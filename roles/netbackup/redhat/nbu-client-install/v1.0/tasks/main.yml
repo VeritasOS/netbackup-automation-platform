@@ -1,0 +1,18 @@
+# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+
+---
+#############################################
+#### NetBackup Install - Client ("RHEL") ####
+#############################################
+
+# Determine whether the NetBackup Client software requires install/upgrade
+# If no install is required, the workflow will finish after running this task. 
+- ansible.builtin.import_tasks: t01_install_verification.yml
+
+# Import required tasks - Base Install
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Load required tasks for NetBackup client {{ nbu_playbook_type }} "
+  ansible.builtin.include_tasks: t02_base_install.yml
+  when:
+    - ( nbu_client_status == "upgrade" or nbu_client_status == "install" )
+
+# EOF

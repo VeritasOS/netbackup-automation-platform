@@ -1,0 +1,62 @@
+# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+
+# These vars are mostly customer-centric and would get updated.
+ # Desired NetBackup Client Version to use in the format [x.x.x.x]
+# Supported versions: ['10.4.0.0', '10.3.0.1', '10.3.0.0', '10.2.0.1', '10.2.0.0', '10.1.1.0', '10.1.0.0', '10.0.0.1', '10.0.0.0']
+nbu_version: x.x.x.x
+
+# {{nbu_artifactory_repo_base_url}} should contain the base url
+nbu_artifactory_repo_base_url: ""
+# {{nbu_path_repo_base_pkg}} should contain relative path of base release version NetBackup packages
+nbu_path_repo_base_pkg: ""
+# {{nbu_path_repo_client_eeb_pkg}} should contain relative path of EEB installer
+nbu_path_repo_client_eeb_pkg: ""
+
+# Mention the list of EEBs to be installed along with NetBackup Client version
+# nbu_eeb_ordered:
+#   client:
+#       x.x.x.x:                                          # nbu version
+#         - <EEB_Installer_Name>                          # EEB installer name
+
+# NB Configuration variables
+nbu_primary_server_ans: PRIMARY01                         # Primary Server hostname can be given here
+
+# Update { os_path_nbu_install } in case you want to install on a custom path. We recommend that the path
+# ends with openv. This will make sure that we remove only the NetBackup installed directories.
+os_path_nbu_install: /usr/openv
+os_path_nbu_yum_cache_base: /var
+nbu_directory_list_to_be_removed:                         # Custom list of directories which should be removed while running [playbook_remove_client_redhat.yml]
+- "{{ os_path_nbu_install }}"
+- "{{ os_path_nbu_install_default }}"
+
+# FTO (Feature Toggle Options)                            # Valid options given can be true|false|yes|no|y|n|1|0
+include_eeb_rpm_marker: false                             # If set to true, playbook wil create/delete extra RPM marker
+nb_include_java_jre_install: false                        # For include java jre packages
+nbu_cert_management: false                                 # For include cert mangement playbook
+
+# Specification required to fetch CA certificate from primary (Applicable only if {{ nbu_cert_management }} is set to true)
+nbu_primary_certdetails:
+- hostname: 'PRIMARY01'                                     # Primary Server hostname
+  nbu_server_fingerPrint: ''                                # Certificate fingerprint
+  nbu_server_authorization_token: ''                        # Authorization Token  
+
+# OS - Packages
+os_rhel_system_packages:                                  # Additional system packages can be added here
+  "9":                                                    # RHEL 9 system packages
+    - libnsl
+    - libxcrypt-compat
+    - ncurses-libs
+  "8":                                                    # RHEL 8 system packages
+    - libnsl
+    - ncurses-libs
+
+# OS - Symbolic links
+os_rhel_system_packages_symlink:                          # Additional symbolic links can be added here
+  "9":                                                    # RHEL 9 symbolic links
+    - { src: /usr/lib64/libncurses.so.6.2, dest: /usr/lib64/libncurses.so.5 }
+    - { src: /usr/lib64/libtinfo.so.6.2, dest: /usr/lib64/libtinfo.so.5 }
+  "8":                                                    # RHEL 8 symbolic links
+    - { src: /usr/lib64/libncurses.so.6.1, dest: /usr/lib64/libncurses.so.5 }
+    - { src: /usr/lib64/libtinfo.so.6.1, dest: /usr/lib64/libtinfo.so.5 }
+
+# EOF     

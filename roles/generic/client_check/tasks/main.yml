@@ -1,0 +1,47 @@
+# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+
+# Verify whether the client machine has the NetBackup client software installed
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Verify if NetBackup client software is installed"
+  ansible.builtin.stat:
+    path: "{{ os_path_nbu_install }}/netbackup/bin/version"
+  register: netbackup_version_file_register
+  failed_when: false
+  changed_when: false
+
+- name: Ansible::Log.info
+  fail:
+    msg: "This machine doesn't have Netackup Client installed, therefore exit immediately."
+  when: not netbackup_version_file_register.stat.exists  
+
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Verify what version of the NetBackup client software is currently installed"
+  ansible.builtin.shell:
+    cmd: "cat {{ os_path_nbu_install }}/netbackup/bin/version | awk -F ' ' '{print $2}'"
+  changed_when: false
+  failed_when: false
+  register: nbu_client_version_register
+
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }}  -> Verify installed NetBackup Client version"
+  block:
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }}  -> Set Client Version to value from version.txt"
+      ansible.builtin.set_fact:
+        nbu_client_current_version: "{{ nbu_client_version_register.stdout }}"
+
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }}  -> Formatting NetBackup Version into x.x.x.x format"
+      ansible.builtin.set_fact:
+        nbu_client_current_version: "{{ nbu_client_current_version + '.' + '0' * (1 - (nbu_client_current_version | regex_replace('.', '') | length) ) }}"
+      when: nbu_client_current_version | regex_findall('\.') | length < 3
+      loop: "{{ range(3) | list }}"
+
+    - name: Ansible::Log.info
+      fail:
+        msg:  "This machine has a different version {{ nbu_client_current_version }} of NetBackup Client installed, therefore exit immediately."
+      when:
+        - ( nbu_client_current_version is version_compare(nbu_version,'>') or nbu_client_current_version is version_compare(nbu_version,'<') )
+
+    - name: Ansible::Log.info
+      ansible.builtin.debug:
+        msg: "The NetBackup client version ({{ nbu_client_current_version }}) is currently installed."
+  when:
+    - ( nbu_client_version_register.stdout != "" )
+
+# EOF

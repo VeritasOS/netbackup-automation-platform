@@ -1,0 +1,28 @@
+# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+
+# NetBackup Client Cert Management - RHEL
+- name: NETBACKUP -> CLIENT CERT MANAGEMENT ("RedHat")
+  gather_facts: false
+  become: yes
+  hosts: all
+  pre_tasks:
+    - name: Retrieving host distribution
+      setup:
+        gather_subset:
+          - "!all"
+          - "!min"
+          - "distribution"
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Load configurable variables"
+      ansible.builtin.include_vars: "vars/main.yml"
+      tags: ["always"]
+      no_log: True
+
+  roles:
+    - role: 'netbackup/redhat'                            # Load netbackup default vars
+    - role: 'generic/server_check'
+    - role: 'generic/client_check' 
+    - role: 'netbackup/redhat/client-get-certificate/v1.0'
+  vars:
+      nbu_playbook_type: "cert-management"
+
+# EOF

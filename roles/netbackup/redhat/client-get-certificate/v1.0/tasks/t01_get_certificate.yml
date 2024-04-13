@@ -1,0 +1,241 @@
+# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+
+##############################################################################
+#### nbu-client-cert-management -> tasks -> t01_get_certificate.yml ####
+##############################################################################
+
+# Define the Certification start time as variable
+- name: "NBU-CLIENT-CERT-MANAGEMENT -> Netbackup cert management started"
+  ansible.builtin.set_fact:
+    status: "started"
+    install_time: "{{ lookup('pipe','date +%Y%m%d%H%M%S') }}"
+   
+- name: "NBU-CLIENT-CERT-MANAGEMENT -> Fetch certificate management details from --extra-vars"
+  set_fact:
+    nbu_authorization_fingerprint: "{{ item.nbu_server_fingerPrint }}"
+    nbu_authorization_token: "{{ item.nbu_server_authorization_token }}"
+  with_items: "{{ nbu_primary_certdetails }}"
+  when: item.hostname == nbu_primary_server_ans
+  no_log: True
+
+- name: "NBU-CLIENT-CERT-MANAGEMENT -> Validate nbu_primary_server_ans in input yaml list."
+  set_fact:
+    nbu_primary_server_ans_found: true
+  with_items: "{{ nbu_primary_certdetails }}"
+  when: item.hostname == nbu_primary_server_ans
+  no_log: true
+
+- name: "NBU-CLIENT-CERT-MANAGEMENT -> Assert nbu_primary_server_ans_found"
+  assert:
+    that: 
+      - nbu_primary_server_ans_found == true
+    fail_msg: "Input variable ( nbu_primary_server_ans:{{ nbu_primary_server_ans }} ) do not match with any hostname given in {{ nbu_primary_certdetails }}"
+    success_msg: "Input variable ( nbu_primary_server_ans:{{ nbu_primary_server_ans }} ) match with hostname given in {{ nbu_primary_certdetails }}"
+    quiet: true
+
+- name: Ansible::Log.info
+  fail:
+    msg: "The length of SHA1 fingerprint and authorization token should be 59 and 16 uppercase characters respectively."
+  when: 
+    - ( nbu_authorization_fingerprint | length != 59 ) and ( nbu_authorization_token | length != 16 ) 
+    - ( nbu_authorization_fingerprint is defined ) and ( nbu_authorization_token is defined )
+
+- name: Ansible::Log.info
+  fail:
+    msg: "The length of SHA1 fingerprint of root certificate is not as per expected length of 59."
+  when: 
+    - ( nbu_authorization_fingerprint | length != 59 )  
+    - ( nbu_authorization_fingerprint is defined ) 
+    
+- name: Ansible::Log.info
+  fail:
+    msg: "The length of authorization token should be 16 uppercase characters"
+  when: 
+    - ( nbu_authorization_token | length != 16 ) 
+    - ( nbu_authorization_token is defined )
+          
+- name: "NBU-CLIENT-CERT-MANAGEMENT -> Create a directory to store certificate inputs on destination host"
+  ansible.builtin.file:
+    path: "{{ nbu_certificates_file_path }}/{{ nbu_certificates_file_dir}}"
+    state: directory
+    mode: '0755'
+  no_log: True  
+  
+- name: "NBU-CLIENT-CERT-MANAGEMENT -> Push ({{ nbu_primary_server_ans }}) fingerprint to destination host"
+  ansible.builtin.copy:
+    content: "{{ nbu_authorization_fingerprint }}"
+    dest: "{{ nbu_certificates_file_path }}/{{ nbu_certificates_file_dir}}/{{ nbu_CACertificate_File }}"
+    mode: u=rw,g=rw,o=rw
+  when: nbu_authorization_fingerprint is defined
+  no_log: True
+
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Check if ({{ nbu_CACertificate_File}}) file exists on Client Machine"
+  ansible.builtin.stat:
+    path: "{{ nbu_certificates_file_path }}/{{ nbu_certificates_file_dir}}/{{ nbu_CACertificate_File }}"
+  register: nbu_CACertificate_File_register
+  failed_when: false
+  changed_when: false
+  no_log: True
+
+- name: "NBU-CLIENT-CERT-MANAGEMENT  -> Checking for local NetBackup CA certificate on Client Machine"
+  block: 
+    - name: "NBU-CLIENT-CERT-MANAGEMENT -> Deploy a CA Certificate on Client Host Machine"
+      ansible.builtin.shell: ( /usr/openv/netbackup/bin/nbcertcmd -getCACertificate -server "{{ nbu_primary_server_ans }}" -file "{{ nbu_certificates_file_path }}/{{ nbu_certificates_file_dir}}/{{ nbu_CACertificate_File }}" -force)
+      changed_when: false
+      register: nbu_get_CA_Certificate_register
+      failed_when: false
+      no_log: true
+
+    - name: "" 
+      block:
+        - name: "NBU-CLIENT-CERT-MANAGEMENT -> Set facts about the CA Certificate Error messages"
+          ansible.builtin.set_fact:
+            nbu_getCA_certificate_errmsg: "{{ nbu_get_CA_Certificate_register.stderr }}"
+          no_log: True
+
+        - name: Ansible::Log.info
+          fail:
+            msg: "{{ nbu_getCA_certificate_errmsg }}"
+
+      when:
+        - (  nbu_get_CA_Certificate_register.rc != 0 )
+
+    - name: ""  
+      block:
+        - name: "NBU-CLIENT-CERT-MANAGEMENT -> Set facts about the CA Certificate Error messages"
+          ansible.builtin.set_fact:
+            nbu_getCA_certificate_output: "{{ nbu_get_CA_Certificate_register.stdout }}"
+          no_log: True
+
+        - name: Ansible::Log.info
+          debug:
+            msg: "{{ nbu_getCA_certificate_output }}"  
+
+      when:
+        - (  nbu_get_CA_Certificate_register.rc == 0 )
+
+  when: 
+    - nbu_CACertificate_File_register.stat.exists
+   
+- name: "NBU-CLIENT-CERT-MANAGEMENT -> Push Token to destination host"
+  ansible.builtin.copy:
+    content: "{{ nbu_authorization_token }}"
+    dest: "{{ nbu_certificates_file_path }}/{{ nbu_certificates_file_dir}}/{{ nbu_authorization_token_file }}"
+    mode: u=rw,g=rw,o=rw
+  when: nbu_authorization_token is defined
+  no_log: True
+
+- name: "NBU-CLIENT-CERT-MANAGEMENT -> Check if User Token exists on Client Machine"
+  ansible.builtin.stat:
+    path: "{{ nbu_certificates_file_path }}/{{ nbu_certificates_file_dir}}/{{ nbu_authorization_token_file }}"
+  register: nbu_authorization_token_file_register
+  failed_when: false
+  changed_when: false
+  no_log: True
+
+  # If the Authorization Token file exists, then proceed with getCertificate
+- name: "NBU-CLIENT-CERT-MANAGEMENT -> Check if Certificate is deployed on Client Machine"
+  block:
+    - name: "NBU-CLIENT-CERT-MANAGEMENT -> In the case where a host ID certificate is not present, use the getCertificate option to retrieve a host ID certificate"
+      ansible.builtin.shell: ( /usr/openv/netbackup/bin/nbcertcmd -getCertificate -server "{{ nbu_primary_server_ans }}" -file "{{ nbu_certificates_file_path }}/{{ nbu_certificates_file_dir}}/{{ nbu_authorization_token_file }}" -force )
+      changed_when: false
+      register: nbu_host_certificate_check_register
+      failed_when: false
+      no_log: True
+
+    # After Netbackup Certificate validation is done, remove all cert management directories and files from Client Machine
+    - name: "NBU-CLIENT-CERT-MANAGEMENT -> Check the existence of Certificate files and its respective directory"
+      ansible.builtin.stat:
+        path: "{{ nbu_certificates_file_path }}/{{ nbu_certificates_file_dir}}"
+      register: nbu_certificate_dir_register
+      no_log: True
+
+    - name: "NBU-CLIENT-CERT-MANAGEMENT -> Remove Certificate files and its respective directory on Client if it exists"
+      ansible.builtin.file:
+        state: absent
+        path: "{{ nbu_certificates_file_path }}/{{ nbu_certificates_file_dir}}"
+      when: nbu_certificate_dir_register.stat.exists and nbu_certificate_dir_register.stat.isdir
+      no_log: True
+
+    - name: "" 
+      block:
+        - name: "NBU-CLIENT-CERT-MANAGEMENT -> Set facts about the Host ID Certificate Error messages"
+          ansible.builtin.set_fact:
+            nbu_get_certificate_errmsg: "{{ nbu_host_certificate_check_register.stderr }}"
+          no_log: True
+
+        - name: "NBU-CLIENT-CERT-MANAGEMENT -> Set facts about the Reissue Token Error messages"
+          ansible.builtin.set_fact:
+            nbu_get_extracted_pattern: "{{ nbu_get_certificate_errmsg | regex_search('EXIT STATUS 5989') }}"
+          
+        - name: "NBU-CLIENT-CERT-MANAGEMENT -> Check if certificate revocation list already exists"
+          ansible.builtin.shell: ( /usr/openv/netbackup/bin/nbcertcmd -getCertificate -server "{{ nbu_primary_server_ans }}" )
+          changed_when: false
+          register: nbu_certificate_existence_register
+          when: ( nbu_get_extracted_pattern == "EXIT STATUS 5989" )
+          no_log: True
+
+        - name: Ansible::Log.info
+          fail:
+            msg: "{{ nbu_get_certificate_errmsg }}"
+          when: 
+            - ( nbu_get_extracted_pattern == "EXIT STATUS 5989" )
+            - ( nbu_certificate_existence_register.rc != 0 )  
+
+        - name: Ansible::Log.info
+          fail:
+            msg: "{{ nbu_get_certificate_errmsg }}"
+          when: 
+            - ( nbu_get_extracted_pattern == "" )
+
+        - name: Ansible::Log.info
+          debug:
+            msg: "{{ nbu_certificate_existence_register.stdout }}" 
+          when: ( nbu_certificate_existence_register.rc == 0 )    
+
+      when:
+        - (  nbu_host_certificate_check_register.rc != 0 )
+
+    - name: ""  
+      block:     
+        - name: "NBU-CLIENT-CERT-MANAGEMENT -> Set facts about the Host ID Certificate Output"
+          ansible.builtin.set_fact:
+            nbu_get_certificate_output: "{{ nbu_host_certificate_check_register.stdout }}"
+          no_log: True
+
+        - name: Ansible::Log.info
+          debug:
+            msg: "{{ nbu_get_certificate_output }}"  
+
+      when:
+        - (  nbu_host_certificate_check_register.rc == 0 )
+
+  when: 
+    - nbu_authorization_token_file_register.stat.exists
+
+- name: "NBU-CLIENT-CERT-MANAGEMENT -> Check if the NetBackup host has connectivity with the master server"
+  ansible.builtin.shell: ( /usr/openv/netbackup/bin/nbcertcmd -ping -server {{ nbu_primary_server_ans }} )
+  changed_when: false
+  register: nbu_is_master_valid_register
+  failed_when: false
+
+- name: Ansible::Log.info
+  fail:
+    msg: "NetBackup host has no connectivity with the master server."
+  when:  
+    - ( nbu_is_master_valid_register.rc != 0 ) 
+
+- block:
+    - name: "NBU-CLIENT-CERT-MANAGEMENT -> Copy Master Server received from Json to bp.conf on client machine"
+      lineinfile:
+        path: /usr/openv/netbackup/bp.conf
+        insertbefore: "BOF"
+        state: present
+        line: 'SERVER = {{ nbu_primary_server_ans }}' 
+
+    - name: Ansible::Log.info
+      debug:
+        msg: "Primary Server has established connectivity with client machine and is ready for backup/restore operation."
+  when: 
+        - ( nbu_is_master_valid_register.rc == 0 )
+

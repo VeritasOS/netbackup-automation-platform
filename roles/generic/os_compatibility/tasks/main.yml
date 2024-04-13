@@ -1,0 +1,13 @@
+# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+
+##############################################################################
+####  Generic tasks to verify OS specification                            ####
+####  - OS version compatibility against provided production version      ####  
+####  - OS related changes                                                ####
+##############################################################################
+
+# Import required tasks - OS compatibility and OS verification
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Load required tasks for NetBackup Client {{ nbu_playbook_type }}"
+  ansible.builtin.include_tasks: t01_{{ansible_os_family|lower}}_compatibility.yml
+
+# EOF

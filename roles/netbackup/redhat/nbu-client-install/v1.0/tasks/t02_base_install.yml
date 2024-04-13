@@ -1,0 +1,201 @@
+# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+
+#############################################################
+#### nbu-client-install -> tasks -> t02_base_install.yml ####
+#############################################################
+
+# Verify whether the NetBackup client has the NetBackup server software installed
+# The install will not be performed if the client is a NetBackup server
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Verify whether NetBackup server software is currently installed"
+  ansible.builtin.include_role:
+    name: 'generic/server_check'
+
+# If the /usr/openv/netbackup/bp.conf file exists, make sure that master_01 is not listed in a SERVER = line
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Check if /usr/openv/netbackup/bp.conf exists"
+  ansible.builtin.stat:
+    path: /usr/openv/netbackup/bp.conf
+  register: bpconf
+  failed_when: false
+  changed_when: false
+
+ # Update CLIENT and SERVER in the NBInstallAnswer-client-linux.j2 template, when upgrade is being performed
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} ->  Update the CLIENT and SERVER in the NBInstallAnswer-client-linux.j2 template"
+  block:
+    # Remove "_" from master_01 for machines that were installed where they were unable
+    # to reach bravura and defaulted to SERVER = master_01 as Primary Server
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Remove pseudo NetBackup Primary Server name from bp.conf file - make RFC compliant"
+      ansible.builtin.shell: ( sed -i 's/SERVER = master_01/SERVER = master01/g' /usr/openv/netbackup/bp.conf )
+      when: bpconf.stat.exists
+      failed_when: false
+      changed_when: false
+
+    # Get the NetBackup primary server hostname from the bp.conf file
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Get Primary Server hostname"
+      ansible.builtin.shell: ( cat  /usr/openv/netbackup/bp.conf | egrep -v "^#" | grep SERVER | awk 'NR==1 {print $3}' )
+      changed_when: false
+      register: nbu_primary_server_register
+
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Set SERVER to value from bp.conf"
+      ansible.builtin.set_fact:
+        nbu_primary_server_ans: "{{ nbu_primary_server_register.stdout }}"
+      when: nbu_primary_server_register.stdout != ""
+
+    # Get the NetBackup CLIENT_NAME from the bp.conf file
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Get machines NetBackup CLIENT_NAME"
+      ansible.builtin.shell: ( cat  /usr/openv/netbackup/bp.conf | egrep -v "^#" | grep CLIENT_NAME | awk 'NR==1 {print $3}' )
+      changed_when: false
+      register: nbu_client_name_register
+
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Set CLIENT_NAME in NBInstallAnswer-client-linux.j2, to values from bp.conf file"
+      ansible.builtin.set_fact:
+        nbu_client_name_ans: "{{ nbu_client_name_register.stdout }}"
+      when: nbu_client_name_register.stdout != ""
+
+  when: bpconf.stat.exists and nbu_playbook_type == "upgrade"
+
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Verify base installation path ({{ os_path_nbu_install_default }}) existence"
+  ansible.builtin.stat:
+    path: "{{ os_path_nbu_install_default }}"
+  register: install_path_check_register
+
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Check base installation path ({{ os_path_nbu_install_default }}) status"
+  block:
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Check link status of install path ({{ os_path_nbu_install_default }})"
+      fail:
+        msg:  "In case of typical/default installation path ({{ os_path_nbu_install_default }}), it shouldn't be a link. We recommend to have the installation path removed and re-run the playbook."
+      when:
+        - os_path_nbu_install == os_path_nbu_install_default
+        - install_path_check_register.stat.islnk
+
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Check custom installation path ({{ os_path_nbu_install }}) status"
+      fail:
+        msg:  "A custom installation path ({{ os_path_nbu_install }}) is provided, but ({{ os_path_nbu_install_default }}) is already linked to a different ({{ install_path_check_register.stat.lnk_source }}) path. We recommend you to remove the link and re-run the playbook."
+      when:
+        - os_path_nbu_install != os_path_nbu_install_default
+        - install_path_check_register.stat.islnk
+        - os_path_nbu_install != install_path_check_register.stat.lnk_source
+
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Verify installation path for upgrade case"
+      fail:
+        msg:  "NetBackup Client ({{ nbu_client_rpm_version }}) is installed at ({{ install_path_check_register.stat.lnk_source }}). As this is an upgrade, different install path ({{ os_path_nbu_install }}) isn't allowed"
+      when:
+        - install_path_check_register.stat.islnk
+        - os_path_nbu_install != install_path_check_register.stat.lnk_source
+        - nbu_playbook_type == "upgrade"
+  when:
+    - install_path_check_register.stat.exists
+
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} Symlink path creation"
+  block: 
+    # Ensure the NetBackup install directory exists
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Ensure NetBackup {{ os_path_nbu_install }} directory exists"
+      ansible.builtin.file:
+        path: "{{ os_path_nbu_install }}"
+        state: directory
+        owner: "root"
+        group: "bin"
+        mode: "0755"
+
+    # Ensure the NetBackup install directory link exists
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Ensure NetBackup {{ os_path_nbu_install }} -> {{ os_path_nbu_install_default }} link exists"
+      ansible.builtin.file:
+        src: "{{ os_path_nbu_install }}"
+        dest: "{{ os_path_nbu_install_default }}"
+        state: link
+  when:
+    - install_path_check_register.stat.exists == false
+    - os_path_nbu_install != os_path_nbu_install_default
+
+# Upload NetBackup answer file ("Client - Linux")
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Upload NetBackup Install Answer File ('Client - Linux')"
+  ansible.builtin.template:
+    src: "NBInstallAnswer-client-linux.j2"
+    dest: "/tmp/NBInstallAnswer.conf"
+    mode: 0755
+
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Find if any previous RPM couldn't install successfully"
+  ansible.builtin.stat:
+    path: /tmp/previous_rpm_pkg_install_failed
+  register: pre_rpm_failed_register
+  failed_when: false
+  changed_when: false
+
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Read the previous failed RPM and attempt a reinstall"
+  block:
+  - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Found instance of previous failed RPM"
+    ansible.builtin.shell:
+      cmd: "sed -n '1p' /tmp/previous_rpm_pkg_install_failed"
+    changed_when: false
+    failed_when: false
+    register: failed_rpm_name_register
+  
+  - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Attempt to reinstall RPM ({{ failed_rpm_name_register.stdout }})"
+    ansible.builtin.shell:
+      cmd: "yum reinstall -y --enablerepo=netbackup {{ failed_rpm_name_register.stdout }}"
+    changed_when: false
+    failed_when: false
+    no_log: true
+  when: pre_rpm_failed_register
+
+# Install NetBackup Software - Client
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> {{ nbu_playbook_type }} the NetBackup client software ('Client - RHEL')"
+  ansible.builtin.yum:
+    name: 
+      - "{{ item.key }}"
+    state: latest
+    disablerepo: "{{ yum_repolist_output_register }}"
+    enablerepo: netbackup
+    validate_certs: no
+  register: result
+  with_items:
+    - "{{ nbu_client_rpms_ordered_list[nbu_version] | dict2items }}"
+  when:
+    - (item.key not in ['VRTSnbjava', 'VRTSnbjre']) or (item.key in ['VRTSnbjava', 'VRTSnbjre'] and nb_include_java_jre_install)
+    - not (result.rc|d(0)) # Make sure that the loop exits if any RPM installation fails.
+
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Set fact for install-phase"
+  set_fact: 
+    install_phase: "POST"
+
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Setting the eventual upgrade counter and status to default values"
+  ansible.builtin.set_fact:
+    nbu_client_upgrade_counter: "0"
+    nbu_client_install_counter: "0"
+    nbu_failed_rpms: ""
+
+# Make a note that currrently we only validate NetBackup RPMs where release version equals nbu_version
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Include tasks for NetBackup {{ nbu_playbook_type }} status verification"
+  ansible.builtin.include_tasks: t01_{{ nbu_playbook_type }}_status.yml
+  loop: "{{ nbu_client_rpms_ordered_list[nbu_version] | dict2items }}"
+  when: 
+    - (item.key not in ['VRTSnbjava', 'VRTSnbjre']) or (item.key in ['VRTSnbjava', 'VRTSnbjre'] and nb_include_java_jre_install)
+    - (item.key not in ['VRTSpbx', 'VRTSpddea'])
+
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Remove the trailing empty item from RPM list"
+  ansible.builtin.set_fact:
+    nbu_failed_rpms: "{{ nbu_failed_rpms[:-1] }}"
+
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Ansible::Log.info"
+  ansible.builtin.assert:  
+    that: 
+      - ( nbu_client_upgrade_counter |int == 0 ) and (nbu_client_install_counter |int == 0)
+    success_msg: "PASS: All NetBackup RPM's for proposed version are installed successfully."
+    fail_msg: "ERROR: [{{ nbu_failed_rpms }}] Selected RPM's failed to install successfully."
+    quiet: true
+
+# Ensure the NetBackup Client java files are not installed
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Remove NetBackup Client Java RPM files if installed by older Ansible package"
+  ansible.builtin.yum:
+    name:
+      - VRTSnbjava
+      - VRTSnbjre
+    state: absent
+  when:  
+    - not nb_include_java_jre_install
+
+# Remove the previous NetBackup EEB RPM marker files
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Remove NetBackup EEB RPM Markers"
+  ansible.builtin.shell: ( rpm -qa | grep '^VRTSnbeeb\|^VRTSnb-vts2' | while read line; do rpm -e $line; done)
+  changed_when: false
+  when: include_eeb_rpm_marker
+# EOF

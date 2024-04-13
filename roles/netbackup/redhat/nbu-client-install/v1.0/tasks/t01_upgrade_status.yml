@@ -1,0 +1,66 @@
+# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+
+#####################################################################
+#### nbu-client-upgrade -> tasks -> t01_upgrade_status.yml ####
+#####################################################################
+
+# These tasks will verify the workflow is being executed on a current NetBackup client
+# and will determine whether the NetBackup client software requires upgrading to a newer version.
+# If the client is not a valid client or the client software doesnt require upgrading, the upgrade
+# workflow will exit after this task and no further tasks will be performed.
+
+# Verify whether the NetBackup client has the NetBackup client software installed
+# The upgrade will not proceed if the NetBackup client software is not already installed.
+- name: "NBU-CLIENT-UPGRADE -> Verify whether NetBackup client software ({{ item.key }}) is currently installed"
+  ansible.builtin.shell: ( rpm -qa | grep "{{ item.key }}" )
+  changed_when: false
+  register: nbu_client_rpm_check
+  failed_when: false
+
+# Verify what version of the NetBackup client software is currently installed.
+# Returned version is used to determine whether the NetBackup client sofware requires upgrading.
+- name: "NBU-CLIENT-UPGRADE -> Verify what version of the NetBackup client software ({{ item.key }}) is currently installed"
+  ansible.builtin.shell: ( rpm -qi "{{ item.key }}" | awk '/Version/ { print $3}' )
+  ignore_errors: true
+  changed_when: false
+  register: nbu_client_rpm_version_register
+  when:
+    - ( nbu_client_rpm_check.rc == 0 )
+
+# Verify if the installed NetBackup client version is out-of-date and requires upgrading
+# If current version is lower than proposed version, upgrade
+- name: "NBU-CLIENT-UPGRADE -> Verify whether installed NetBackup client version ({{ nbu_client_rpm_version_register.stdout }}) is out-of-date - Set fact to 'upgrade'"
+  ansible.builtin.set_fact:
+    nbu_client_upgrade_counter: "{{ nbu_client_upgrade_counter | default(0) | int + 1 }}"
+  when:
+    - ( nbu_client_rpm_check.rc == 0 )
+    - nbu_client_rpm_version_register.stdout is version_compare(item.value | default(nbu_version, true),'<')
+
+- name: "NBU-CLIENT-UPGRADE -> Setting the eventual upgrade status"
+  ansible.builtin.set_fact:
+    nbu_client_status: upgrade
+    nbu_failed_rpms: "{{ nbu_failed_rpms }}{{ item.key }},"
+  when: ( nbu_client_upgrade_counter |int > 0 )
+
+- name: "NBU-CLIENT-UPGRADE -> Setting the eventual upgrade status"
+  ansible.builtin.set_fact:
+    nbu_client_status: none
+  when:
+    - ( nbu_client_upgrade_counter |int == 0 )
+    - install_phase == "PRE"
+
+- name: Ansible::Log.info
+  fail:
+    msg:  "This machine doesn't have Netackup Client installed, hence cannot be upgrade, therefore exit immediately."
+  when:
+    - ( nbu_client_rpm_check.rc == 1 )
+    - install_phase == "PRE"
+
+# Verify if the installed NetBackup client version is higher than the proposed version. 
+- name: "NBU-CLIENT-UPGRADE -> Verify if the installed NetBackup client version is compatible for upgrade with proposed version "
+  assert:
+    that: "nbu_client_rpm_version_register.stdout is version_compare(nbu_version, '<=')"
+    fail_msg: This Client has higher version {{ nbu_client_rpm_version_register.stdout }} installed than proposed version {{ nbu_version }}, therefore exit immediately.
+    quiet: true
+
+# EOF
