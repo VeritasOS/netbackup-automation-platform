@@ -1,4 +1,4 @@
-# NetBackup Automation Platform
+# NetBackup Automation Platform (NBAP)
 
 ## Description
 
