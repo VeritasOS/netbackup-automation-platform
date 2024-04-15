@@ -1,1 +1,2 @@
-*.yml linguist-detectable=false
+*.sh linguist-detectable=false
+*.yml linguist-detectable=true
