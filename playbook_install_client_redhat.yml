@@ -22,6 +22,7 @@
     - role: 'generic/os_compatibility'
     - role: 'generic/server_check'       # Make sure that the execution isn't running on a NetBackup Server
     - role: 'generic/nbu_version_check'
+    - role: 'custom/pre-upgrade-backup'
     - role: 'netbackup/redhat/nbu-client-install/v1.0'
     - role: 'netbackup/redhat/nbu-install-eeb/v1.0'
     - role: 'netbackup/redhat/client-get-certificate/v1.0'
