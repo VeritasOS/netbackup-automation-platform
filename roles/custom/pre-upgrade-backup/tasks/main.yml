@@ -1,0 +1,24 @@
+---
+
+# Take backup of critical files before upgrading NetBackup Software
+- name: "Check the existence of bp.conf"
+  ansible.builtin.stat:
+    path: "{{ os_path_nbu_install }}/netbackup/bp.conf"
+  register: bp_conf_stat_register
+  failed_when: false
+  changed_when: false
+
+- name: "create backup directory"
+  ansible.builtin.file:
+    path: /usr/netbackup_saveddata
+    state: directory
+    mode: '0755'
+
+- name: "Save bp.conf to backup location"
+  ansible.builtin.copy:
+    src: "{{ os_path_nbu_install }}/netbackup/bp.conf"
+    dest: /usr/netbackup_saveddata/bp.conf
+    owner: root
+    group: root
+    mode: '0644'
+  when: bp_conf_stat_register.stat.exists
