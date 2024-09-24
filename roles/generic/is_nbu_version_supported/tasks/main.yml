@@ -1,0 +1,30 @@
+# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+
+# Verify if the proposed NetBackup software version is supported.
+# Set fact - Netbackup Released versions
+# Verify if the proposed NetBackup software version is supported.
+- name: "NBU-VERSION-SUPPORTED -> Set fact for NBU supported release versions"
+  ansible.builtin.set_fact:
+    nbu_versions_supported: "{{ nbu_pkgs_ordered_list['client'].keys() | list }}"
+  when:
+   - ( ansible_system == 'Linux' )
+
+- name: "NBU-VERSION-SUPPORTED -> Set fact for NBU supported release versions"
+  ansible.builtin.set_fact:
+    nbu_versions_supported: "{{ nbu_pkgs_ordered_list.keys() | list }}"
+  when:
+   - ansible_os_family == 'Windows'
+
+# Set fact - Netbackup install/ upgrade supported versions
+# Note:- [:-6] is used to get the list of only supported versions among all the NetBackup software released vesrsions.
+- name: "NBU-VERSION-SUPPORTED -> Set fact for NBU supported versions"
+  ansible.builtin.set_fact:
+    nbu_versions_supported: "{{ nbu_versions_supported[:-6] }}"
+
+# Verify if the proposed NetBackup software version is supported for install/upgrade
+- name: "NBU-VERSION-SUPPORTED -> Verify the OS proposed version is compatible for either Install or Upgrade"
+  ansible.builtin.fail:
+    msg: "ERROR - Incompatible proposed NetBackup software version ( nbu_version:{{ nbu_version }} ). The supported Netbackup software versions are {{ nbu_versions_supported }}"
+  when: nbu_version not in nbu_versions_supported
+
+# EOF

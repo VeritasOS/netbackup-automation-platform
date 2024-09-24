@@ -1,0 +1,78 @@
+# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+
+# These tasks validate the certificate-specific configurations that you have provided and shows a report of all successful and failed validations.
+# If any checks fail, the workflow will fail so the problem can be recified prior to
+# commencing the NetBackup server upgrade.
+
+- name: "NBU-VERIFICATION -> Verify NetBackup file {{ nbu_path_nbcertcmd }} existence status"
+  win_stat:
+    path: "{{ nbu_path_nbcertcmd }}"
+  register: netbackup_nbcertcmd_file_register
+
+# Get the NetBackup primary server hostname from the registry file
+- name: "NBU-VERIFICATION -> Get Primary Server hostname from registry file"
+  block:
+    - name: "NBU-VERIFICATION -> Get Primary Server hostname"
+      win_reg_stat:
+        path: "{{ nbu_registry_path }}\\CurrentVersion\\Config"
+        name: Server
+      register: nbu_primary_server_registry_register
+
+    - name: "NBU-VERIFICATION -> Set SERVER to value from registry"
+      ansible.builtin.set_fact:
+         nbu_primary_server_ans: "{{ nbu_primary_server_registry_register.value[0] }}"
+      when: nbu_primary_server_registry_register.value != ""
+  when: nbu_playbook_type == "upgrade" 
+
+- name: "NBU-VERIFICATION -> Verify the bpclntcmd file existence status"
+  win_stat:
+    path: "{{ os_path_nbu_install }}\\NetBackup\\bin\\bpclntcmd.exe"
+  register: netbackup_bpclntcmd_file_register
+  failed_when: false
+  changed_when: false 
+
+- name: "NBU-VERIFICATION -> Clear NetBackup Host Caching"
+  win_command: "bpclntcmd.exe -clear_host_cache"
+  args:
+    chdir: "{{ os_path_nbu_install }}\\NetBackup\\bin"
+  when: 
+    - netbackup_bpclntcmd_file_register.stat.exists
+
+- name: "NBU-VERIFICATION -> Verify connectivity with the NetBackup primary server's ({{ nbu_primary_server_ans }}) web service."
+   # Continue running respective CLIs only if the last one is sucessfull.
+  win_command: "nbcertcmd.exe {{ item }}"
+  args:
+    chdir: "{{ os_path_nbu_install }}\\NetBackup\\bin"
+  register: netbackup_commands_rc_register
+  failed_when: false
+  no_log: true
+  loop:
+   - "-ping -server {{ nbu_primary_server_ans }}"
+   - "-hostselfcheck -server {{ nbu_primary_server_ans }}"
+  when: 
+   - netbackup_nbcertcmd_file_register.stat.exists
+   - not (netbackup_commands_rc_register.rc|d(0))
+
+- name: "NBU-VERIFICATION -> Setting netbackup commands result facts"
+  ansible.builtin.set_fact:
+    netbackup_failed_rc: "{{ item.rc }}"
+    netbackup_failed_cmd: "{{ item.cmd }}"
+    netbackup_failed_stderr: "{{ item.stderr }}"
+  with_items: "{{ netbackup_commands_rc_register.results }}"
+  when: 
+    - item.changed
+    - (item.rc|d(0))
+  no_log: true
+    
+- name: "NBU-VERIFICATION -> Verification failed for ({{ netbackup_failed_cmd }})"
+  ansible.builtin.fail:
+    msg: "{{ netbackup_failed_stderr }}"
+  ignore_errors: "{{ ignore_primary_connectivity_failures }}"  
+  when: 
+    - netbackup_failed_rc | default(0)
+
+- name: "NBU-VERIFICATION -> Verification completed successfully"
+  ansible.builtin.debug:
+    msg: "Primary Server connectivity with {{ nbu_primary_server_ans }} has been successfully verified."
+  when: 
+    - not netbackup_failed_rc | default(0)

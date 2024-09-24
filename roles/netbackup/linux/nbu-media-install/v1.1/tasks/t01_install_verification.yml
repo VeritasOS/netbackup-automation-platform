@@ -1,0 +1,187 @@
+# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+
+#####################################################################
+#### nbu-server-install -> tasks -> t01_install_verification.yml ####
+#####################################################################
+
+# Define the install start time as variable
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }}  -> Start NetBackup {{ nbu_playbook_type }}"
+  ansible.builtin.set_fact:
+    status: "started"
+    install_time: "{{ lookup('pipe','date +%Y%m%d%H%M%S') }}"
+
+# Check - Upgrade is being performed by root user
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Verify the root user is performing the NetBackup server upgrade"
+  ansible.builtin.shell:  ( whoami )
+  changed_when: false
+  register: root_check
+  failed_when: ( root_check.stdout != 'root' ) 
+
+# Set default Artifactory Respository 
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Set Artifactory Repository based on type of environment as Fact"
+  ansible.builtin.set_fact:
+    artifactory_repo: ""
+
+# Discover Artifactory Respository based on the type of environment
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Define Artifactory Repository based on type of environment"
+  block:
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Define Artifactory Repository - DEV"
+      ansible.builtin.set_fact:
+        artifactory_repo: yum-enterprise-dev-local/
+      when: "'DEV' in awx_inventory_name"
+
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Define Artifactory Repository - UAT"
+      ansible.builtin.set_fact:
+        artifactory_repo: yum-enterprise-test-local/
+      when: "'UAT' in awx_inventory_name"
+
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Define Artifactory Repository - PROD"
+      ansible.builtin.set_fact:
+        artifactory_repo: yum-enterprise-prod-local/
+      when:
+        - "'PROD' in awx_inventory_name"
+  when: awx_inventory_name is defined and awx_inventory_name != ""
+
+# Check if the NetBackup yum cache exists
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Check if {{ os_path_nbu_yum_cache }} exists"
+  ansible.builtin.stat:
+    path: "{{ os_path_nbu_yum_cache }}"
+  register: yum_cache_register
+  failed_when: false
+  changed_when: false
+
+# Remove the contents of the "/var/cache/yum/x86_64/7Server/netbackup" directory
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Remove the NetBackup yum cache directory"
+  ansible.builtin.file:
+    path: "{{ os_path_nbu_yum_cache }}"
+    state: absent
+  failed_when: false
+  when: ( ansible_distribution_major_version  == '7' and yum_cache_register.stat.exists )
+
+# Add NetBackup Server Repo - Enable it
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Add YUM repository for NetBackup Software" 
+  ansible.builtin.yum_repository:
+    name: netbackup
+    description: NetBackup Server Binaries
+    baseurl: "{{ nbu_artifactory_repo_base_url }}{{ artifactory_repo }}{{ nbu_path_repo_base_pkg }}"
+    enabled: no
+    gpgcheck: no
+    state: present
+    sslverify: no
+  when:
+  - ansible_os_family == 'RedHat'
+
+# Add NetBackup Server Repo - Enable it
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Add zypper repository for NetBackup Software"
+  community.general.zypper_repository:
+    name: netbackup
+    repo: "{{ nbu_artifactory_repo_base_url }}{{ artifactory_repo }}{{ nbu_path_repo_base_pkg }}"
+    state: present
+    disable_gpg_check: yes
+    enabled: yes
+  when:
+  - ansible_os_family == 'Suse'
+
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Determine the NetBackup Server installed software version"
+  block:
+    # Verify whether the NetBackup server has the NetBackup {{ nbu_role }} software installed
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Verify whether NetBackup {{ nbu_role | capitalize }} software is currently installed"
+      ansible.builtin.shell: ( rpm -qa | grep "{{ nbu_server_rpm_name }}" )
+      changed_when: false
+      register: nbu_server_rpm_check
+      failed_when: false
+  
+    # Verify what version of the NetBackup  software is currently installed.
+    # Returned version is used to determine whether the NetBackup server sofware requires upgrading.
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Verify what version of the NetBackup server software is currently installed"
+      ansible.builtin.shell: ( rpm -qi "{{ nbu_server_rpm_name }}" | awk '/Version/ { print $3}' )
+      changed_when: false
+      register: nbu_server_rpm_version_register
+      when:
+        - ( nbu_server_rpm_check.rc == 0 )
+  when: nbu_playbook_type == "upgrade"
+ 
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Detect if NetBackup Server ({{ nbu_server_rpm_version_register.stdout | default(nbu_version) }}) is currently installed"
+  ansible.builtin.set_fact:
+    nbu_server_rpm_version: "{{ nbu_server_rpm_version_register.stdout | default(nbu_version) }}"
+
+# Make a note that currrently we only validate NetBackup RPMs where release version equals nbu_version
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Include tasks for NetBackup {{ nbu_playbook_type }} status verification"
+  ansible.builtin.include_tasks: t01_{{ nbu_playbook_type }}_status.yml
+  loop: "{{ nbu_pkgs_ordered_list[nbu_role][nbu_server_rpm_version] | dict2items }}"
+  when:
+    - item.key not in ['VRTSpbx', 'VRTSnbjava', 'VRTSnbjre', 'VRTSpddeu', 'VRTSpddei']
+    - nbu_role == "media"
+
+# Set facts about the NetBackup Server
+# Does not run if NetBackup Server software is not installed
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Set facts about the NetBackup server {{ nbu_playbook_type }}"
+  ansible.builtin.set_fact:
+    nbu_server_name: "{{ inventory_hostname }}"
+    nbu_server_version_current: "{{ nbu_server_rpm_version }}"
+    nbu_server_version_proposed: "{{ nbu_version }}"
+  when:
+    - ( nbu_server_rpm_check.rc == 0 ) and ( nbu_server_status == "upgrade" )
+
+# Does not run if NetBackup Server software is not installed
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }}  -> Set facts about the NetBackup server {{ nbu_playbook_type }} "
+  ansible.builtin.set_fact:
+    nbu_server_name: "{{ inventory_hostname }}"
+    nbu_server_version_proposed: "{{ nbu_version }}"
+  when:
+    - ( nbu_server_status == "install" )
+
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Load required tasks for symlink validation and creation"
+  ansible.builtin.include_role:
+    name: 'netbackup/linux/symlink-operations'
+
+# Running NBChecks for critical and non-critical checks
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }}  -> Start NBCheck execution for NetBackup {{ nbu_role|capitalize }}"
+  ansible.builtin.include_role:
+    name: 'generic/initiate_nbcheck'
+  when: do_perform_nbcheck_preinstall
+
+# Display facts about the NetBackup server
+# Does not run if NetBackup Server software is not installed
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Display facts about the NetBackup server {{ nbu_playbook_type }}"
+  ansible.builtin.debug:
+    msg:
+      - "NetBackup Server - Hostname:                         {{ nbu_server_name }}"
+      - "NetBackup Server - Action:                           {{ nbu_server_status }}"
+      - "NetBackup Server - Version ('Current'):              {{ nbu_server_version_current }}"
+      - "NetBackup Server - Version ('New'):                  {{ nbu_server_version_proposed }}"
+  when:
+    - ( nbu_server_status == "upgrade" )
+
+# Display facts about the NetBackup Server
+# Runs only when NetBackup Server software is not installed
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Display facts about the NetBackup server {{ nbu_playbook_type }}"
+  ansible.builtin.debug:
+    msg:
+      - "NetBackup Server - Hostname:                         {{ nbu_server_name }}"
+      - "NetBackup Server - Action:                           {{ nbu_server_status }}"
+      - "NetBackup Server - Version ('New'):                  {{ nbu_server_version_proposed }}"
+  when:
+    - ( nbu_server_status == "install" )
+
+- name: Ansible::Log.info
+  ansible.builtin.debug:
+    msg: "Installed NetBackup server version ({{ nbu_server_rpm_version }}) is up-to-date"
+  when: ( nbu_server_status == "none" )
+
+# License key should be present for nbu_version <= 10.0.0.1. Because its required in answer file.
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> License key validation"
+  block:
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Verify license key is provided or not for version(<= 10.0.0.1)"
+      assert:
+        that: nbu_license_key_ans | length >= 46
+        fail_msg: "ERROR - The NBU license key is required for version {{ nbu_version }}, therefore exit immediately."
+        quiet: true
+  when: "nbu_version is version_compare('10.0.0.1', '<=')"
+
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Include tasks for space check "
+  ansible.builtin.include_role:
+     name: 'generic/nbu_space_check'
+  when: ( nbu_server_status == "install" ) or ( nbu_server_status == "upgrade" )
+
+# EOF

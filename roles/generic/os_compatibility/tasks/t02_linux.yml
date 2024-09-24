@@ -1,0 +1,33 @@
+# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+
+# These tasks will perform some OS related checks on the NetBackup server.
+# If any checks fail, the workflow will fail so the problem can be recified prior to
+# commencing the NetBackup server upgrade.
+- name: "NBU-OS-COMPATIBILITY -> Linux Media and Primary OS verification"
+  block:
+    - name: "NBU-OS-COMPATIBILITY -> Verify the local hosts file has IPv4 line containing '127.0.0.1 localhost'"
+      ansible.builtin.shell: ( grep "127.0.0.1" "{{ os_file_hosts }}" )
+      changed_when: false
+      register: hosts_check_ipv4
+      failed_when: "'localhost' not in hosts_check_ipv4.stdout"   
+
+    - name: "NBU-OS-COMPATIBILITY -> Verify the local hosts file has IPv6 line containing '::1 localhost'"
+      ansible.builtin.shell: ( grep "::1" "{{ os_file_hosts }}" )
+      changed_when: false
+      register: hosts_check_ipv6
+      failed_when: "'localhost' not in hosts_check_ipv6.stdout"
+
+    - name: "NBU-OS-COMPATIBILITY -> Verify the local hosts file has correct permissions to allow all users to read it"
+      ansible.builtin.shell: ( stat -c '%a' "{{ os_file_hosts }}" )
+      changed_when: false
+      register: hosts_check_permissions
+      failed_when: "'644' not in hosts_check_permissions.stdout"
+
+    - name: "NBU-OS-COMPATIBILITY -> Verify the NetBackup database is not located on BTRFS filesystem"
+      ansible.builtin.shell: ( mount | grep {{ os_dir_nbu_db }} | grep btrfs )
+      changed_when: false
+      register: db_mount_btrfs
+      failed_when: db_mount_btrfs == 0
+  when:
+   - ( nbu_role == "primary") or ( nbu_role == "master") or ( nbu_role == "media")
+# EOF

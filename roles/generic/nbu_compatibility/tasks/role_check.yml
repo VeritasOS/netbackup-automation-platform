@@ -1,0 +1,18 @@
+# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+
+- name: "NBU-ROLE-CHECK -> Fail if target host machine has different role installed other than the playbook role"
+  block:
+    - name: "NBU-ROLE-CHECK -> Fail if target host machine has different role installed other than the playbook role"
+      fail:
+        msg: "This machine has NetBackup {{ nbu_detected_role }} installed . Installing this Playbook on {{ nbu_detected_role }} would cause a significant outage."
+      when:
+        - nbu_role is defined
+        - nbu_role != nbu_detected_role
+        - nbu_detected_role != "NOT_FOUND"
+
+    - name: "NBU-ROLE-CHECK -> Check if target host machine doesn't have any NetBackup Software installed during upgrade"
+      fail:
+        msg: "This machine doesn't have any Netackup Software installed"
+      when: 
+        - nbu_detected_role == "NOT_FOUND" 
+        - nbu_playbook_type == "upgrade"

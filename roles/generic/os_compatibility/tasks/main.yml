@@ -6,8 +6,24 @@
 ####  - OS related changes                                                ####
 ##############################################################################
 
+- name: "NBU-OS-COMPATIBILITY -> Verify the OS distribution is compatible with NetBackup Version"
+  ansible.builtin.assert:  
+    that: (ansible_os_family == 'Windows') or (ansible_os_family == 'RedHat') or (ansible_os_family == 'Suse')
+    success_msg: "PASS - Operating system distribution is compatible - OS distribution: {{ ansible_os_family }}"
+    fail_msg: "ERROR - Incompatible OS Distribution - Detected OS Distribution is {{ ansible_os_family }}"
+    quiet: true
+
 # Import required tasks - OS compatibility and OS verification
-- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Load required tasks for NetBackup Client {{ nbu_playbook_type }}"
-  ansible.builtin.include_tasks: t01_{{ansible_os_family|lower}}_compatibility.yml
+- name: "NBU-OS-COMPATIBILITY -> Load NetBackup required tasks"
+  ansible.builtin.include_tasks: t01_{{ansible_os_family|lower}}.yml
+  when:
+   - nbu_playbook_type != "remove"
+
+# Import required tasks (All Linux) - OS compatibility and OS verification
+- name: "NBU-OS-COMPATIBILITY -> Load NetBackup required tasks"
+  ansible.builtin.include_tasks: t02_{{ansible_system|lower}}.yml
+  when:
+   - nbu_playbook_type != "remove"
+   - ansible_system == "Linux"
 
 # EOF

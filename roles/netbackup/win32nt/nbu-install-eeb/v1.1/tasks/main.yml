@@ -1,0 +1,78 @@
+# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+
+###########################################################
+#### nbu-eeb-install -> tasks -> main.yml ####
+###########################################################
+
+- name: "NBU-EEB-INSTALL -> NBU services stop block"
+  block:
+  # Check nbstop.exe and bpup.exe file exists or not
+  - name: "NBU-EEB-INSTALL-> Verify the nbstop and bpup files exists on NetBackup client and stop the NetBackup services"
+    win_stat:
+      path: "{{ netbackup_file }}"
+    register: file_exist_status_register
+    with_items:
+      - '{{ os_path_nbu_install }}\NetBackup\bin\nbstop.exe'
+      - '{{ os_path_nbu_install }}\NetBackup\bin\bpup.exe'
+    loop_control:
+      loop_var: netbackup_file
+
+  - name: "NBU-EEB-INSTALL-> Attempting to stop NetBackup services"
+    win_command: "nbstop.exe -k"
+    args:
+      chdir: "{{ os_path_nbu_install }}\\NetBackup\\bin"
+    failed_when: false
+    changed_when: false
+    register: nbstop_status_check_register
+    until: nbstop_status_check_register.rc | int == 0
+    delay: 5
+    retries: 3
+
+  # Install NetBackup EEBS for the specific NetBackup Version
+  - name: "NBU-EEB-INSTALL-> Include tasks for NetBackup EEB installation"
+    include_tasks: t01_base_patch_eeb.yml
+    loop: "{{ nbu_client_eeb_ordered[nbu_version]  }}"
+    when: nbu_client_eeb_ordered[nbu_version] is defined
+
+  always:
+  # Start the NetBackup daemons, if they are down
+  - name: "NBU-EEB-INSTALL-> Start NetBackup services"
+    win_command: "bpup.exe -S"
+    args:
+      chdir: "{{ os_path_nbu_install }}\\NetBackup\\bin"
+    failed_when: false
+    changed_when: false
+    no_log: false
+    when: file_exist_status_register.results[1].stat.exists
+
+- name: "NBU-EEB-INSTALL-> Check the existence of EEB-Marker path"
+  win_stat:
+    path: "{{ os_path_nbu_install }}\\Patch\\EEB-Marker"
+  no_log: true
+  register: eeb_marker_folder_check_register
+
+- name: "NBU-EEB-INSTALL-> Found the existence of EEB-Marker path"
+  block:
+    - name: "NBU-EEB-INSTALL-> Get the list of EEB-Markers"
+      win_command: cmd /q /c "for %f in ("*.ini") do (for /f "delims=_ tokens=1,2" %a in ('echo %~nf') do echo SET%a_EEB%b)"
+      args:
+        chdir: "{{ os_path_nbu_install }}\\Patch\\EEB-Marker"
+      register: eeb_marker_installed_list_register
+      changed_when: false
+      no_log: true
+      failed_when: false
+
+    - name: "NBU-EEB-INSTALL->  Get the list of installed EEBs"
+      win_command: cmd /q /c "for /f "delims=_ tokens=5,6" %a in ('findstr "Installed" History.log') do echo %a_%b"
+      args:
+        chdir: '{{ os_path_nbu_install }}\Patch'
+      register: list_of_eebs_installed_register
+      changed_when: false
+      failed_when: false
+
+    - name: "NBU-EEB-INSTALL-> Remove stale EEB-Marker entries"
+      include_tasks: t02_remove_stale_eeb_marker.yml
+      with_items: "{{ eeb_marker_installed_list_register.stdout_lines }}"
+      when: item not in list_of_eebs_installed_register.stdout_lines
+
+  when: ( eeb_marker_folder_check_register.stat.exists == true )

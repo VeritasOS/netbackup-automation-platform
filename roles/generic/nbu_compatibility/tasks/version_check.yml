@@ -1,0 +1,47 @@
+# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+# For certificate and upgrade playbook, if software is not installed, we don't want to proceed further.
+- name: "NBU-VERSION-CHECK -> Check whether NetBackup is installed on target host."
+  block:
+  - name: Ansible::Log.info
+    fail:
+      msg:  "This machine does not have any NetBackup software installed, hence can not proceed."
+    when:
+      - ansible_system == "Linux"
+      - netbackup_version_file_register.stat.exists == false
+      - (nbu_playbook_type == "certificate") or (nbu_playbook_type == "upgrade")
+
+# For certificate and upgrade playbook, if software is not installed, we don't want to proceed further.
+- name: "NBU-VERSION-CHECK -> Check whether NetBackup is installed on target host."
+  block:
+  - name: Ansible::Log.info
+    fail:
+      msg:  "This machine does not have any NetBackup software installed, hence can not proceed."
+    when:
+      - ansible_os_family == 'Windows'
+      - not netbackup_version_file_register.exists
+      - (nbu_playbook_type == "certificate") or (nbu_playbook_type == "upgrade")
+
+  - name: "NBU-VERSION-CHECK -> Check whether the nbu current installed version is same as proposed version"
+    block:
+    - name: Ansible::Log.info
+      fail:
+        msg:  "This machine has a different version {{ nbu_current_installed_version }} of NetBackup Client installed, therefore exit immediately."
+      when:
+        - nbu_current_installed_version is defined
+        - ( nbu_current_installed_version is version_compare(nbu_version,'>') or nbu_current_installed_version is version_compare(nbu_version,'<') )
+    when: 
+      - (nbu_playbook_type != "upgrade")
+
+      # Target host does not have any software installed or has higher version installed and trying to another lower version
+  - name: "NBU-VERSION-CHECK -> Check whether any NetBackup version is found installed"
+    block:
+    - name: Ansible::Log.info
+      fail:
+        msg:  "This machine has a higher version {{ nbu_current_installed_version }} of NetBackup is installed, therefore exit immediately."
+      when: 
+        - nbu_current_installed_version is defined
+        - nbu_current_installed_version is version_compare(nbu_version,'>')
+    when:
+      - nbu_playbook_type == "upgrade"
+  
+  

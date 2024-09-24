@@ -1,0 +1,13 @@
+# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+
+#####################################################
+#### Stage Packages Locally - ("Linux/Windows") ####
+#####################################################
+
+- name: "NBU-STAGE-PACKAGES -> Setup the netbackup repo"
+  ansible.builtin.include_tasks: t01_setup_netbackup_repo.yml
+
+- name: "NBU-STAGE-PACKAGES -> Stage NetBackup packages locally"
+  ansible.builtin.include_tasks: t02_stage_packages.yml
+
+# EOF

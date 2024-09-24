@@ -1,0 +1,56 @@
+# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+
+# Gather file system disk space usage
+- name: "NBU-STORAGE-COMPATIBILITY -> Get disk space information for {{ ansible_env.SystemDrive.split(':')[0] }} drive"
+  ansible.windows.win_shell:  "Get-PSDrive {{ ansible_env.SystemDrive.split(':')[0] }} | Select-Object -ExpandProperty Free | ForEach-Object { [Math]::Round($_ / 1MB) }"
+  register: nbu_system_path_register
+  no_log: true
+
+# Gather install path system disk space usage if set to non-default
+- name: "NBU-STORAGE-COMPATIBILITY -> Get disk space information for {{ os_path_nbu_base }} drive"
+  ansible.windows.win_shell:  "Get-PSDrive {{ os_path_nbu_base }} | Select-Object -ExpandProperty Free | ForEach-Object { [Math]::Round($_ / 1MB) }"
+  register: nbu_install_path_register
+  no_log: true
+  failed_when: false
+  when:
+   - os_path_nbu_base != ansible_env.SystemDrive.split(':')[0]
+
+- name: Ansible::Log.info -> Check if the install path drive exists
+  fail:
+    msg: "The '{{ os_path_nbu_install }}' path drive couldn't be found. A drive with the name '{{ os_path_nbu_base }}' does not exist."
+  when:
+   - os_path_nbu_base != ansible_env.SystemDrive.split(':')[0]
+   - nbu_install_path_register.rc != 0
+ 
+# Set file_system_array ['path':,'space_required':,'space_available':]
+- name: "NBU-STORAGE-COMPATIBILITY -> Space required in {{ ansible_env.SystemDrive.split(':')[0] }}"
+  set_fact:
+    file_system_array: "{{ file_system_array | default([]) + [ { 'path': ansible_env.SystemDrive.split(':')[0], 'space_required': nbu_path_install_space_validation[0].space_required_MB, 'space_available': nbu_system_path_register.stdout_lines[0] | int } ] }}"
+  no_log: true
+  when:
+   - os_path_nbu_base != ansible_env.SystemDrive.split(':')[0]
+
+- name: "NBU-STORAGE-COMPATIBILITY -> Space required in {{ os_path_nbu_base }}"
+  set_fact:
+    file_system_array: "{{ file_system_array | default([]) + [ { 'path': os_path_nbu_base, 'space_required': nbu_path_install_space_validation[1].space_required_MB, 'space_available': nbu_install_path_register.stdout_lines[0] | int } ] }}"
+  no_log: true
+  when:
+   - os_path_nbu_base != ansible_env.SystemDrive.split(':')[0]
+   
+- name: "NBU-STORAGE-COMPATIBILITY -> Space required in {{ ansible_env.SystemDrive.split(':')[0] }}"
+  set_fact:
+   file_system_array: "{{ file_system_array | default([]) + [ { 'path': ansible_env.SystemDrive.split(':')[0], 'space_required': nbu_path_install_space_validation[0].space_required_MB + nbu_path_install_space_validation[1].space_required_MB, 'space_available': nbu_system_path_register.stdout_lines[0] | int } ] }}"
+  no_log: true
+  when:
+   - os_path_nbu_base == ansible_env.SystemDrive.split(':')[0]
+
+# Perform disk space check of defined file_system_array
+- name: "NBU-STORAGE-COMPATIBILITY -> Verify the available disk space on required file systems"
+  assert:
+      that: "{{ item.space_available > item.space_required }}"
+      success_msg: "PASS - {{ item.path }} have required available disk space - {{ item.space_available }} MB free"
+      fail_msg: "FAILED - Insufficient disk space in {{ item.path }}. Required {{ item.space_required }} MB of free diskspace"
+      quiet: false
+  with_items: "{{ file_system_array }}"
+
+ # EOF

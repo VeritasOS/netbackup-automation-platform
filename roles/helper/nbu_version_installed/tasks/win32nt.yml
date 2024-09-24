@@ -1,0 +1,33 @@
+# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+
+# Verify whether the host machine has the NetBackup software installed
+# NetBackup Software - Base - Check whether the NetBackup client/primary/media is already installed
+- name: "NBU-VERSION-CHECK -> Verify what version of the NetBackup Software is currently installed"
+  win_reg_stat:
+    path: "{{ nbu_registry_path }}\\CurrentVersion"
+    name: VERSION
+  register: netbackup_version_file_register
+  
+# Determine the NetBackup Software installed version 
+# NetBackup Software - Base - Check whether the NetBackup Software is already installed
+- name: Set Fact and formatting of nbu version
+  block:
+    # NetBackup software - Set the current version of the NetBackup product as a fact
+    - name: "NBU-VERSION-CHECK -> Set the current NetBackup Version as Fact"
+      set_fact:
+        nbu_current_installed_version: "{{ netbackup_version_file_register.value }}"
+    
+    - name: "NBU-VERSION-CHECK -> Formatting NetBackup Version into x.x.x.x format"
+      ansible.builtin.set_fact:
+        nbu_current_installed_version: "{{ nbu_current_installed_version + '.' + '0' * (1 - (nbu_current_installed_version | regex_replace('.', '') | length) ) }}"
+      loop: "{{ range(3) | list }}"
+      when: 
+        - ( nbu_current_installed_version | regex_findall('\.') | length < 3 )
+
+    - name: Ansible::Log.info
+      ansible.builtin.debug:
+        msg: "The NetBackup software version ({{ nbu_current_installed_version }}) is currently installed."
+  when: 
+    - netbackup_version_file_register.value is defined
+
+# EOF

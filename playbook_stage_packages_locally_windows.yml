@@ -1,0 +1,26 @@
+# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+
+# NetBackup Stage Packages Locally
+- name: NETBACKUP -> Stage Packages Locally
+  gather_facts: true
+  hosts: all
+  pre_tasks:
+    - name: Retrieving host distribution
+      setup:
+        gather_subset:
+          - "!all"
+          - "!min"
+          - "distribution"
+    - name: "NBU-STAGE-PACKAGES -> Load configurable variables"
+      ansible.builtin.include_vars: "vars/win32nt.yml"
+      tags: ["always"]
+      no_log: True
+  roles:
+    - role: 'netbackup/win32nt'                   # Load netbackup default vars
+    - role: 'generic/is_nbu_version_supported'
+    - role: 'netbackup/common/stage-package-locally'
+  vars:
+    nbu_playbook_type: "stage"
+    nbu_role: "client"
+
+# EOF

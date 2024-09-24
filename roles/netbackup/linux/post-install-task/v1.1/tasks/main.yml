@@ -1,0 +1,15 @@
+# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+
+# Enable all policies and SLPs
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Enable all NetBackup and storage lifecycle policies"
+  ansible.builtin.shell:  ( cd {{ os_dir_nbu_backup }} && ./install_prep.pl -reactivate)
+  register: result_install_prep_deactivate
+  changed_when: false
+  when: ( nbu_role == "primary") or ( nbu_role == "master")
+
+# Upgrade Complete
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> NetBackup Server Upgrade"
+  ansible.builtin.debug:
+    msg: "Completed Succesfully"
+
+# EOF

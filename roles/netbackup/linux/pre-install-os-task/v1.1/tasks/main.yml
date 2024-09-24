@@ -1,0 +1,58 @@
+# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+
+# This workflow will perform pre-upgrade OS tasks
+
+# Set ulimit for nbwebsvc is not set
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Set OS ulimit for nbwebsvc user"
+  ansible.builtin.lineinfile:
+    dest: '{{ os_file_security_limits }}'
+    line: "{{ item }}"
+    create: yes
+  with_items:
+    - "{{ nbu_config_nbwebsvc_limit }}"
+  when: 
+   - ( nbu_role == "primary") or ( nbu_role == "master")
+
+# OS - Configure a new local group for NetBackup Web Services
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Add new local group for NetBackup Web Services Group - {{ nbu_webservices_group }}"
+  group:
+    name: '{{ nbu_webservices_group }}'
+  when:   
+    - "'primary' in nbu_role"
+
+# OS - Configure a new local group and user for NetBackup Web Services to group
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Add new local user and add it to NetBackup Web Services Group - {{ nbu_webservices_group }}"
+  user:
+    name: '{{ nbu_webservices_user }}'
+    comment: NetBackup Web Services
+    group: '{{ nbu_webservices_group }}'
+  when:   
+    - "'primary' in nbu_role"
+
+# OS - Configure a new local group for NetBackup Services to run under
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Add new local group for NetBackup Services Group - {{ nbu_services_group }}"
+  group:
+    name: '{{ nbu_services_group }}'
+    state: present
+  when:   
+    - "'primary' in nbu_role"
+
+# OS - Configure netbackup service account 
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Create new user for NetBackup Service Account"
+  user: 
+    name: '{{ nbu_services_user }}'
+    comment: NetBackup Service Account
+    groups: "{{ nbu_services_group }},{{ nbu_webservices_group }}"
+  when:   
+    - "'primary' in nbu_role"
+
+# # OS - Configure netbackup service account 
+# - name: -> Create new user for NetBackup Service Account
+#   user: 
+#     name: '{{ nbu_services_user }}'
+#     comment: NetBackup Service Account
+#     groups: "{{ nbu_services_group }}"
+#   when:   
+#     - "'media' in nbu_role"
+
+# EOF

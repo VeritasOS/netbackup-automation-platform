@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product Id="*"
+           Language="1033"
+           Manufacturer="Veritas Technologies LLC"
+           Name="Veritas NetBackup Client EEB - $(var.EEB_VER)"
+           Version="$(var.NB_VERSION)">
+
+    <Package InstallScope="perMachine" Compressed="yes" Platform="x64" InstallerVersion="200" />
+
+    <MediaTemplate EmbedCab="yes" />
+
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFiles64Folder">
+        <Directory Id="INSTALLDIR" Name="Veritas">
+          <Directory Id="NB_PATCH" Name="Patch">
+            <Directory Id="EEB_MARKER" Name="EEB-Marker">
+              <Component Id="ProductComponent" Win64="yes">
+                <File KeyPath="yes" Name="$(var.EEB_VER).ini" Source="$(var.SOURCE_PATH)\EEB-$(var.EEB_VER)"></File>
+                <IniFile Id="ProductCode" Action="createLine" Directory="EEB_MARKER" Section="Marker" Name="$(var.EEB_VER).ini" Key="ProductCode" Value="[ProductCode]" />
+              </Component>
+            </Directory>
+          </Directory>
+        </Directory>
+      </Directory>
+    </Directory>
+
+    <Feature Id="EEBFeature">
+      <ComponentRef Id="ProductComponent" />
+    </Feature>
+    <Property Id="ARPPRODUCTICON" Value="$(var.BASE_INSTALL_PATH)\NetBackup\NB_ARP.ico"/>
+    <Property Id="ARPNOREPAIR" Value="TRUE"/>
+    <Property Id="ARPNOMODIFY" Value="TRUE"/>
+  </Product>
+</Wix>

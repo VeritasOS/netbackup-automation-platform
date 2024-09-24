@@ -1,0 +1,23 @@
+# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+    
+- name: "NBU-OS-COMPATIBILITY  -> Windows verification"
+  block:
+    - name: "NBU-OS-COMPATIBILITY -> Create OS distribution version var"
+      set_fact:
+        os_version_major: "{{ ansible_distribution_version.split('.')[0] | int}}"
+        os_version_minor: "{{ ansible_distribution_version.split('.')[1] | int}}"
+
+    - name: "NBU-OS-COMPATIBILITY -> Create OS distribution version var"
+      set_fact:
+        os_version: "{{os_version_major}}.{{os_version_minor}}"
+
+    # Verify - OS Distribution Version
+    - name: "NBU-OS-COMPATIBILITY -> Verify the OS distribution version is compatible (>= {{os_version_supported_minimum}}) with NetBackup {{ nbu_role}} Version"
+      ansible.builtin.assert:
+        that: "os_version is version_compare(os_version_supported_minimum, '>=')"
+        success_msg: "PASS - Operating system distribution version is compatible - OS distribution version: {{ ansible_distribution_version }}"
+        fail_msg: "ERROR - Incompatible OS Distribution version - Detected OS Distribution Version is {{ ansible_distribution_version }}"
+        quiet: true
+  
+
+#EOF
