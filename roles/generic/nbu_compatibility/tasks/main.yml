@@ -1,0 +1,23 @@
+# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+
+- name: "NBU-VERSION-CHECK -> Gather facts for version status"
+  ansible.builtin.include_role:
+    name: 'helper/nbu_version_installed'
+
+- name: "NBU-VERSION-CHECK -> Include tasks for NetBackup version check"
+  ansible.builtin.include_tasks: "version_check.yml"
+
+- name: "NBU-ROLE-CHECK -> Gather facts for role status"
+  ansible.builtin.include_role:
+    name: 'helper/nbu_role_status'
+
+- name: "NBU-ROLE-CHECK -> Include tasks for NetBackup role check"
+  ansible.builtin.include_tasks: "role_check.yml"
+
+- name: "NBU-COMPATIBILITY -> Include tasks for NetBackup compatibility check"
+  ansible.builtin.include_tasks: "primary_version_check_{{ansible_system|lower}}.yml"
+  when:
+    - ( nbu_playbook_type is defined )
+    - ( nbu_playbook_type == "install" ) or ( nbu_playbook_type == "upgrade")
+
+# EOF

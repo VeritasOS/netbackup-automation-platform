@@ -1,0 +1,82 @@
+# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+
+# OS Path
+nbu_tmp_dir: C:\Windows\Temp
+os_path_nbu_install: C:\Program Files\Veritas
+os_path_nbu_base: "{{ os_path_nbu_install.split(':')[0] }}"
+nbu_registry_path: HKLM:\SOFTWARE\Veritas\NetBackup
+nbu_client_product_name: "NetBackup Client"
+nbu_media_product_name: "NetBackup Media Server"
+nbu_primary_product_name: "NetBackup Primary Server"
+nbu_path_nbcertcmd: "{{ os_path_nbu_install }}\\NetBackup\\bin\\nbcertcmd.exe"
+
+# Disk Space variables
+nbu_path_install_space_validation:
+  - { path: "{{nbu_tmp_dir}}", space_required_MB: 5650 }
+  - { path: "{{os_path_nbu_base}}", space_required_MB: 1024 }
+
+# Extra parameters to setup.exe w.r.t VCREDIST install preference for nbu_version>=10.4.0.0
+setup_vcredist_params_default: "/STOP_NB_BEFORE_VCREDIST:'YES' /VCREDIST_ATTEMPT_PREFERENCE:'YES' /VCREDIST_RESTART_PREFERENCE:'PROCEED'"
+
+# Windows DVD image name for each NetBackup release.
+nbu_pkgs_ordered_list:
+  10.5.0.0: 'NetBackup_10.5_Win'
+  10.4.0.1: 'NetBackup_10.4.0.1_Win'
+  10.4.0.0: 'NetBackup_10.4_Win'
+  10.3.0.1: 'NetBackup_10.3.0.1_Win'
+  10.3.0.0: 'NetBackup_10.3_Win'
+  10.2.0.1: 'NetBackup_10.2.0.1_Win'
+  10.2.0.0: 'NetBackup_10.2_Win'
+  10.1.1.0: 'NetBackup_10.1.1_Win'
+  10.1.0.0: 'NetBackup_10.1_Win'
+  10.0.0.1: 'NetBackup_10.0.0.1_Win'
+  10.0.0.0: 'NetBackup_10.0_Win'
+  9.1.0.1: 'NetBackup_9.1.0.1_Win'
+  9.1.0.0: 'NetBackup_9.1_Win'
+  9.0.0.0: 'NetBackup_9.0_Win'
+  8.3.0.2: 'NetBackup_8.3.0.2_Win'
+  8.3.0.1: 'NetBackup_8.3.0.1_Win'
+  8.3.0.0: 'NetBackup_8.3_Win'
+
+os_version_supported_minimum: 6.2
+
+# Software Repo
+nbu_repo_force: no
+nbu_repo_validate_certs: no
+
+# EEB Patch
+nbu_eeb_file_base: "{{ item | basename }}"                      # Extract filename from EEB path
+nbu_eeb_filename: "{{ item.value.package | basename }}"
+nbu_eeb_file_id: "{{ nbu_eeb_file_base.split('_')[1] }}"        # Extract EEB ET-ID from EEB path
+nbu_eeb_file_ver: "{{ nbu_eeb_file_base.split('_')[2] }}"       # Extract EEB Version from EEB path
+eeb_name: "{{ nbu_eeb_file_base.split(' ')[0] }}"               # Extract EEB ET-ID from EEB path
+eeb_execution_flag: "{{ nbu_eeb_file_base.split(' ')[1] |default('') }}"     # Extract EEB Version from EEB path
+nbu_eeb_marker_name: "Veritas NetBackup Client EEB ({{ nbu_eeb_file_id }}_{{ nbu_eeb_file_ver }})"
+
+# Certificate management resources
+nbu_certificates_file_dir: certinfo                             # newly created directory for keeping cert management files
+nbu_CACertificate_File: NBU_Fingerprint.txt                     # name of CACertificate file
+nbu_authorization_token_file: NBU_Token.txt                     # name of Authorization token file
+nbu_primary_server_ans_found: false
+nbu_certificates_file_path: "{{ os_path_nbu_install }}\\NetBackup\\Temp"      # NBU Installer path where certificate deployment dir will be created
+nbu_detected_role: "NOT_FOUND"
+
+# NB web service vars
+nbu_api_port: '1556'
+
+# NB Configuration variables
+ignore_primary_connectivity_failures: false                     # If using a masked primary for initial install, set the value to true to ignore connectivity validation and continue execution. 
+skip_primary_version_compatibility_check: false                 # Skip Primary server version compatibility check
+# Set this to true if packages are cached locally independently or by using staging playbook to avoid downloading the pakcages at install-time.
+install_pkgs_from_local_cache: false
+
+#List of directories to be removed
+nbu_directory_list_to_be_removed:
+  - "{{ os_path_nbu_install }}\\Help"
+  - "{{ os_path_nbu_install }}\\msg"
+  - "{{ os_path_nbu_install }}\\NetBackup"
+  - "{{ os_path_nbu_install }}\\Patch"
+  - "{{ os_path_nbu_install }}\\pdde"
+  - "{{ os_path_nbu_install }}\\Security"
+
+#EOF

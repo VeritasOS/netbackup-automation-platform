@@ -1,0 +1,64 @@
+#$Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved. $
+
+#####################################################################
+#### nbu-client-remove -> tasks -> t01_pre_remove_check.yml ####
+#####################################################################
+
+# These tasks will verify the workflow is being executed on a current NetBackup client
+# Define the playbook removal time as variable
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Start NetBackup Removal pre-checks"
+  ansible.builtin.set_fact:
+    status: "started"
+    install_time: "{{ lookup('pipe','date +%Y%m%d%H%M%S') }}"
+
+# Verify whether the NetBackup client has the NetBackup server software installed
+# The install will not be performed if the client is a NetBackup server
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Verify whether NetBackup server software is currently installed"
+  ansible.builtin.include_role:
+    name: 'generic/nbu_compatibility'
+
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Verify whether NetBackup client software is currently installed"
+  win_reg_stat:
+    path: "{{ nbu_registry_path }}\\CurrentVersion"
+    name: Install Type
+  register: nbu_install_type_register
+
+# NetBackup Client Software - Base - Check whether the NetBackup Client is already installed
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Verify what version of the NetBackup client software is currently installed"
+  win_reg_stat:
+    path: "{{ nbu_registry_path }}\\CurrentVersion"
+    name: VERSION
+  register: nbu_client_version_register
+  when:
+    - nbu_install_type_register.exists
+    - nbu_install_type_register.value == nbu_client_product_name
+
+# Determine the NetBackup Client installed software version 
+# NetBackup Client Software - Base - Check whether the NetBackup Client is already installed
+- name: Set Fact and formatting of nbu version
+  block:
+    # NetBackup client software - Set the current version of the NetBackup client as a fact
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Set the current NetBackup Client Version as Fact"
+      set_fact:
+        nbu_client_current_version: "{{ nbu_client_version_register.value }}"
+    
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Formatting NetBackup Version into x.x.x.x format"
+      ansible.builtin.set_fact:
+        nbu_client_current_version: "{{ nbu_client_current_version + '.' + '0' * (1 - (nbu_client_current_version | regex_replace('.', '') | length) ) }}"
+      loop: "{{ range(3) | list }}"
+      when: 
+        - ( nbu_client_current_version | regex_findall('\.') | length < 3 )
+        - ( nbu_install_type_register.value == nbu_client_product_name )
+  when: 
+    - nbu_client_version_register.value is defined
+
+# If NetBackup 10.1.1 Client is not present in Registry, exit with the message saying that the NetBackup 10.1.1 is not installed
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Ansible::Log.info"
+  fail:
+    msg: "NetBackup Client installed version {{ nbu_client_current_version }} is different from proposed Version ({{nbu_version}})"
+  when:
+    - ( nbu_client_current_version is defined ) 
+    - ( nbu_client_current_version is version(nbu_version, '>') or nbu_client_current_version is version(nbu_version, '<') )
+     
+
+

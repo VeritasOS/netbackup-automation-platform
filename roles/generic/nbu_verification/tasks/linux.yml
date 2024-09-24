@@ -1,0 +1,155 @@
+# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+
+# These tasks validate the certificate-specific configurations that you have provided and shows a report of all successful and failed validations.
+# If any checks fail, the workflow will fail so the problem can be recified prior to
+# commencing the NetBackup server upgrade.
+
+- name: "NBU-VERIFICATION -> Verify NetBackup file {{ os_file_nbu_nbcertcmd }} existence status"
+  ansible.builtin.stat:
+    path: "{{ os_file_nbu_nbcertcmd }}"
+  register: netbackup_nbcertcmd_file_register
+  failed_when: false
+  changed_when: false
+
+# Get the NetBackup primary server hostname from the bp.conf file
+- name: "NBU-VERIFICATION -> Get Primary Server hostname from bp.conf file"
+  block:
+    - name: "NBU-VERIFICATION -> Get Primary Server hostname"
+      ansible.builtin.shell: ( cat  {{ os_file_nbu_bpconf }} | egrep -v "^#" | grep SERVER | awk 'NR==1 {print $3}' )
+      changed_when: false
+      register: nbu_primary_server_bpconf_register
+
+    - name: "NBU-VERIFICATION -> Set SERVER to value from bp.conf"
+      ansible.builtin.set_fact:
+        nbu_primary_server_ans: "{{ nbu_primary_server_bpconf_register.stdout }}"
+      when: nbu_primary_server_bpconf_register.stdout != ""
+  when: nbu_playbook_type == "upgrade"
+
+- name: "NBU-VERIFICATION -> Verify connectivity with the NetBackup primary server's ({{ nbu_primary_server_ans }}) web service."
+  # Continue running respective CLIs only if the last one is sucessfull.
+  ansible.builtin.shell: "{{ os_file_nbu_nbcertcmd }} {{ item }}"
+  register: netbackup_commands_rc_register 
+  failed_when: false
+  no_log: true
+  loop:
+   - "-ping -server {{ nbu_primary_server_ans }}"
+   - "-getCRL -server {{ nbu_primary_server_ans }}"
+   - "-hostselfcheck -server {{ nbu_primary_server_ans }}"
+  when: 
+   - netbackup_nbcertcmd_file_register.stat.exists
+   - not (netbackup_commands_rc_register.rc|d(0))
+
+- name: "NBU-VERIFICATION -> Setting netbackup commands result facts"
+  ansible.builtin.set_fact:
+    netbackup_failed_rc: "{{ item.rc }}"
+    netbackup_failed_cmd: "{{ item.cmd }}"
+    netbackup_failed_stderr: "{{ item.stderr }}"
+  with_items: "{{ netbackup_commands_rc_register.results }}"
+  when: 
+    - item.changed
+    - (item.rc|d(0))
+  no_log: true
+    
+- name: "NBU-VERIFICATION -> Verification failed for ({{ netbackup_failed_cmd }})"
+  ansible.builtin.fail:
+    msg: "{{ netbackup_failed_stderr }}"
+  ignore_errors: "{{ ignore_primary_connectivity_failures }}"
+  when: 
+    - netbackup_failed_rc | default(0)
+
+- name: "NBU-VERIFICATION -> Verification completed successfully"
+  ansible.builtin.debug:
+    msg: "Primary Server connectivity with {{ nbu_primary_server_ans }} has been successfully verified."
+  when: 
+    - not netbackup_failed_rc | default(0)
+
+- name: "NBU-VERIFICATION -> Verify NetBackup files existence status"
+  ansible.builtin.stat:
+    path: "{{ netbackup_file }}"
+  register: netbackup_files_register
+  with_items:
+    - "{{ os_file_nbu_nbemmcmd }}"
+    - "{{ os_file_nbu_bpdbjobs }}"
+    - "{{ os_file_nbu_nbauditreport }}"
+    - "{{ os_file_nbu_bpimagelist }}"
+    - "{{ os_file_nbu_nbhostidentity }}"
+  loop_control:
+    loop_var: netbackup_file
+  failed_when: false
+  no_log: true
+  changed_when: false
+
+- name: "NBU-VERIFICATION -> Set Pre/Post Install retries"
+  set_fact: 
+    install_retries: "{{ '2' if install_phase | default ('PRE') == 'POST' else '0' }}"
+
+# Check 1 - Check NetBackup EMM Database is responding. 
+- name: "NBU-VERIFICATION -> Check NetBackup EMM Database is responding"
+  ansible.builtin.shell: ( "{{ os_file_nbu_nbemmcmd }}" -listhosts )
+  register: nbemmcmd_result
+  retries: "{{ install_retries }}"
+  delay: 5
+  until: nbemmcmd_result.rc == 0
+  changed_when: nbemmcmd_result.rc != 0
+  ignore_errors: true
+  when: 
+    - netbackup_files_register.results[0].stat.exists
+
+- name: "NBU-VERIFICATION -> Checks for Primary/Master Server "
+  block: 
+    # Check 2 - Check NetBackup Jobs Database.
+    - name: "NBU-VERIFICATION -> Check NetBackup Jobs Database"
+      ansible.builtin.shell: "{{ os_file_nbu_bpdbjobs }}"
+      register: bpdbjobs_result
+      retries: "{{ install_retries }}"
+      delay: 5
+      until: bpdbjobs_result.rc == 0
+      changed_when: bpdbjobs_result.rc != 0
+      ignore_errors: true
+      when:
+      - netbackup_files_register.results[1].stat.exists 
+      
+    # Check 3 - Check NetBackup Audit Report.
+    - name: "NBU-VERIFICATION -> Check NetBackup Audit Report"
+      ansible.builtin.shell: "{{ os_file_nbu_nbauditreport }}"
+      register: nbauditreport_result
+      retries: "{{ install_retries }}"
+      delay: 5
+      until: nbauditreport_result.rc == 0
+      changed_when: nbauditreport_result.rc != 0
+      ignore_errors: true
+      when:
+      - netbackup_files_register.results[2].stat.exists
+      
+    # Check 4 - Verify if a NetBackup catalog backup has been succesful in last 24 hours
+    # Fail if there's no recent NBU Catalog backup
+    - name: "NBU-VERIFICATION -> Verify whether NetBackup catalog backup has completed succesfully in last 24 hours"
+      ansible.builtin.shell: ( "{{ os_file_nbu_bpimagelist }} -idonly -hoursago 24 -pt NBU-Catalog | head -1 | awk '{ print $8}' | cut -d "_" -f 2 ")
+      changed_when: false
+      register: nbu_check_catbkp
+      failed_when: ( nbu_check_catbkp.rc == 227 ) or (nbu_check_catbkp.stderr == 'no entity was found' )
+      when:
+      - netbackup_files_register.results[3].stat.exists
+        
+    # Check 5 - Verify the DR file passphrase is known
+    # Fail if the DR password is not correct
+    - name: "NBU-VERIFICATION -> Verify the NetBackup catalog DR file passphrase if known if the NetBackup catalog needs to be recovered"
+      ansible.builtin.shell: ( echo "{{ nbu_dr_passphrase }}" | "{{ os_file_nbu_nbhostidentity }}" -testpassphrase -infile {{ os_dir_nbu_drfiles }}/*{{ nbu_check_catbkp.stdout }}*.drpkg )
+      changed_when: false
+      register: nbu_check_drcheck
+      failed_when: "'Command is successfully carried out' not in nbu_check_drcheck.stdout"
+      when:
+      - netbackup_files_register.results[4].stat.exists
+      
+    # Check 6 - Verify the NetBackup CA key strength
+    # Fail if the key strength is not 2048 bit strength.
+    - name: "NBU-VERIFICATION -> Verify the NetBackup CA Key Strength is 2048 bit"
+      ansible.builtin.shell: ( "{{ os_file_nbu_nbcertcmd }}" -listcertdetails | grep "Key Strength" )
+      changed_when: false
+      register: nbu_check_castrength_register
+      failed_when: "'             Key Strength : 2048' not in nbu_check_castrength_register.stdout"
+      when:
+      - netbackup_nbcertcmd_file_register.stat.exists
+  when:
+    - ( nbu_role == "primary") 
+# EOF

@@ -1,0 +1,222 @@
+# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved. $
+
+#############################################################
+#### nbu-client-remove -> tasks -> t02_base_remove.yml ####
+#############################################################
+
+# Define the install start time as variable
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Start NetBackup Removal Playbook"
+  ansible.builtin.set_fact:
+    status: "started"
+    install_time: "{{ lookup('pipe','date +%Y%m%d%H%M%S') }}"
+
+# Verify whether the NetBackup client has the NetBackup server software installed
+# The install will not be performed if the client is a NetBackup server
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Verify whether NetBackup server software is currently installed"
+  ansible.builtin.include_role:
+    name: 'generic/nbu_compatibility'
+
+# Check nbstop.exe file exists or not
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Verify the nbstop exists on NetBackup client"
+  win_stat:
+    path: "{{ os_path_nbu_install }}\\NetBackup\\bin\\nbstop.exe"
+  register: file_exist_status_register
+
+# Stop NetBackup services before proceeding further with removal.
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Attempting to stop NetBackup services"
+  win_command: "nbstop.exe -k"
+  args:
+    chdir: "{{ os_path_nbu_install }}\\NetBackup\\bin"
+  failed_when: false
+  changed_when: false
+  register: nbstop_status_check_register
+  until: nbstop_status_check_register.rc | int == 0
+  delay: 5
+  retries: 3
+  when: file_exist_status_register.stat.exists
+
+# Look for installed EEBs and uninstall them.
+# Check whether history.log file exists or not
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Check the existence of History.log"
+  win_stat:
+    path: "{{ os_path_nbu_install }}\\Patch\\History.log"
+  register: history_log_check_register
+
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Found presense of History.log"
+  block:
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} ->  Get the list of installed EEBs"
+      win_command: cmd /q /c "for /f "delims=_ tokens=4,5,6" %a in ('findstr "Installed" History.log') do echo %a_%b_%c"
+      args:      
+        chdir: '{{ os_path_nbu_install }}\Patch'
+      register: list_of_eebs_installed_register
+      changed_when: false
+      failed_when: false
+
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> List of EEBs found installed"
+      debug:
+        msg: "{{ item }}"
+      with_items: "{{ list_of_eebs_installed_register.stdout_lines }}"
+
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Get the list of installed EEBs path"
+      win_command: cmd /q /c "for /f "delims=_ tokens=2,3,4,5,6" %a in ('findstr "Installed" History.log') do (for %f in ("{{ os_path_nbu_install }}\Patch\EEB\%a_%b\%c_%d_%e_x64\eebinstaller*.exe") do echo "%f")"
+      args:      
+        chdir: '{{ os_path_nbu_install }}\Patch'
+      register: path_list_of_eebs_installed_register
+      changed_when: false
+      failed_when: false
+      no_log: true
+
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Remove installed EEBs"
+      win_command: "{{ item }} -uninstall -no_questions"
+      with_items: "{{ path_list_of_eebs_installed_register.stdout_lines }}"
+      no_log: true
+      changed_when: false
+      failed_when: false
+  when : ( history_log_check_register.stat.exists == true )
+
+# Look for installed EEB Markers and uninstall them.
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Check the existence of EEB-Marker path"
+  win_stat:
+    path: "{{ os_path_nbu_install }}\\Patch\\EEB-Marker"
+  no_log: true
+  register: eeb_marker_folder_check_register
+
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Found presence of EEB-Marker path"
+  block:
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Get the list of EEB-Markers"
+      win_command: cmd /q /c "for %f in ("*.ini") do (for /f "delims=_ tokens=1,2" %a in ('echo %~nf') do echo SET%a_EEB%b)"
+      args:
+        chdir: "{{ os_path_nbu_install }}\\Patch\\EEB-Marker"
+      register: eeb_marker_installed_list_register
+      changed_when: false
+      no_log: true
+      failed_when: false
+
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Remove EEB-Markers"
+      block:
+        - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> List of EEB-Markers found installed"
+          debug:
+            msg: "{{ item }}"
+          with_items: "{{ eeb_marker_installed_list_register.stdout_lines }}"
+
+        - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Get the list of EEB-Markers GUIDs to remove"
+          win_command: cmd /q /c "for %f in ("*.ini") do (for /f "delims== tokens=2" %a in ('findstr "ProductCode" %f') do echo %a)"
+          args:
+            chdir: '{{ os_path_nbu_install }}\Patch\EEB-Marker'
+          register: product_code_list_of_eebs_markers_register
+          changed_when: false
+          no_log: true
+          failed_when: false
+
+        - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Remove installed EEB-Markers"
+          win_package:
+            product_id: '{{ item }}'
+            state: absent
+          with_items: "{{ product_code_list_of_eebs_markers_register.stdout_lines }}"
+      when: eeb_marker_installed_list_register.stdout_lines
+  when: ( eeb_marker_folder_check_register.stat.exists == true )
+
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Get the installed NetBackup client GUID"
+  win_reg_stat:
+    path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Veritas NetBackup Client
+    name: UninstallString
+  register: uninstall_path_register
+
+- block:
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> set_fact installed NetBackup client uninstallation path"
+      set_fact:
+        actual_uninstallation_path: "{{  uninstall_path_register.value | regex_replace('\\\\[^\\\\]+$', '') | regex_replace('^\"', '') }}"
+
+    # NetBackup - Remove NetBackup Client Software using setup.exe
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> {{ nbu_playbook_type }} NetBackup Client Software (Windows)"
+      win_command: "setup.exe /CLIENT -s -u /RESPFILE:SILENT.resp"
+      args:
+        chdir: '{{ actual_uninstallation_path }}'
+      register: nbuUninstall_check_status
+      failed_when: false
+  when: uninstall_path_register.exists
+
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Check whether Netbackup Client on Windows is successfully removed"
+  block:
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Netbackup Client Uninstall Status on Windows"
+      ansible.builtin.debug:
+        msg: "Uninstallation Step Successful with removal Status: {{ nbuUninstall_check_status.rc }}"
+      when: nbuUninstall_check_status.rc == 0 
+
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Netbackup Client Uninstall Status on Windows"
+      ansible.builtin.debug:
+        msg: "Uninstallation Step Successful with removal Status: {{ nbuUninstall_check_status.rc }}. Requires reboot - Please reboot the Client post completion"
+      when: ( nbuUninstall_check_status.rc == 3010 ) and ( nbuUninstall_check_status.reboot_required == true )
+
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Netbackup Client Uninstall Status on Windows"
+      ansible.builtin.debug:
+        msg: "The installer has initiated a restart. This message indicates success with Uninstall Status: {{ nbuUninstall_check_status.rc }}"
+      when: ( nbuUninstall_check_status.rc == 1641 ) and ( nbuUninstall_check_status.reboot_required == true )
+
+    - name: Ansible::Log.info
+      fail:
+        msg:  "Netbackup Client Uninstall failed with Error: {{ nbuUninstall_check_status.rc }}. Please lookup the error code : https://learn.microsoft.com/en-us/windows/win32/msi/error-codes?redirectedfrom=MSDN"
+      when:
+        - ( nbuUninstall_check_status.rc != 0 )
+        - ( nbuUninstall_check_status.rc != 1641 )
+        - ( nbuUninstall_check_status.rc != 3010 )
+
+  when: nbuUninstall_check_status.changed
+
+# Stop VxLogServer before removing downloaded NetBackup Installer files
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Stop VxLogServer process"
+  win_command: cmd /q /c "taskkill /IM "VxLogServer.exe" /F"
+  changed_when: false
+  no_log: true
+  failed_when: false
+
+# Remove Downloaded NetBackup Installer
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Get directories for NetBackup Client Installer"
+  win_find:
+    paths: "{{ nbu_tmp_dir }}"
+    patterns: ['NetBackup_*']
+  register: wildcard_files_to_delete
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Delete NetBackup Client Installer files"
+  win_file:
+    path: "{{ item }}"
+    state: absent
+  ignore_errors: true
+  with_items: 
+    - "{{wildcard_files_to_delete.files[0].path}}"
+  when: 
+    - wildcard_files_to_delete.files | length > 0
+
+# Remove Downloaded NetBackup Installer
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Get directories for NetBackup Client Installer"
+  win_find:
+    paths: "{{ nbu_tmp_dir }}"
+    patterns: ['NetBackup_*']
+    file_type: "directory"
+  register: wildcard_directories_to_delete
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Delete NetBackup Client Installer directory"
+  win_file:
+    path: "{{ item }}"
+    state: absent
+  ignore_errors: true
+  with_items: 
+    - "{{wildcard_directories_to_delete.files[0].path}}"
+  when: 
+    - wildcard_directories_to_delete.files | length > 0
+
+# At the end lets remove all known directories and files from the system
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Delete NetBackup Windows Client Directories"
+  win_file:
+    path: "{{ item }}"
+    state: absent
+  ignore_errors: true
+  with_items: 
+    - "{{ nbu_directory_list_to_be_removed }}"
+
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Delete NetBackup Installer from Cache"
+  win_file:
+    path: '{{ actual_uninstallation_path }}'
+    state: absent
+  ignore_errors: true
+  when: uninstall_path_register.exists
+
+# EOF

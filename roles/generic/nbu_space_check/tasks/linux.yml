@@ -1,0 +1,59 @@
+# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+
+# Perform disk space validation for the required file systems
+# Gather file system disk space usage
+- name: "NBU-STORAGE-COMPATIBILITY -> set os_path_space_validation fact based on playbook type"
+  ansible.builtin.set_fact:
+    os_path_space_validation: "{{ os_path_install_space_validation[nbu_role] }}" 
+  when: nbu_playbook_type == "install"
+
+- name: "NBU-STORAGE-COMPATIBILITY -> set os_path_space_validation fact based on playbook type"
+  ansible.builtin.set_fact:
+    os_path_space_validation: "{{ os_path_upgrade_space_validation[nbu_role] }}"
+  when: nbu_playbook_type == "upgrade"
+
+- name: "NBU-STORAGE-COMPATIBILITY -> Get disk space information for each path"
+  ansible.builtin.shell: df -m --output=source,avail,target {{ item.path }}
+  register: path_mount_register
+  with_items: "{{ os_path_space_validation }}"
+  no_log: false
+  changed_when: false
+
+# Create an complete array with elements (path, mount, space_required & space_available)
+- name: "NBU-STORAGE-COMPATIBILITY -> Add source mount to each path"
+  ansible.builtin.set_fact:
+    os_path_space_validation_array: "{{ os_path_space_validation_array | default([]) + [ { 'path': item.item.path , 'mount': item.stdout_lines[1].split()[2], 'space_required': item.item.space_required_MB, 'space_available': item.stdout_lines[1].split()[1] } ] }}"
+  loop: "{{ path_mount_register.results }}"
+  no_log: True
+
+- name: "NBU-STORAGE-COMPATIBILITY -> Space required in {{ os_path_root_file_system }}"
+  ansible.builtin.set_fact:
+    space_required_root_path: "{{ space_required_root_path | default() | int + item.space_required }}"
+  loop: "{{ os_path_space_validation_array }}"
+  when: item.mount == os_path_root_file_system
+  no_log: True
+
+# Set file_system_array ['path':,'space_required':,'space_available']
+# Run through the entire list of paths and find space required for '/'
+- name: "NBU-STORAGE-COMPATIBILITY -> Space required in {{ os_path_root_file_system }}"
+  ansible.builtin.set_fact:
+    file_system_array: "{{ [ { 'path': os_path_root_file_system, 'space_required': space_required_root_path | int, 'space_available': item.space_available | int } ] }}"
+  loop: "{{ os_path_space_validation_array }}"
+  when: item.mount == os_path_root_file_system
+
+# Run through the entire list of paths and find space required for specific mounted filesystem
+- name: "NBU-STORAGE-COMPATIBILITY -> Space required in specific mounted filesystem"
+  ansible.builtin.set_fact:
+    file_system_array: "{{ file_system_array | default([]) + [ { 'path': item.mount, 'space_required': item.space_required | int, 'space_available': item.space_available | int } ] }}"
+  loop: "{{ os_path_space_validation_array }}"
+  when: item.mount != os_path_root_file_system
+
+- name: "NBU-STORAGE-COMPATIBILITY -> Verify the available disk space on required file systems"
+  ansible.builtin.assert:
+      that: "{{ item.space_available > item.space_required }}"
+      success_msg: "PASS - {{ item.path }} have required available disk space - {{ item.space_available }} MB free"
+      fail_msg: "FAILED - Insufficient disk space in {{ item.path }}. Required {{ item.space_required }} MB of free diskspace"
+      quiet: false
+  with_items: "{{ file_system_array }}"
+     
+ # EOF

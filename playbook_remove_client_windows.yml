@@ -1,0 +1,28 @@
+# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+
+# NetBackup Client Remove - Windows
+- name: NETBACKUP -> CLIENT REMOVE ("Windows")
+  gather_facts: true
+  hosts: all
+
+  pre_tasks:
+    - name: Retrieving host distribution
+      setup:
+        gather_subset:
+          - "distribution"
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Load configurable variables"
+      ansible.builtin.include_vars: "vars/win32nt.yml"
+      tags: ["always"]
+      no_log: True      
+
+  roles:
+    - role: 'netbackup/win32nt'                        # Load netbackup default vars
+    - role: 'generic/os_compatibility'
+    - role: 'generic/is_nbu_version_supported'
+    - role: 'generic/nbu_compatibility'
+    - role: 'netbackup/win32nt/nbu-client-remove/v1.1'
+  vars:
+    nbu_role: "client"
+    nbu_playbook_type: "remove"
+    
+  #EOF

@@ -1,0 +1,34 @@
+# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+
+# NetBackup Server - Install - CLIENT
+- name: NETBACKUP -> CLIENT INSTALL ("Windows")
+  gather_facts: true
+  hosts: all
+  pre_tasks:
+    - name: Retrieving host distribution
+      setup:
+        gather_subset:
+          - "!all"
+          - "!min"
+          - "distribution"
+          - "env"
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Load configurable variables"
+      ansible.builtin.include_vars: "vars/win32nt.yml"
+      tags: ["always"]
+      no_log: True
+      
+  roles:
+    - role: 'netbackup/win32nt'                        # Load netbackup default vars
+    - role: 'generic/os_compatibility'
+    - role: 'generic/is_nbu_version_supported'
+    - role: 'generic/nbu_compatibility'
+    - role: 'netbackup/win32nt/nbu-client-install/v1.1'
+    - role: 'netbackup/common/nbu-get-certificate/v1.1'
+    - role: 'generic/nbu_verification'
+    - role: 'netbackup/win32nt/nbu-install-eeb/v1.1'
+
+  vars:
+    nbu_role: "client"
+    nbu_playbook_type: "install"
+
+# EOF

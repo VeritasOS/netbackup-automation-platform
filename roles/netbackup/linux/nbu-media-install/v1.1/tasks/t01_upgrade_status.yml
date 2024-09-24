@@ -1,0 +1,71 @@
+# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+
+#####################################################################
+#### nbu-server-upgrade -> tasks -> t01_upgrade_status.yml ####
+#####################################################################
+
+# These tasks will verify the workflow is being executed on a current NetBackup server
+# and will determine whether the NetBackup server software requires upgrading to a newer version.
+# If the server is not a valid server or the server software doesnt require upgrading, the upgrade
+# workflow will exit after this task and no further tasks will be performed.
+
+# Verify whether the NetBackup server has the NetBackup server software installed
+# The upgrade will not proceed if the NetBackup server software is not already installed.
+- name: "NBU-{{ nbu_role|upper }}-UPGRADE -> Verify whether NetBackup server software ({{ item.key }}) is currently installed"
+  ansible.builtin.shell: ( rpm -qa | grep "{{ item.key }}" )
+  changed_when: false
+  register: nbu_server_rpm_check
+  failed_when: false
+
+# Verify what version of the NetBackup server software is currently installed.
+# Returned version is used to determine whether the NetBackup server sofware requires upgrading.
+- name: "NBU-{{ nbu_role|upper }}-UPGRADE -> Verify what version of the NetBackup server software ({{ item.key }}) is currently installed"
+  ansible.builtin.shell: ( rpm -qi "{{ item.key }}" | awk '/Version/ { print $3}' )
+  ignore_errors: true
+  changed_when: false
+  register: nbu_server_rpm_version_register
+  when:
+    - ( nbu_server_rpm_check.rc == 0 )
+
+- name: "NBU-{{ nbu_role|upper }}-UPGRADE -> Get the [{{ item.key }}] rpm version from proposed version list"
+  ansible.builtin.set_fact:
+      rpm_proposed_version: "{{ rpm_data.value }}"
+  with_items: "{{ nbu_pkgs_ordered_list[nbu_role][nbu_version] | dict2items }}"
+  loop_control:
+    loop_var: rpm_data
+  when: rpm_data.key == item.key
+
+# Verify if the installed NetBackup server version is out-of-date and requires upgrading
+# If current version is lower than proposed version, upgrade
+- name: "NBU-{{ nbu_role|upper }}-UPGRADE -> Verify whether installed NetBackup server version ({{ nbu_server_rpm_version_register.stdout }}) is out-of-date - Set fact to 'upgrade'"
+  ansible.builtin.set_fact:
+    nbu_server_upgrade_counter: "{{ nbu_server_upgrade_counter | default(0) | int + 1 }}"
+  when:
+    - ( nbu_server_rpm_check.rc == 0 )
+    - nbu_server_rpm_version_register.stdout is version_compare(rpm_proposed_version,'<')
+
+- name: "NBU-{{ nbu_role|upper }}-UPGRADE -> Setting the eventual upgrade status"
+  ansible.builtin.set_fact:
+    nbu_server_status: upgrade
+  when: ( nbu_server_upgrade_counter |int > 0 )
+
+- name: "NBU-{{ nbu_role|upper }}-UPGRADE -> Setting the eventual upgrade status"
+  ansible.builtin.set_fact:
+    nbu_server_status: none
+  when: 
+    - ( nbu_server_upgrade_counter |int == 0 )
+    - install_phase == "PRE"
+
+- name: Ansible::Log.info
+  fail:
+    msg:  "This machine doesn't have Netackup Server installed, hence cannot be upgrade, therefore exit immediately."
+  when: 
+    - ( nbu_server_rpm_check.rc == 1 )
+    - install_phase == "PRE"
+
+# Verify if the installed NetBackup Server version is higher than the proposed version. 
+- name: "NBU-{{ nbu_role|upper }}-UPGRADE -> Verify if the installed NetBackup Server version is compatible for upgrade with proposed version "
+  assert:
+    that: "nbu_server_rpm_version_register.stdout is version_compare(rpm_proposed_version, '<=')"
+    fail_msg: This Server machine has higher version {{ nbu_server_rpm_version_register.stdout }} installed than proposed version {{ rpm_proposed_version }}, therefore exit immediately.
+    quiet: true

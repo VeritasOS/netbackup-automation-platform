@@ -1,0 +1,74 @@
+# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+
+- name: "NBU-ROLE-STATUS -> Get Install Type of the NetBackup Software"
+  win_reg_stat:
+    path: "{{ nbu_registry_path }}\\CurrentVersion"
+    name: Install Type
+  register: nbu_install_type_register
+  changed_when: false
+
+- name: "NBU-ROLE-STATUS -> Check if target host machine is Primary/Media/Client"
+  block:
+    - name: "NBU-ROLE-STATUS -> Verify whether NetBackup Primary or Media server is currently installed"
+      win_reg_stat:
+        path: "{{ nbu_registry_path }}\\CurrentVersion"
+        name: MediaServerInstalled
+      register: nbu_server_check_register
+      changed_when: false
+
+    - name: "NBU-ROLE-STATUS -> Get Installation path of the NetBackup Software"
+      win_reg_stat:
+        path: "{{ nbu_registry_path }}\\CurrentVersion"
+        name: INSTALLDIR
+      register: nbu_installed_path_register
+      changed_when: false
+
+    - name: "NBU-ROLE-STATUS -> Setfact NBU Installed path"
+      ansible.builtin.set_fact:
+        nbu_installed_path: "{{ nbu_installed_path_register.value | default(os_path_nbu_install) }}"
+
+    - name: "NBU-ROLE-STATUS -> Verify the bptm and create_nbdb files exist on target host machine"
+      win_stat:
+        path: "{{ netbackup_file }}"
+      register: nbu_primary_files_register
+      with_items:
+        - "{{ nbu_installed_path }}\\NetBackup\\bin\\bptm.exe"
+        - "{{ nbu_installed_path }}\\NetBackup\\bin\\create_nbdb.exe"
+      loop_control:
+        loop_var: netbackup_file
+      failed_when: false
+
+    - name: "NBU-ROLE-STATUS -> Check if target host machine is Primary/Media"
+      block:
+          - name: "NBU-ROLE-STATUS -> Set NBU_Role to Primary if target host machine has primary server installed" 
+            ansible.builtin.set_fact:
+              nbu_detected_role: "primary"
+            when:
+              - nbu_install_type_register.value == nbu_primary_product_name
+
+          - name: "NBU-ROLE-STATUS -> Set NBU_Role to Media if target host machine has media server installed" 
+            ansible.builtin.set_fact:
+              nbu_detected_role: "media"
+            when:
+              - nbu_install_type_register.value == nbu_media_product_name
+              
+      when:
+        - ( nbu_server_check_register.exists )
+        - ( nbu_primary_files_register.results[0].stat.exists ) 
+        - ( nbu_primary_files_register.results[1].stat.exists )
+
+    - name: "NBU-ROLE-STATUS -> Set NBU_Role to Client if target host machine has client installed" 
+      ansible.builtin.set_fact:
+        nbu_detected_role: "client"
+      when:
+        - ( not nbu_server_check_register.exists )
+        - nbu_install_type_register.value == nbu_client_product_name
+
+    - name: "NBU-ROLE-STATUS -> Set NBU_Role to ( nbu_detected_role ) if nbu_role is undefined" 
+      ansible.builtin.set_fact:
+        nbu_role: "{{ nbu_detected_role }}"
+      when:
+        - ( nbu_role is not defined )
+      
+  when:
+    - ( nbu_install_type_register.exists )
