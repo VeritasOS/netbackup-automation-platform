@@ -22,7 +22,7 @@ nbu_eeb_ordered:
         - "<eebinstall_name>"
 
 # NB Configuration variables
-nbu_primary_server_ans: PRIMARY01                          # Primary Server hostname can be given here
+nbu_primary_server_ans: PRIMARY01                         # Primary Server hostname can be given here
 ignore_primary_connectivity_failures: false               # If using a masked primary for initial install, set the value to true to ignore connectivity validation and continue execution. 
 skip_primary_version_compatibility_check: false           # Skip Primary server version compatibility check
 
@@ -38,12 +38,12 @@ nbu_directory_list_to_be_removed:                         # Custom list of direc
 # FTO (Feature Toggle Options)                            # Valid options given can be true|false|yes|no|y|n|1|0
 include_eeb_rpm_marker: false                             # If set to true, playbook wil create/delete extra RPM marker
 nb_include_java_jre_install: false                        # For include java jre packages
-nbu_cert_management: false                                # For include cert mangement playbook                                    
-do_perform_nbcheck_preinstall: false                      # If set to true nbcheck gets called before NBU install/upgrade, else skip
-should_force_process_termination: false                    # After 3 attempts of graceful shutdown, forcefully terminate the running processes
+nbu_cert_management: true                                 # For include cert mangement playbook                                    
+do_perform_nbcheck_preinstall: true                       # If set to true nbcheck gets called before NBU install/upgrade, else skip
+should_force_process_termination: false                   # After 3 attempts of graceful shutdown, forcefully terminate the running processes
+
 # Set this to true if packages are cached locally independently or by using staging playbook to avoid downloading the pakcages at install-time.
 install_pkgs_from_local_cache: false
- 
 
 # Secrets
 nbu_dr_passphrase: dr_passphrase
