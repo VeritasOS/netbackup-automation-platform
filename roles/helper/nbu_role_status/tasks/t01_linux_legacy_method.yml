@@ -51,7 +51,7 @@
       block:
       # Verify whether target host machine has the NetBackup client software installed
         - name: "NBU-ROLE-STATUS -> Verify whether NetBackup client software is currently installed"
-          ansible.builtin.shell: ( rpm -qa | grep "{{ nbu_client_rpm_name }}" )
+          ansible.builtin.shell: ( rpm -qa | grep "{{ nbu_rpm_vrtsnbcfg }}" )
           changed_when: false
           register: nbu_client_rpm_check
           failed_when: false

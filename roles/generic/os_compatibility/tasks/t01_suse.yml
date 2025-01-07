@@ -16,4 +16,56 @@
     fail_msg: "ERROR - Incompatible OS Distribution Major version - Detected OS Distribution Major Version is {{ ansible_distribution_major_version }}"
     quiet: true
 
+# Special handling of native dependent packages for SUSE
+- name: "NBU-OS-COMPATIBILITY -> Check for system dependent packages on SUSE"
+  block:
+    - name: "NBU-OS-COMPATIBILITY -> Load the native package facts for SUSE"
+      ansible.builtin.package_facts:
+        manager: auto
+      no_log: true
+
+    - name: "NBU-OS-COMPATIBILITY -> Initialize native dependent missing_packages variable"
+      set_fact:
+        missing_packages: []
+
+    - name: "NBU-OS-COMPATIBILITY -> Set-fact common native dependent missing packages"
+      set_fact:
+        missing_packages: "{{ missing_packages + (os_suse_system_packages['common'] | difference(ansible_facts.packages.keys())) }}"
+      when:
+        - os_suse_system_packages['common'] is defined
+        - (os_suse_system_packages['common'] | difference(ansible_facts.packages.keys())) | length > 0
+
+    - name: "NBU-OS-COMPATIBILITY -> Set-fact {{ nbu_role | capitalize }} native dependent missing packages"
+      set_fact:
+        missing_packages: "{{ missing_packages + (os_suse_system_packages[nbu_role] | difference(ansible_facts.packages.keys())) }}"
+      when:
+        - os_suse_system_packages[nbu_role] is defined
+        - (os_suse_system_packages[nbu_role] | difference(ansible_facts.packages.keys())) | length > 0
+
+    - name: "NBU-OS-COMPATIBILITY -> Set-fact {{ ansible_os_family }}:{{ ansible_distribution_major_version }} native dependent missing packages"
+      set_fact:
+        missing_packages: "{{ missing_packages + (os_suse_system_packages[ansible_distribution_major_version] | difference(ansible_facts.packages.keys())) }}"
+      when:
+        - os_suse_system_packages[ansible_distribution_major_version] is defined
+        - (os_suse_system_packages[ansible_distribution_major_version] | difference(ansible_facts.packages.keys())) | length > 0
+
+    - name: "NBU-OS-COMPATIBILITY -> Install native dependent packages if missing"
+      zypper:
+        name: "{{ item }}"
+        state: present
+        disable_gpg_check: no
+      with_items: "{{ missing_packages }}"
+      when: missing_packages | length > 0
+
+    - name: "NBU-OS-COMPATIBILITY -> Reload the native package facts"
+      ansible.builtin.package_facts:
+        manager: auto
+      no_log: true
+    
+    - name: "NBU-OS-COMPATIBILITY -> Verify the existence of native dependent packages"
+      fail:
+        msg: "One or more required system packages are not installed: {{ absent_packages }}"
+      when: absent_packages | length > 0
+      vars:
+        absent_packages: "{{ missing_packages | difference(ansible_facts.packages.keys()) }}"
 # EOF

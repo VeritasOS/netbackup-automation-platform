@@ -8,6 +8,18 @@
    - "{{ os_path_openv_tmp  }}/VRTSnbpck.rpm"
    - "{{ os_path_openv_tmp  }}/usr"
 
+- name: "NBCHECK -> Verify base directory {{ os_path_nbu_install_default }} existence"
+  stat:
+    path: "{{ os_path_nbu_install_default }}"
+  register:  base_dir_existence_status_register
+
+- name: "NBCHECK -> Ansible::Log.info"
+  ansible.builtin.assert:
+    that:
+      - ( base_dir_existence_status_register.stat.exists )
+    fail_msg: "ERROR: [{{ os_path_nbu_install_default }}] does not exists, could not continue with playbook execution."
+    quiet: false
+
 - name: "NBCHECK -> Create [{{ os_path_openv_tmp }}] directory if it does not exist"
   ansible.builtin.file:
     path: "{{ os_path_openv_tmp }}"
@@ -37,3 +49,28 @@
   set_fact:
     test_name_list: "{{ nbcheck_test_name[nbu_role] }}"
 
+- name: "NBCHECK -> Set Fact NBCheck service user CLI argument"
+  set_fact:
+    db_service_user_arg: "{{ '-Dservice_user='+nbu_services_user if nbu_role =='primary' else '' }}"
+
+- name: "NBCHECK -> Set fact for installing ITA DC NBCheck CLI argument"
+  set_fact:
+    install_it_analytics: "{{ '-Dinstall_it_analytics=yes' if nbu_role =='primary' and do_install_ita_dc else '' }}"
+
+- name: "NBCHECK -> Passing nbcheck CLI argument when websvc group is different from default web group"
+  set_fact:
+    nbweb_service_group: "{{ '-Dwebsvc_group='+nbu_webservices_group if nbu_role =='primary' else '' }}"
+
+- name: "NBCHECK -> Passing nbcheck CLI argument when websvc user is different from default web user"
+  set_fact:
+    nbweb_service_user: "{{ '-Dwebsvc_user='+nbu_webservices_user if nbu_role =='primary' else '' }}"
+    
+- name: "NBCHECK -> Passing nbcheck CLI argument when database user is different from default user"
+  set_fact:
+    postgres_user_param: "{{ '-Dpostgres_user='+nbu_database_user if nbu_role =='primary' else '' }}"
+
+- name: "NBCHECK -> Passing nbcheck CLI argument when postgresql_pooler_odbc_port (pg bouncer port) is different from default"
+  set_fact:
+    pg_bouncer_port_param: "{{ '-Dpgb_port='+postgresql_pooler_odbc_port if nbu_role =='primary' else '' }}"
+
+#EOF

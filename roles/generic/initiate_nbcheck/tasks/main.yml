@@ -1,44 +1,65 @@
 # $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
 
-# Once NBCheck is externally executed successfully, create the touch file to avoid re-running it from within the RPM.
-- name: "NBU-NBCHECK ->  Create the nbcheck marker file"
+# Execute the role which detect the partial install status
+- name: "NBU-NBCHECK -> Execute the partial install status role"
+  ansible.builtin.include_role:
+    name: 'helper/detect_partial_install'
+
+- name: "NBU-NBCHECK -> Execute the task based on partial installation detection"
   block:
-    - name: "NBU-NBCHECK -> Get [/tmp/client_traditional_install] file age"
-      ansible.builtin.find:
-        paths: "/tmp/"
-        pattern: "client_traditional_install"
-        age: 2h
-      register: install_file_age_register
-      no_log: true
+    - name: "NBU-NBCHECK -> Execution of symlink operation role"
+      ansible.builtin.include_role:
+        name: 'netbackup/{{ ansible_system|lower }}/symlink-operations'
 
-    - name: "NBU-NBCHECK -> Delete [/tmp/client_traditional_install] file, if it's older than 2hr"
-      ansible.builtin.file:
-        path: /tmp/client_traditional_install
-        state: absent
-      when: install_file_age_register.matched|int > 0
+    - name: "NBU-NBCHECK -> Set fact nbu type filename"
+      ansible.builtin.set_fact:
+        traditional_install_status_file: "{{ 'client_traditional_install' if 'client' in nbu_role else 'server_traditional_install' }}"
 
-    - name: "NBU-NBCHECK -> Verify [/tmp/client_traditional_install] file existence"
-      stat:
-        path: /tmp/client_traditional_install
-      register: traditional_install_file_register
-      no_log: true
-  when: nbu_role == "client"
+    # Once NBCheck is externally executed successfully, create the touch file to avoid re-running it from within the RPM.
+    - name: "NBU-NBCHECK ->  Create the nbcheck marker file"
+      block:
+        - name: "NBU-NBCHECK -> Get [/tmp/{{ traditional_install_status_file }}] file age"
+          ansible.builtin.find:
+            paths: "/tmp/"
+            pattern: "{{ traditional_install_status_file }}"
+            age: 2h
+          register: install_file_age_register
+          no_log: true
 
-- name: "NBU-NBCHECK -> Start NBChecks executions"
-  block:
-    - name: "NBCHECK -> Include tasks for NBChecks"
-      ansible.builtin.include_tasks: "{{ ansible_system|lower }}.yml"
+        - name: "NBU-NBCHECK -> Delete [/tmp/{{ traditional_install_status_file }}] file, if it's older than 2hr"
+          ansible.builtin.file:
+            path: /tmp/{{ traditional_install_status_file }}
+            state: absent
+          when: install_file_age_register.matched|int > 0
 
-    - name: "NBCHECK -> Executing NBChecks"
-      ansible.builtin.include_tasks: "nbcheck.yml"
-      with_items: "{{ test_name_list }}"
+        - name: "NBU-NBCHECK -> Verify [/tmp/{{ traditional_install_status_file }}] file existence"
+          stat:
+            path: /tmp/{{ traditional_install_status_file }}
+          register: traditional_install_file_register
+          no_log: true
 
-    # Create temp file once NBCheck run. So that NBCheck should not get called through rpm again
-    - name: "NBU-NBCHECK -> Create [/tmp/client_traditional_install] file for NBCheck"
-      ansible.builtin.file:
-        path: /tmp/client_traditional_install
-        state: touch
-        mode: u+rw,g-wx,o-rwx
-      when: nbu_role == "client"
+    - name: "NBU-NBCHECK -> Start NBChecks executions"
+      block:
+        - name: "NBCHECK -> Include tasks for NBChecks"
+          ansible.builtin.include_tasks: "{{ ansible_system|lower }}.yml"
+
+        - name: "NBCHECK -> Executing NBChecks"
+          ansible.builtin.include_tasks: "nbcheck.yml"
+          with_items: "{{ test_name_list }}"
+
+        # Create temp file once NBCheck run. So that NBCheck should not get called through rpm again
+        - name: "NBU-NBCHECK -> Create temp file to get nbu role status"
+          ansible.builtin.copy:
+            content: "{{ 'n' if 'media' in nbu_role else 'y' }}"
+            dest: /tmp/nb_mstr_ans
+          when: nbu_role == "media" or nbu_role == "primary"
+
+        - name: "NBU-NBCHECK -> Create [/tmp/{{ traditional_install_status_file }}] file for NBCheck"
+          ansible.builtin.file:
+            path: /tmp/{{ traditional_install_status_file }}
+            state: touch
+            mode: u+rw,g-wx,o-rwx
+      when:
+      - ( not traditional_install_file_register.stat.exists )
   when:
-   - ( ( nbu_role =="media" ) or ( not traditional_install_file_register.stat.exists ) )
+    - (not nbap_partial_install_detected)

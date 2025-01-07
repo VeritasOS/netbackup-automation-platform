@@ -1,0 +1,45 @@
+# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+
+- name: "NBU-CERTIFICATE-DEPLOYMENT -> Verify NetBackup file {{ nbu_path_nbcertcmd }} existence status"
+  win_stat:
+    path: "{{ nbu_path_nbcertcmd }}"
+  register: netbackup_nbcertcmd_file_register
+  failed_when: false
+  changed_when: false
+
+- name: "NBU-CERTIFICATE-DEPLOYMENT -> Retrieve certificate mode if {{ nbu_path_nbcertcmd }} exists"
+  block: 
+    - name: "NBU-CERTIFICATE-DEPLOYMENT-> Retrieve certificate mode for primary server: {{ nbu_primary_server_ans }}"
+      win_command: nbcertcmd -getSecConfig -caUsage -server "{{ nbu_primary_server_ans }}"
+      args:
+        chdir: "{{ os_path_nbu_install }}\\netbackup\\bin"
+      changed_when: false
+      register: nbu_primary_certificate_mode_register
+      failed_when: false
+
+    - name: "NBU-CERTIFICATE-DEPLOYMENT -> Verify for validity of primary server: {{ nbu_primary_server_ans }}"
+      fail:
+        msg: "{{ nbu_primary_certificate_mode_register.stderr }}"
+      when:
+        - ( nbu_primary_certificate_mode_register.rc != 0 )
+        - nbu_primary_certificate_mode_register.stderr != ""
+
+    - name: "NBU-CERTIFICATE-DEPLOYMENT->Extract certificate mode of NBCA and ECA"
+      set_fact:
+        nbu_nbca_mode: "{{ nbu_primary_certificate_mode_register.stdout_lines[0].split(':')[1] | trim }}"
+        nbu_eca_mode: "{{ nbu_primary_certificate_mode_register.stdout_lines[1].split(':')[1] | trim }}"
+
+    - name: "NBU-CERTIFICATE-DEPLOYMENT -> Load required tasks for Certificate deployment using NBCA"
+      ansible.builtin.include_tasks: t01_{{ansible_system|lower}}_nbca_certificate.yml
+      when: 
+        - ( nbu_eca_mode == "OFF" )
+        - ( nbu_nbca_mode == "ON" )
+
+    - name: "NBU-CERTIFICATE-DEPLOYMENT -> Load required tasks for Certificate deployment using ECA"
+      ansible.builtin.include_tasks: t01_{{ansible_system|lower}}_eca_certificate.yml
+      when: 
+        - ( nbu_eca_mode == "ON" )
+  when:
+    - netbackup_nbcertcmd_file_register.stat.exists
+
+# EOF

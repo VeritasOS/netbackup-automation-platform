@@ -1,0 +1,9 @@
+# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+
+# This var file is considered to store secrets and we highly recommend that it is encrypted using ansible-vault
+# This essentially means that you would have to pass-on vault passowrd upon executing the respective playbook
+
+# These credentials could also be sent as a survey input from Ansible Tower
+nbu_rbac_user: ''
+nbu_rbac_user_password: ''
+nbu_user_apikey: ''

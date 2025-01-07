@@ -1,0 +1,22 @@
+# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+
+#####################################################
+#### Stage Packages Locally - ("Linux/Windows") ####
+#####################################################
+
+# Stage NetBackup Software Packages -> Windows
+# OS - Create a temporary directory for NetBackup Software
+- name: "NBU-STAGE-PACKAGES -> Create temporary directory for NetBackup Client"
+  win_file:
+    path: "{{ nbu_tmp_dir}}"
+    state: directory
+
+# Download the NetBackup Client Software - Windows
+- name: "NBU-STAGE-PACKAGES -> Download NetBackup Client Software (Windows)"
+  win_get_url:
+    url: "{{ nbu_artifactory_repo_base_url }}{{ artifactory_repo }}{{ nbu_path_repo_client_base_pkg }}{{ nbu_pkgs_ordered_list[nbu_version] }}.zip"
+    dest: "{{ nbu_tmp_dir }}\\{{ nbu_pkgs_ordered_list[nbu_version] }}.zip"
+    force: true
+    validate_certs: "{{ nbu_repo_validate_certs }}"
+
+# EOF

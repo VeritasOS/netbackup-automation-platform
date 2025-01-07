@@ -1,0 +1,101 @@
+# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+ 
+# These vars are mostly customer-centric and would get updated.
+# Desired NetBackup Client Version to use in the format [x.x.x.x]
+# Supported versions: ['10.5.0.0', '10.4.0.1', '10.4.0.0', '10.3.0.1', '10.3.0.0', '10.2.0.1', '10.2.0.0', '10.1.1.0', '10.1.0.0', '10.0.0.1', '10.0.0.0']
+nbu_version: x.x.x.x
+
+nbu_artifactory_repo_base_url: "https://nbartifactory.rsv.ven.veritas.com:443/artifactory/oem_local/ansible_repo/software/"
+# {{nbu_path_repo_base_pkg}} should contain relative path of base release version NetBackup packages
+nbu_path_repo_base_pkg: "netbackup/{{ nbu_version }}/{{ ansible_os_family }}/"
+# {{nbu_path_repo_client_eeb_pkg}} should contain relative path of EEB installer
+nbu_path_repo_eeb_pkg: "/netbackup/{{ nbu_version }}/eeb/{{ ansible_os_family }}/"
+# {{nbu_path_support_utilities}} should contain relative path of support utilities
+nbu_path_support_utilities: "/netbackup/{{ nbu_version }}/utilities/{{ ansible_system }}/"
+# List of EEBs to be installed per nbu_role and version
+nbu_eeb_ordered:
+  client:
+      10.1.1.0:
+        - "eebinstaller_4102406_15_linux{{ 'R' if 'RedHat' in ansible_os_family else 'S' }}_x86_3_10_0"
+        - "eebinstaller_4138919_1_linux{{ 'R' if 'RedHat' in ansible_os_family else 'S' }}_x86_3_10_0"
+  media:
+      10.1.1.0:
+        - "eebinstaller_4108283_2_linux{{ 'R' if 'RedHat' in ansible_os_family else 'S' }}_x86"
+        - "eebinstaller_4129778_1_linux{{ 'R' if 'RedHat' in ansible_os_family else 'S' }}_x86"
+
+
+# NB Configuration variables
+nbu_primary_server_ans: PRIMARY01                         # Primary Server hostname can be given here
+ignore_primary_connectivity_failures: false               # If using a masked primary for initial install, set the value to true to ignore connectivity validation and continue execution. 
+skip_primary_version_compatibility_check: false           # Skip Primary server version compatibility check
+# NetBackup - Web Services Account
+nbu_webservices_group: nbwebgrp
+nbu_webservices_user: nbwebsvc
+# NetBackup - Services Account
+nbu_services_group: ''
+nbu_services_user: ''
+postgresql_pooler_odbc_port: ''
+
+# Update { os_path_nbu_install } in case you want to install on a custom path. We recommend that the path
+# ends with openv. This will make sure that we remove only the NetBackup installed directories.
+os_path_nbu_install: /usr/openv
+os_path_nbu_yum_cache_base: /var
+nbu_directory_list_to_be_removed:                         # Custom list of directories which should be removed while running [playbook_remove_client_redhat.yml]
+- "{{ os_path_nbu_install_default }}"
+- "{{ os_path_nbu_install }}"
+
+# FTO (Feature Toggle Options)                            # Valid options given can be true|false|yes|no|y|n|1|0
+include_eeb_rpm_marker: true                              # If set to true, playbook wil create/delete extra RPM marker
+nb_include_java_jre_install: false                        # For include java jre packages
+nbu_cert_management: false                                # For include cert mangement playbook
+do_perform_nbcheck_preinstall: false                      # If set to true nbcheck gets called before NBU install/upgrade, else skip
+skip_missing_catalog_backup_check: false
+
+# Secrets
+# This option specifes the path and file name of the Usage Insights customer registration key file valid for nbu_version <= "10.2.0.1".
+nbu_cust_reg_file_name: ""
+# This option specifies the license key string to apply to the server.
+# Additional "LICENSE = key" lines may be added if more licenses are to be applied. This option is valid for nbu_version <= "10.2.0.1".
+nbu_license_key:
+- '<nbu_license_key1>'
+
+# This option specifies the SLIC file path list valid for nbu_version > "10.2.0.1"
+nbu_license_file_name_list:
+- "<slic_filepath1>"
+
+# NBCA configuration details
+nbu_primary_certdetails:
+- hostname: 'PRIMARY01'                                   # Primary Server hostname
+  nbu_server_fingerPrint: ''                              # Certificate fingerprint
+  nbu_server_authorization_token: ''                      # Authorization Token 
+
+# ECA configuration details
+nbu_eca_certdetails:
+  nbu_eca_cert_path: ''                                   # Certificate Path
+  nbu_eca_private_key_path: ''                            # Private key Path
+  nbu_eca_trust_store_path: ''                            # Truststore Path
+  nbu_eca_key_passphrasefile: ''                          # Key Passphrase file path if key is encrypted
+  eca_crl:  
+    nbu_eca_crl_check_level:                              # Should a CRL be honoured for external certificate configuration. Options are ['USE_CDP', 'USE_PATH', 'DISABLED']
+    nbu_eca_crl_path: ''                                  # The file system directory path where CRLs are available 
+
+# OS - Packages
+os_rhel_system_packages:                                  # Additional system packages can be added here
+  "9":                                                    # RHEL 9 system packages
+    - libnsl
+    - libxcrypt-compat
+    - ncurses-libs
+  "8":                                                    # RHEL 8 system packages
+    - libnsl
+    - ncurses-libs
+
+# OS - Symbolic links
+os_rhel_system_packages_symlink:                          # Additional symbolic links can be added here
+  "9":                                                    # RHEL 9 symbolic links
+    - { src: /usr/lib64/libncurses.so.6.2, dest: /usr/lib64/libncurses.so.5 }
+    - { src: /usr/lib64/libtinfo.so.6.2, dest: /usr/lib64/libtinfo.so.5 }
+  "8":                                                    # RHEL 8 symbolic links
+    - { src: /usr/lib64/libncurses.so.6.1, dest: /usr/lib64/libncurses.so.5 }
+    - { src: /usr/lib64/libtinfo.so.6.1, dest: /usr/lib64/libtinfo.so.5 }
+
+# EOF

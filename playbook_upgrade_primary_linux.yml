@@ -1,0 +1,37 @@
+# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+
+# NetBackup Server - Upgrade - Primary Server
+- name: NETBACKUP -> PRIMARY SERVER UPGRADE
+  gather_facts: true
+  become: yes
+  hosts: all
+  pre_tasks:
+    - name: Retrieving host distribution
+      setup:
+        gather_subset:
+          - "!all"
+          - "!min"
+          - "distribution"
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Load configurable variables"
+      ansible.builtin.include_vars: "vars/linux.yml"
+      tags: ["always"]
+      no_log: True
+
+  roles:
+   - role: 'netbackup/linux'                                    # Load netbackup default vars
+   - role: 'generic/os_compatibility'
+   - role: 'generic/is_nbu_version_supported'
+   - role: 'helper/detect_partial_install'
+   - role: 'generic/nbu_compatibility'
+   - role: 'generic/nbu_verification'                           # Verifies certificate specific checks and report
+   - role: 'netbackup/common/rest-api-integration'
+   - role: 'netbackup/common/rest-api-integration/catalog_images'
+   - role: 'netbackup/linux/nbu-server-install/v2.0'
+   - role: 'generic/nbu_verification'                           # Verifies certificate specific checks and report
+   - role: 'netbackup/linux/nbu-install-eeb/v2.0'
+  vars:
+    # Role Control
+    nbu_role: "primary"
+    nbu_playbook_type: "upgrade"
+    
+# EOF

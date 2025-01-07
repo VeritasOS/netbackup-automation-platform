@@ -32,12 +32,12 @@
   failed_when: false
   no_log: true
   loop:
-   - "-ping -server {{ nbu_primary_server_ans }}"
-   - "-getCRL -server {{ nbu_primary_server_ans }}"
-   - "-hostselfcheck -server {{ nbu_primary_server_ans }}"
+  - "-ping -server {{ nbu_primary_server_ans }}"
+  - "-getCRL -server {{ nbu_primary_server_ans }}"
+  - "-hostselfcheck -server {{ nbu_primary_server_ans }}"
   when: 
-   - netbackup_nbcertcmd_file_register.stat.exists
-   - not (netbackup_commands_rc_register.rc|d(0))
+  - netbackup_nbcertcmd_file_register.stat.exists
+  - not (netbackup_commands_rc_register.rc|d(0))
 
 - name: "NBU-VERIFICATION -> Setting netbackup commands result facts"
   ansible.builtin.set_fact:
@@ -49,10 +49,22 @@
     - item.changed
     - (item.rc|d(0))
   no_log: true
-    
+
+- name: "NBU-VERIFICATION -> Setting a custom message for Connectivity failures"
+  ansible.builtin.set_fact:
+    custom_error_msg: "NetBackup {{ nbu_role }} got sucessfully installed but option(nbu_cert_management) seems to be turned off, connectivity to Primary Server has not been established and would result into failure. We recommend that the configuration option be turned on and provide the security specifications."
+  no_log: true
+  when: nbu_role == "client" or nbu_role == "media"
+
+- name: "NBU-VERIFICATION -> Setting a custom message for Connectivity failures"
+  ansible.builtin.set_fact:
+    custom_error_msg: "NetBackup Primary server got successfully installed, but we couldn't bring all services up. Please contact your NetBackup administrator."
+  no_log: true
+  when: nbu_role == "primary"
+
 - name: "NBU-VERIFICATION -> Verification failed for ({{ netbackup_failed_cmd }})"
   ansible.builtin.fail:
-    msg: "{{ netbackup_failed_stderr }}"
+    msg: "{{ custom_error_msg }} {{ netbackup_failed_stderr }}"
   ignore_errors: "{{ ignore_primary_connectivity_failures }}"
   when: 
     - netbackup_failed_rc | default(0)
@@ -62,7 +74,7 @@
     msg: "Primary Server connectivity with {{ nbu_primary_server_ans }} has been successfully verified."
   when: 
     - not netbackup_failed_rc | default(0)
-
+  
 - name: "NBU-VERIFICATION -> Verify NetBackup files existence status"
   ansible.builtin.stat:
     path: "{{ netbackup_file }}"
@@ -106,9 +118,10 @@
       until: bpdbjobs_result.rc == 0
       changed_when: bpdbjobs_result.rc != 0
       ignore_errors: true
+      no_log: true
       when:
-      - netbackup_files_register.results[1].stat.exists 
-      
+        - netbackup_files_register.results[1].stat.exists 
+
     # Check 3 - Check NetBackup Audit Report.
     - name: "NBU-VERIFICATION -> Check NetBackup Audit Report"
       ansible.builtin.shell: "{{ os_file_nbu_nbauditreport }}"
@@ -118,30 +131,23 @@
       until: nbauditreport_result.rc == 0
       changed_when: nbauditreport_result.rc != 0
       ignore_errors: true
+      no_log: true
       when:
-      - netbackup_files_register.results[2].stat.exists
-      
+        - netbackup_files_register.results[2].stat.exists
+
     # Check 4 - Verify if a NetBackup catalog backup has been succesful in last 24 hours
     # Fail if there's no recent NBU Catalog backup
     - name: "NBU-VERIFICATION -> Verify whether NetBackup catalog backup has completed succesfully in last 24 hours"
-      ansible.builtin.shell: ( "{{ os_file_nbu_bpimagelist }} -idonly -hoursago 24 -pt NBU-Catalog | head -1 | awk '{ print $8}' | cut -d "_" -f 2 ")
+      ansible.builtin.shell: ( "{{ os_file_nbu_bpimagelist }}" -idonly -hoursago 24 -pt NBU-Catalog )
       changed_when: false
       register: nbu_check_catbkp
       failed_when: ( nbu_check_catbkp.rc == 227 ) or (nbu_check_catbkp.stderr == 'no entity was found' )
       when:
-      - netbackup_files_register.results[3].stat.exists
-        
-    # Check 5 - Verify the DR file passphrase is known
-    # Fail if the DR password is not correct
-    - name: "NBU-VERIFICATION -> Verify the NetBackup catalog DR file passphrase if known if the NetBackup catalog needs to be recovered"
-      ansible.builtin.shell: ( echo "{{ nbu_dr_passphrase }}" | "{{ os_file_nbu_nbhostidentity }}" -testpassphrase -infile {{ os_dir_nbu_drfiles }}/*{{ nbu_check_catbkp.stdout }}*.drpkg )
-      changed_when: false
-      register: nbu_check_drcheck
-      failed_when: "'Command is successfully carried out' not in nbu_check_drcheck.stdout"
-      when:
-      - netbackup_files_register.results[4].stat.exists
-      
-    # Check 6 - Verify the NetBackup CA key strength
+        - nbu_playbook_type == "upgrade"
+        - skip_missing_catalog_backup_check == false
+        - netbackup_files_register.results[3].stat.exists
+
+    # Check 5 - Verify the NetBackup CA key strength
     # Fail if the key strength is not 2048 bit strength.
     - name: "NBU-VERIFICATION -> Verify the NetBackup CA Key Strength is 2048 bit"
       ansible.builtin.shell: ( "{{ os_file_nbu_nbcertcmd }}" -listcertdetails | grep "Key Strength" )
@@ -149,7 +155,7 @@
       register: nbu_check_castrength_register
       failed_when: "'             Key Strength : 2048' not in nbu_check_castrength_register.stdout"
       when:
-      - netbackup_nbcertcmd_file_register.stat.exists
+        - netbackup_nbcertcmd_file_register.stat.exists
   when:
     - ( nbu_role == "primary") 
 # EOF

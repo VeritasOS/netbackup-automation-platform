@@ -1,0 +1,35 @@
+# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+
+###########################################################
+#### Load access token for the given user - ("Linux")   ####
+###########################################################
+
+# Execute the role which detect the partial install status
+- name: "NBU-LOAD-ACCESS-TOKEN -> Execute the partial install status role"
+  ansible.builtin.include_role:
+    name: 'helper/detect_partial_install'
+
+- name: "NBU-LOAD-ACCESS-TOKEN -> Failed to authentication"
+  ansible.builtin.fail:
+    msg: "Required credentials 'nbu_rbac_user' and ('nbu_rbac_user_password' or 'nbu_user_apikey') are missing. Please provide the necessary information."
+  when: 
+    - (nbu_rbac_user is not defined or nbu_rbac_user | length == 0)
+    - (nbu_rbac_user_password is not defined or nbu_rbac_user_password | length == 0) or (nbu_user_apikey is not defined or nbu_user_apikey | length == 0)
+
+# Validate how we need to load the token (JWT/Token)
+- name: "NBU-LOAD-ACCESS-TOKEN -> Get access token"
+  ansible.builtin.include_role:
+    name: 'netbackup/common/rest-api-integration/get-access-token'
+  when:
+    - nbu_rbac_user is defined and nbu_rbac_user | length > 0
+    - nbu_rbac_user_password is defined and nbu_rbac_user_password | length > 0
+
+- name: "NBU-LOAD-ACCESS-TOKEN -> Use provided apikey"
+  ansible.builtin.set_fact:
+    user_access_token: "{{ nbu_user_apikey }}"
+  no_log: true
+  when:
+    - nbu_rbac_user is defined and nbu_rbac_user | length > 0
+    - nbu_user_apikey is defined and nbu_user_apikey | length > 0
+
+#EOF

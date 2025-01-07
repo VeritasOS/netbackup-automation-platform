@@ -1,0 +1,57 @@
+# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+
+###########################################################
+#### Global Security Settings - ("Linux/Windows") ####
+###########################################################
+
+- name: "NBU-GLOBAL-SETTINGS -> Apply the global security properties"
+  ansible.builtin.uri:
+    url: "{{ nbu_api_base_url + 'security/properties' }}"
+    method: POST
+    headers:
+      Content-Type: "{{ nbu_api_content_type }}"
+      Authorization: "Bearer {{ user_access_token }}" 
+    body: "{{ security_properties_params | to_json }}"
+    body_format: json
+    status_code: 200
+    validate_certs: no
+  register: task_security_properties_result
+  retries: 2
+  delay: 2
+  until:  task_security_properties_result.status == 200
+
+- name: "NBU-GLOBAL-SETTINGS -> Apply Passphrase constraints"
+  ansible.builtin.uri:
+    url: "{{ nbu_api_base_url + 'security/passphrase-constraints/DR_PKG' }}"
+    method: PATCH
+    headers:
+      Content-Type: "{{ nbu_api_content_type }}"
+      Authorization: "Bearer {{ user_access_token }}"
+    body: "{{ lookup('template', 'setPassphraseConstraintsRequest.j2') }}"
+    body_format: json
+    status_code: 204
+    validate_certs: no
+  register: task_passphrase_constraints_result
+  retries: 2
+  delay: 2
+  until:  task_passphrase_constraints_result.status == 204
+
+- name: "NBU-GLOBAL-SETTINGS -> Set the security credentials"
+  ansible.builtin.uri:
+    url: "{{ nbu_api_base_url + 'security/credentials' }}"
+    method: PUT
+    headers:
+      Content-Type: "{{ nbu_api_content_type }}"
+      Authorization: "Bearer {{ user_access_token }}" 
+    body:
+      credName: "DR_PKG_KEY"
+      credValue: "{{ drpkgpassphrase }}"
+    body_format: json
+    status_code: 200
+    validate_certs: no
+  register: task_security_credentials_result
+  retries: 2
+  delay: 2
+  until:  task_security_credentials_result.status == 200
+
+#EOF

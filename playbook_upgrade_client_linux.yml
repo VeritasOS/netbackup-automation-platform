@@ -23,9 +23,9 @@
     - role: 'generic/is_nbu_version_supported'
     - role: 'generic/nbu_compatibility'
     - role: 'generic/nbu_verification'
-    - role: 'netbackup/linux/nbu-client-install/v1.1'
+    - role: 'netbackup/linux/nbu-client-install/v2.0'
     - role: 'generic/nbu_verification'                          # Verifies certificate specific checks and report
-    - role: 'netbackup/linux/nbu-install-eeb/v1.1'
+    - role: 'netbackup/linux/nbu-install-eeb/v2.0'
   vars:
     nbu_role: "client"
     nbu_playbook_type: "upgrade"

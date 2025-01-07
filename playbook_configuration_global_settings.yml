@@ -1,0 +1,30 @@
+# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+
+# NetBackup Apply Global Settings
+- name: NETBACKUP -> Apply Global Settings
+  gather_facts: true
+  become: yes
+  hosts: all
+  pre_tasks:
+    - name: Retrieving host distribution
+      setup:
+        gather_subset:
+          - "!all"
+          - "!min"
+          - "distribution"
+    - name: "NBU-GLOBAL-SETTINGS -> Load configurable variables"
+      ansible.builtin.include_vars: "vars/linux.yml"
+      tags: ["always"]
+      no_log: True
+
+  roles:
+    - role: 'netbackup/linux'                   # Load netbackup default vars
+    - role: 'generic/is_nbu_version_supported'
+    - role: 'generic/nbu_compatibility'
+    - role: 'netbackup/common/rest-api-integration'
+    - role: 'netbackup/common/rest-api-integration/global_settings'
+  vars:
+    nbu_playbook_type: "global-settings"
+    nbu_role: "primary"                  # Supported values ['primary','media','client'] 
+
+# EOF

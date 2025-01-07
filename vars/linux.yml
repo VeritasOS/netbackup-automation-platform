@@ -5,32 +5,49 @@
 # Supported versions: ['10.5.0.0', '10.4.0.1', '10.4.0.0', '10.3.0.1', '10.3.0.0', '10.2.0.1', '10.2.0.0', '10.1.1.0', '10.1.0.0', '10.0.0.1', '10.0.0.0']
 nbu_version: x.x.x.x
 
-# {{nbu_artifactory_repo_base_url}} should contain the base url
-nbu_artifactory_repo_base_url: ""
-# {{nbu_path_repo_base_pkg}} should contain relative path of base release version NetBackup packages
-nbu_path_repo_base_pkg: ""
-# {{nbu_path_repo_eeb_pkg}} should contain relative path of EEB installer
-nbu_path_repo_eeb_pkg: ""
+Comment: >
+  # NetBackup Package Artifactory Repository
+  # {{nbu_artifactory_repo_base_url}} should contain the base url (pre yum-enterprise-<awx_inventory_name>-local) so that it can be appended based on the {{awx_inventory_name}}.
+  nbu_artifactory_repo_base_url: ""
+  # {{nbu_path_repo_client_base_pkg}} should contain relative path of base release version NetBackup packages
+  nbu_path_repo_base_pkg: ""
+  # {{nbu_path_repo_client_eeb_pkg}} should contain relative path of EEB installer and its related RPM Marker file
+  nbu_path_repo_eeb_pkg: ""
+  # {{nbu_path_support_utilities}} should contain relative path of support utilities
+  nbu_path_support_utilities: ""
 
-# List of EEBs to be installed per nbu_role and version
-nbu_eeb_ordered:
-  client:
-      10.1.1.0:
-        - "<eebinstall_name>"
-  media:
-      10.1.1.0:
-        - "<eebinstall_name>"
+  # List of EEBs to be installed per nbu_role and version
+  nbu_eeb_ordered:
+    client:
+        10.1.1.0:
+         - "<eebinstall_name>"
+    media:
+        10.1.1.0:
+         - "<eebinstall_name>"
+    primary:
+        10.1.1.0:
+         - "<eebinstall_name>"    
 
 # NB Configuration variables
-nbu_primary_server_ans: PRIMARY01                         # Primary Server hostname can be given here
+nbu_primary_server_ans: PRIMARY01                          # Primary Server hostname can be given here
 ignore_primary_connectivity_failures: false               # If using a masked primary for initial install, set the value to true to ignore connectivity validation and continue execution. 
 skip_primary_version_compatibility_check: false           # Skip Primary server version compatibility check
+# NetBackup - Web Services Account
+nbu_webservices_group: nbwebgrp
+nbu_webservices_user: nbwebsvc
+# NetBackup - Services Account
+nbu_services_group: ''
+nbu_services_user: ''
+nbu_database_user: "{{ nbu_services_user }}"
+postgresql_pooler_odbc_port: ''
 
 # Update { os_path_nbu_install } in case you want to install on a custom path. We recommend that the path
 # ends with openv. This will make sure that we remove only the NetBackup installed directories.
 os_path_nbu_install: /usr/openv
 os_path_nbu_base: /usr
 os_path_nbu_yum_cache_base: /var
+nbu_db_data_path: "{{ os_path_nbu_install }}/db/data"
+
 nbu_directory_list_to_be_removed:                         # Custom list of directories which should be removed while running [playbook_remove_client_redhat.yml]
 - "{{ os_path_nbu_install }}"
 - "{{ os_path_nbu_install_default }}"
@@ -38,16 +55,43 @@ nbu_directory_list_to_be_removed:                         # Custom list of direc
 # FTO (Feature Toggle Options)                            # Valid options given can be true|false|yes|no|y|n|1|0
 include_eeb_rpm_marker: false                             # If set to true, playbook wil create/delete extra RPM marker
 nb_include_java_jre_install: false                        # For include java jre packages
-nbu_cert_management: true                                 # For include cert mangement playbook                                    
+nbu_cert_management: true                                # For include cert mangement playbook
 do_perform_nbcheck_preinstall: true                       # If set to true nbcheck gets called before NBU install/upgrade, else skip
 should_force_process_termination: false                   # After 3 attempts of graceful shutdown, forcefully terminate the running processes
+
+# primary specific options
+do_install_ita_dc: false                                  # If set to true, will attempt to install ITA Data Collector along with Primary Server
+# This option specifies if an upgrade from a 10.1.1 or earlier primary server is allowed to proceed. 
+# NetBackup 10.2 and later versions check if a catalog backup was performed in the last 24 hours.
+skip_missing_catalog_backup_check: false
 
 # Set this to true if packages are cached locally independently or by using staging playbook to avoid downloading the pakcages at install-time.
 install_pkgs_from_local_cache: false
 
+#Primary Security Settings
+security_properties_params:
+  certificateAutoDeployLevel: 1
+  dteGlobalMode: "PREFERRED_ON"
+  allowInsecureBackLevelHost: 0
+  aliasAutoAdd: 1
+setPassphraseConstraintsRequest:
+  minPassphraseLength: 18
+  minUpperCaseRequired: 1
+  minLowerCaseRequired: 1
+drpkgpassphrase: ""
+
 # Secrets
-nbu_dr_passphrase: dr_passphrase
-nbu_license_key_ans: ''
+# This option specifes the file name of the Usage Insights customer registration key file valid for nbu_version <= "10.2.0.1".
+nbu_cust_reg_file_name: "veritas_customer_registration_key.json"
+# This option specifies the license key string to apply to the server.
+# Additional "LICENSE = key" lines may be added if more licenses are to be applied. This option is valid for nbu_version <= "10.2.0.1".
+# nbu_license_key: ''
+nbu_license_key:
+- '<nbu_license_key1>'
+
+# This option specifies the SLIC file names list valid for nbu_version > "10.2.0.1"
+nbu_license_file_name_list: 
+- "<slice_license1>"
 
 # NBCA configuration details
 nbu_primary_certdetails:
@@ -67,13 +111,20 @@ nbu_eca_certdetails:
 
 # OS - Packages
 os_rhel_system_packages:                                  # Additional system packages can be added here
+  "common":                                               #common for all os-versions and all nbu-roles
+    - libnsl
+    - ncurses-libs
+  "primary":                                              #primary specific. Similarly client and media specific list can be added
+    - bc
+    - gzip
   "9":                                                    # RHEL 9 system packages
-    - libnsl
     - libxcrypt-compat
-    - ncurses-libs
-  "8":                                                    # RHEL 8 system packages
-    - libnsl
-    - ncurses-libs
+
+os_suse_system_packages:                                  # SUSE system packages       
+  "primary":
+    - insserv-compat 
+    - libXrender1
+    - libXtst6
 
 # OS - Symbolic links
 os_rhel_system_packages_symlink:                          # Additional symbolic links can be added here

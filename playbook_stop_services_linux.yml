@@ -1,0 +1,38 @@
+# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+
+# NetBackup SERVER - SHUTDOWN SERVICES
+- name: NETBACKUP -> SHUTDOWN SERVICES ("Linux")
+  gather_facts: true
+  become: yes
+  hosts: all
+
+  pre_tasks:
+    - name: Retrieving host distribution
+      setup:
+        gather_subset:
+          - "!all"
+          - "!min"
+          - "distribution"
+    - name: "NBU-STOP-SERVICES -> Load configurable variables"
+      ansible.builtin.include_vars: "vars/linux.yml"
+      tags: ["always"]
+      no_log: True
+
+    - name: "NBU-STOP-SERVICES -> Input validation for netbackup role"
+      fail:
+        msg: "'nbu_role' is required to proceed with stop services playbook. Do provide the NetBackup role and re-run the playbook."
+      when:
+      - nbu_role == ""
+
+  roles:
+    - role: 'netbackup/linux'                           # Load netbackup default vars
+    - role: 'generic/is_nbu_version_supported'
+    - role: 'generic/nbu_compatibility'
+    - role: 'netbackup/linux/nbu-stop-services'
+  vars:
+    nbu_playbook_type: "shutdown"
+    nbu_playbook_name: "nbu_stop_services"
+    nbu_role: ""                  # Supported values ['primary','media','client']
+
+
+# EOF

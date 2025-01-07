@@ -3,3 +3,4 @@
 # run client check depending on OS family
 - name: "NBU-VERSION-CHECK -> Load required tasks to check installed NetBackup version"
   ansible.builtin.include_tasks: "{{ ansible_system|lower }}.yml"
+  when: nbu_current_installed_version is not defined

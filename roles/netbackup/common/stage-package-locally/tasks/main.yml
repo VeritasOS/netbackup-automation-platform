@@ -4,10 +4,7 @@
 #### Stage Packages Locally - ("Linux/Windows") ####
 #####################################################
 
-- name: "NBU-STAGE-PACKAGES -> Setup the netbackup repo"
-  ansible.builtin.include_tasks: t01_setup_netbackup_repo.yml
-
-- name: "NBU-STAGE-PACKAGES -> Stage NetBackup packages locally"
-  ansible.builtin.include_tasks: t02_stage_packages.yml
+- name: "NBU-STAGE-PACKAGES -> Setup the netbackup repo and stage packages"
+  ansible.builtin.include_tasks: "{{ ansible_system|lower }}.yml"
 
 # EOF

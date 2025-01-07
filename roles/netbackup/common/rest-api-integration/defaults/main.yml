@@ -1,0 +1,19 @@
+# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+
+# API Configuration
+nbu_api_hostname: "{{ nbu_primary_server_ans }}"
+nbu_api_port: '1556'
+nbu_api_base_url: "{{ 'https://' + nbu_api_hostname + ':' + nbu_api_port + '/netbackup/' }}"
+nbu_api_content_type: application/vnd.netbackup+json;version=7.0
+
+#Primary Security Settings
+security_properties_params:
+  certificateAutoDeployLevel: 1
+  dteGlobalMode: "PREFERRED_ON"
+  allowInsecureBackLevelHost: 0
+  aliasAutoAdd: 1
+setPassphraseConstraintsRequest:
+  minPassphraseLength: 18
+  minUpperCaseRequired: 1
+  minLowerCaseRequired: 1
+drpkgpassphrase: ""

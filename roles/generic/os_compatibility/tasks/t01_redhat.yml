@@ -24,26 +24,49 @@
         manager: auto
       no_log: true
 
-    - name: "NBU-OS-COMPATIBILITY -> Install native dependent packages {{ os_rhel_system_packages[ansible_distribution_major_version] }} if missing"
+    - name: "NBU-OS-COMPATIBILITY -> Initialize native dependent missing_packages variable"
+      set_fact:
+        missing_packages: []
+
+    - name: "NBU-OS-COMPATIBILITY -> Set-fact common native dependent missing packages"
+      set_fact:
+        missing_packages: "{{ missing_packages + (os_rhel_system_packages['common'] | difference(ansible_facts.packages.keys())) }}"
+      when:
+        - os_rhel_system_packages['common'] is defined
+        - (os_rhel_system_packages['common'] | difference(ansible_facts.packages.keys())) | length > 0
+
+    - name: "NBU-OS-COMPATIBILITY -> Set-fact {{ nbu_role | capitalize }} native dependent missing packages"
+      set_fact:
+        missing_packages: "{{ missing_packages + (os_rhel_system_packages[nbu_role] | difference(ansible_facts.packages.keys())) }}"
+      when:
+        - os_rhel_system_packages[nbu_role] is defined
+        - (os_rhel_system_packages[nbu_role] | difference(ansible_facts.packages.keys())) | length > 0
+
+    - name: "NBU-OS-COMPATIBILITY -> Set-fact {{ ansible_os_family }}:{{ ansible_distribution_major_version }} native dependent missing packages"
+      set_fact:
+        missing_packages: "{{ missing_packages + (os_rhel_system_packages[ansible_distribution_major_version] | difference(ansible_facts.packages.keys())) }}"
+      when:
+        - os_rhel_system_packages[ansible_distribution_major_version] is defined
+        - (os_rhel_system_packages[ansible_distribution_major_version] | difference(ansible_facts.packages.keys())) | length > 0
+
+    - name: "NBU-OS-COMPATIBILITY -> Install native dependent packages if missing"
       ansible.builtin.yum:
         name: "{{ item }}"
         state: present
       with_items: "{{ missing_packages }}"
       when: missing_packages | length > 0
-      vars:
-        missing_packages: "{{ os_rhel_system_packages[ansible_distribution_major_version] | difference(ansible_facts.packages.keys()) }}"
 
     - name: "NBU-OS-COMPATIBILITY -> Reload the native package facts"
       ansible.builtin.package_facts:
         manager: auto
       no_log: true
-    
-    - name: "NBU-OS-COMPATIBILITY -> Verify the existence of native dependent packages {{ os_rhel_system_packages[ansible_distribution_major_version] }}"
+
+    - name: "NBU-OS-COMPATIBILITY -> Verify the existence of native dependent packages"
       fail:
-        msg: "One or more required system packages are not installed: {{ missing_packages }}"
-      when: missing_packages | length > 0
+        msg: "One or more required system packages are not installed: {{ absent_packages }}"
+      when: absent_packages | length > 0
       vars:
-        missing_packages: "{{ os_rhel_system_packages[ansible_distribution_major_version] | difference(ansible_facts.packages.keys()) }}"
+        absent_packages: "{{ missing_packages | difference(ansible_facts.packages.keys()) }}"
 
     - name: "NBU-OS-COMPATIBILITY -> Create required symbolic link for RHEL. Required steps for RHEL 8/9 only"
       ansible.builtin.file:
