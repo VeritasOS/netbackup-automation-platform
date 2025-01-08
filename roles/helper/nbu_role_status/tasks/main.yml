@@ -1,4 +1,4 @@
-## $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+## $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
 - name: "NBU-VERSION-CHECK -> Gather facts for version status"
   ansible.builtin.include_role:
     name: 'helper/nbu_version_installed'

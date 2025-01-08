@@ -1,4 +1,4 @@
-# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
 
 # Check file existence of /tmp/nbap_partial_install_detected
 - name: "NBU-PARTIAL-INSTALL-DETECTION -> Verify {{ os_path_openv_tmp }}/nbap_partial_install_detected file existence"

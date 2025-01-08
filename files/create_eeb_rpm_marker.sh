@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
 
 help()
 {

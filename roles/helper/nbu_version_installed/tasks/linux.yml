@@ -1,4 +1,4 @@
-# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
 
 # Verify whether the machine has the NetBackup software installed
 - name: "NBU-VERSION-CHECK -> Verify if NetBackup Software is currently installed"

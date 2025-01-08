@@ -1,4 +1,4 @@
-# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
 
 - name: "NBCHECK -> Removing existing VRTSnbpck package and /usr folder from {{ os_path_openv_tmp  }}"
   file:

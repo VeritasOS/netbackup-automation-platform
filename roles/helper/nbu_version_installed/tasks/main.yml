@@ -1,4 +1,4 @@
-## $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+## $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
 
 # run client check depending on OS family
 - name: "NBU-VERSION-CHECK -> Load required tasks to check installed NetBackup version"
