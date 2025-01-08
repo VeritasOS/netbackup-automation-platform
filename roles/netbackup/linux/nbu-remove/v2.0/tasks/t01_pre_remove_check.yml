@@ -1,0 +1,51 @@
+#$Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved. $
+
+#####################################################################
+#### nbu-remove -> tasks -> t01_pre_remove_check.yml ####
+#####################################################################
+
+# These tasks will verify the workflow is being executed on a current NetBackup machine.
+# Define the playbook removal time as variable
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Start NetBackup Removal pre-checks"
+  ansible.builtin.set_fact:
+    status: "started"
+    install_time: "{{ lookup('pipe','date +%Y%m%d%H%M%S') }}"
+
+# Verify whether the NetBackup Server software installed
+# Do not continue if target machine has different role installed other than the playbook role
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Do not continue if target machine has different role installed other than the playbook role"
+  ansible.builtin.include_role:
+    name: 'generic/nbu_compatibility'
+
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Set fact for NetBackup RPMs list to validate their existence"
+  ansible.builtin.set_fact:
+    nbu_rpms_version_ordered: "{{ nbu_rpms_version_ordered | default('', true) }}{{ item.key }}-{{ item.value }}|"
+  no_log: true
+  with_items:
+    - "{{ rpm_ordered_list }}"
+  when:
+    - ( item.key not in ['VRTSpddei'] )
+
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Remove the trailing empty item from RPM list"
+  ansible.builtin.set_fact:
+    nbu_rpms_version_ordered: "{{ nbu_rpms_version_ordered[:-1] }}"
+
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Verify whether NetBackup {{ nbu_role | capitalize }} software is currently installed"
+  ansible.builtin.shell: ( rpm -qa | egrep "{{ nbu_rpms_version_ordered }}" )
+  register: nbu_rpm_check_register
+  failed_when: false
+  no_log: true
+
+# If None of the NetBackup Client/Media RPMs are installed, exit with the message saying that the NetBackup Client/Media RPMs supported by this Playbook are not installed
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Ansible::Log.info"
+  ansible.builtin.debug:
+    msg: "NetBackup {{ nbu_role | capitalize }} {{nbu_version}} is already uninstalled on this machine."
+  when:
+    - ( nbu_rpm_check_register.rc == 1 )
+
+- name: Ansible::Log.info
+  ansible.builtin.debug:
+    msg: "The NetBackup {{ nbu_role | capitalize }} version ({{ nbu_version }}) is currently installed."
+  when: nbu_rpm_check_register.rc == 0
+
+# EOF

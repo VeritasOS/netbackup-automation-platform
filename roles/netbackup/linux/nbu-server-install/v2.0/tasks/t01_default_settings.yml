@@ -1,0 +1,135 @@
+# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+
+#####################################################################
+#### nbu-server-install -> tasks -> t01_default_settings.yml ####
+#####################################################################
+
+# Define the install start time as variable
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Start NetBackup {{ nbu_playbook_type }}"
+  ansible.builtin.set_fact:
+    status: "started"
+    install_time: "{{ lookup('pipe','date +%Y%m%d%H%M%S') }}"
+
+# Check - Upgrade is being performed by root user
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Verify the root user is performing the NetBackup server upgrade"
+  ansible.builtin.shell:  ( whoami )
+  changed_when: false
+  register: root_check
+  failed_when: ( root_check.stdout != 'root' ) 
+
+# Set default Artifactory Respository 
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Set Artifactory Repository based on type of environment as Fact"
+  ansible.builtin.set_fact:
+    artifactory_repo: ""
+
+# Discover Artifactory Respository based on the type of environment
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Define Artifactory Repository based on type of environment"
+  block:
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Define Artifactory Repository - DEV"
+      ansible.builtin.set_fact:
+        artifactory_repo: yum-enterprise-dev-local/
+      when: "'DEV' in awx_inventory_name"
+
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Define Artifactory Repository - UAT"
+      ansible.builtin.set_fact:
+        artifactory_repo: yum-enterprise-test-local/
+      when: "'UAT' in awx_inventory_name"
+
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Define Artifactory Repository - PROD"
+      ansible.builtin.set_fact:
+        artifactory_repo: yum-enterprise-prod-local/
+      when:
+        - "'PROD' in awx_inventory_name"
+  when: awx_inventory_name is defined and awx_inventory_name != ""
+
+# Check if the NetBackup yum cache exists
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Check if {{ os_path_nbu_yum_cache }} exists"
+  ansible.builtin.stat:
+    path: "{{ os_path_nbu_yum_cache }}"
+  register: yum_cache_register
+  failed_when: false
+  changed_when: false
+
+# Remove the contents of the "/var/cache/yum/x86_64/7Server/netbackup" directory
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Remove the NetBackup yum cache directory"
+  ansible.builtin.file:
+    path: "{{ os_path_nbu_yum_cache }}"
+    state: absent
+  failed_when: false
+  when: ( ansible_distribution_major_version  == '7' and yum_cache_register.stat.exists )
+
+# Add NetBackup Server Repo - Enable it
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Add YUM repository for NetBackup Software" 
+  ansible.builtin.yum_repository:
+    name: netbackup
+    description: NetBackup Server Binaries
+    baseurl: "{{ nbu_artifactory_repo_base_url }}{{ artifactory_repo }}{{ nbu_path_repo_base_pkg }}"
+    enabled: no
+    gpgcheck: no
+    state: present
+    sslverify: no
+  when:
+  - ansible_os_family == 'RedHat'
+
+# Add NetBackup Server Repo - Enable it
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Add zypper repository for NetBackup Software"
+  community.general.zypper_repository:
+    name: netbackup
+    repo: "{{ nbu_artifactory_repo_base_url }}{{ artifactory_repo }}{{ nbu_path_repo_base_pkg }}"
+    state: present
+    disable_gpg_check: yes
+    enabled: yes
+  when:
+  - ansible_os_family == 'Suse'
+
+- name: NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Find if any previous RPM couldn't install successfully"
+  ansible.builtin.stat:
+    path: /tmp/previous_rpm_pkg_install_failed
+  register: pre_rpm_failed_register
+  failed_when: false
+  changed_when: false
+
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Read the previous failed RPM and attempt a reinstall"
+  block:
+  - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Found instance of previous failed RPM"
+    ansible.builtin.shell:
+      cmd: "sed -n '1p' /tmp/previous_rpm_pkg_install_failed"
+    changed_when: false
+    failed_when: false
+    register: failed_rpm_name_register
+  
+  - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Attempt to reinstall RPM ({{ failed_rpm_name_register.stdout }})"
+    ansible.builtin.shell:
+      cmd: "yum reinstall -y --enablerepo=netbackup {{ failed_rpm_name_register.stdout }}"
+    changed_when: false
+    failed_when: false
+    no_log: true
+  when: 
+    - ( pre_rpm_failed_register.stat.exists )
+
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Load required tasks for install verification"
+  ansible.builtin.include_role:
+    name: 'netbackup/linux/nbu-install-verification'
+
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Include tasks for space check "
+  ansible.builtin.include_role:
+    name: 'generic/nbu_space_check'
+  when: ( nbu_install_status == "install" ) or ( nbu_install_status == "upgrade" )
+
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Load required tasks for symlink validation and creation"
+  ansible.builtin.include_role:
+    name: 'netbackup/linux/symlink-operations'
+
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Load pre-install tasks"
+  ansible.builtin.include_role:
+    name: 'netbackup/linux/pre-install-os-task/v2.0'
+
+# Running NBChecks for critical and non-critical checks
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Start NBCheck execution for NetBackup {{ nbu_role|capitalize }}"
+  ansible.builtin.include_role:
+    name: 'generic/initiate_nbcheck'
+  when:
+    - do_perform_nbcheck_preinstall
+    - ( nbu_install_status == "install" ) or ( nbu_install_status == "upgrade" )
+
+# EOF

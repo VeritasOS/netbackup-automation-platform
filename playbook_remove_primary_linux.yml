@@ -1,0 +1,32 @@
+# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+
+# NetBackup Primary - REMOVE
+- name: NETBACKUP -> PRIMARY REMOVE ("Linux")
+  gather_facts: true
+  become: yes
+  hosts: all
+
+  pre_tasks:
+    - name: Retrieving host distribution
+      setup:
+        gather_subset:
+          - "!all"
+          - "!min"
+          - "distribution"
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Load configurable variables"
+      ansible.builtin.include_vars: "vars/linux.yml"
+      tags: ["always"]
+      no_log: True
+
+  roles:
+    - role: 'netbackup/linux'                           # Load netbackup default vars
+    - role: 'generic/os_compatibility'
+    - role: 'generic/is_nbu_version_supported'
+    - role: 'generic/nbu_compatibility'
+    - role: 'netbackup/linux/nbu-remove/v2.0'
+  vars:
+    # Role control
+    nbu_role: "primary"
+    nbu_playbook_type: "remove"
+
+# EOF

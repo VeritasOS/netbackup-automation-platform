@@ -1,0 +1,33 @@
+## $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+
+- name: "NBU-ROLE-STATUS -> Verify NetBackup file {{ nbu_path_nbcertcmd }} existence status"
+  win_stat:
+    path: "{{ nbu_path_nbcertcmd }}"
+  register: netbackup_nbcertcmd_file_register
+
+- name: "NBU-ROLE-STATUS -> Execute Role Check as per installed NetBackup Version"
+  block: 
+    - name: "NBU-ROLE-STATUS -> Check if the NetBackup host has connectivity with the Primary server"
+      win_command: "nbcertcmd.exe -ping -server {{ nbu_primary_server_ans }}"
+      args:
+        chdir: "{{ os_path_nbu_install }}\\NetBackup\\bin"
+      changed_when: false
+      register: nbu_is_master_valid_register
+      failed_when: false 
+
+    - name: "NBU-ROLE-STATUS -> Load required tasks for NetBackup Role Check for nbu version below 10.0"
+      ansible.builtin.include_tasks: "t01_{{ ansible_system|lower }}_legacy_method.yml"
+      when: 
+        - nbu_current_installed_version is version_compare("10.0.0.0",'<') or ( nbu_is_master_valid_register.rc != 0 )
+
+    - name: "NBU-ROLE-STATUS -> Load required tasks for NetBackup Role Check for nbu version 10.0 onwards"
+      ansible.builtin.include_tasks: "t01_{{ ansible_system|lower }}_bpclntcmd_method.yml"
+      when: 
+        - nbu_current_installed_version is version_compare("10.0.0.0",'>')
+        - ( nbu_is_master_valid_register.rc == 0 )
+        
+  when:
+    - netbackup_version_file_register.exists
+    - netbackup_nbcertcmd_file_register.stat.exists
+
+# EOF

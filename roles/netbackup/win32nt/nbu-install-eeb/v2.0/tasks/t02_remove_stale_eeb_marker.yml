@@ -1,0 +1,25 @@
+# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+
+#########################################################################
+#### NBU-CLIENT-EEB-INSTALL -> tasks -> t02_remove_stale_eeb_marker.yml ####
+#########################################################################
+
+- name: "NBU-EEB-INSTALL -> Extract EEB Support ET and version"
+  set_fact: 
+    set_number: "{{ item | regex_search('(?<=SET)\\d+') }}"
+    eeb_version: "{{ item | regex_search('(?<=EEB)\\d+') }}"
+
+- name: "NBU-EEB-INSTALL -> Get the EEB-Marker GUID to remove"
+  win_command: cmd /q /c "for %f in ("{{ set_number }}_{{ eeb_version }}.ini") do (for /f "delims== tokens=2" %a in ('findstr "ProductCode" %f') do echo %a)"
+  args:
+    chdir: '{{ os_path_nbu_install }}\Patch\EEB-Marker'
+  register: product_code_of_eeb_marker_register
+  changed_when: false
+  no_log: false
+  failed_when: false
+
+- name: "NBU-EEB-INSTALL -> Remove stale EEB-Marker ({{ set_number }}_{{ eeb_version }})"
+  win_package:
+    product_id: '{{ item }}'
+    state: absent
+  with_items: "{{ product_code_of_eeb_marker_register.stdout_lines }}"

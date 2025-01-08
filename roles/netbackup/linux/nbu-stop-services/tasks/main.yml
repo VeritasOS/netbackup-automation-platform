@@ -1,6 +1,5 @@
-# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
 
----
 #############################################################
 #               Stop NetBackup Services   
 # We will attempt 3 times to stop process gracefully.

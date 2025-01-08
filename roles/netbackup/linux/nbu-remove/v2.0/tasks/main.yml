@@ -1,0 +1,19 @@
+# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+
+#############################################
+#### NetBackup Remove - ("RHEL") ####
+#############################################
+# Import required tasks - Base Remove
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} ->  Setting rpm ordered list for {{ nbu_role | capitalize }}"
+  ansible.builtin.set_fact:
+    rpm_ordered_list: "{{ nbu_pkgs_ordered_list[nbu_role][nbu_version] | dict2items }}"
+
+# Import required tasks - Base Remove
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Verify whether the NetBackup {{ nbu_role | capitalize }} is installed and is the version supported for removal by this Playbook"
+  ansible.builtin.include_tasks: t01_pre_remove_check.yml
+
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Remove the NetBackup {{ nbu_role | capitalize }}"
+  ansible.builtin.include_tasks: t03_base_remove.yml
+  when: nbu_rpm_check_register.rc == 0
+
+# EOF

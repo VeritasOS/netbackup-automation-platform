@@ -1,0 +1,26 @@
+# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+
+#######################################################################################
+#### NBU-ECA-CERTIFICATE-DEPLOYMENT -> tasks -> t01_win32nt_eca_certificate.yml ####
+#######################################################################################
+
+- name: "NBU-ECA-CERTIFICATE-DEPLOYMENT-> Set fact for each dictionary item of [ nbu_eca_certdetails ]"
+  set_fact:
+    nbu_cert_store_type: "{{ nbu_eca_certdetails.cert_store_type }}"
+    
+- name: Ansible::Log.info
+  fail:
+    msg: "cert_store_type:'{{ nbu_cert_store_type }}' is not a valid option. Must be ['windows_cert_store' or 'windows_file_based']"
+  when: 
+    - ( nbu_cert_store_type is defined )
+    - ( nbu_cert_store_type | length == 0 ) or ( nbu_cert_store_type | string not in ["windows_cert_store", "windows_file_based"] )
+
+- name: "NBU-ECA-CERTIFICATE-DEPLOYMENT -> Load required tasks for file based Certificate deployment "
+  ansible.builtin.include_tasks: t02_{{ansible_system|lower}}_eca_filebased_certificate.yml
+  when: 
+    - ( nbu_cert_store_type == "windows_file_based" )
+
+- name: "NBU-ECA-CERTIFICATE-DEPLOYMENT -> Load required tasks for Windows Cert store based Certificate deployment "
+  ansible.builtin.include_tasks: t02_{{ansible_system|lower}}_eca_wincertstore_certificate.yml
+  when: 
+    - ( nbu_cert_store_type == "windows_cert_store" )

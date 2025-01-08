@@ -1,0 +1,43 @@
+# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+
+###########################################################
+#### Get access token for the given user - ("Linux")   ####
+###########################################################
+
+- name: "NBU-GET-ACCESS-TOKEN -> BLOCK: Execute the task based on partial installation state"
+  block:
+    - name: "NBU-GET-ACCESS-TOKEN -> Get access token for the given user: {{ nbu_rbac_user }}"
+      ansible.builtin.uri:
+        url: "{{ nbu_api_base_url + 'login' }}"
+        method: POST
+        headers:
+          Content-Type: "{{ nbu_api_content_type }}"
+        body:
+          domainName: "{{ nbu_api_hostname }}"
+          userName: "{{ nbu_rbac_user }}"
+          password: "{{ nbu_rbac_user_password }}"
+        body_format: json
+        status_code: 201, 401
+        validate_certs: no
+      no_log: true
+      failed_when: false
+      register: task_login_result
+      retries: 1
+      delay: 2
+      until:  task_login_result.status == 201
+
+    - name: "NBU-GET-ACCESS-TOKEN -> Failed to fetch access token for the given user: {{ nbu_rbac_user }}"
+      ansible.builtin.assert:
+        that: task_login_result.status == 201
+        fail_msg: "{{ task_login_result.json.errorMessage }}"
+        quiet: false
+      when: task_login_result.json.errorMessage is defined
+
+    - name: "NBU-GET-ACCESS-TOKEN -> Set access token"
+      ansible.builtin.set_fact:
+        user_access_token: "{{ task_login_result.json.token }}"
+      no_log: true
+  when:
+    - ( not nbap_partial_install_detected )
+    
+#EOF

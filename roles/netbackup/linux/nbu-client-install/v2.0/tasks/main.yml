@@ -1,0 +1,23 @@
+# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+
+---
+#############################################
+#### NetBackup Install - Client ("RHEL") ####
+#############################################
+
+# Initializing pre-install phase
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Set fact for install-phase"
+  set_fact:
+   install_phase : "PRE"
+
+# Import required tasks - Base Install
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Load required pre-install tasks for NetBackup client {{ nbu_playbook_type }}"
+  ansible.builtin.include_tasks: t01_default_settings.yml
+
+# Import required tasks - Base Install
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Load required tasks for NetBackup client {{ nbu_playbook_type }}"
+  ansible.builtin.include_tasks: t02_base_install.yml
+  when:
+    - ( nbu_install_status == "upgrade" or nbu_install_status == "install" )
+
+# EOF

@@ -1,4 +1,4 @@
-# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
 
 # NetBackup Client - REMOVE - CLIENT
 - name: NETBACKUP -> CLIENT REMOVE ("Linux")
@@ -24,7 +24,7 @@
     - role: 'generic/os_compatibility'
     - role: 'generic/is_nbu_version_supported'
     - role: 'generic/nbu_compatibility'
-    - role: 'netbackup/linux/nbu-remove/v1.1'
+    - role: 'netbackup/linux/nbu-remove/v2.0'
   vars:
     nbu_role: "client"
     nbu_playbook_type: "remove"

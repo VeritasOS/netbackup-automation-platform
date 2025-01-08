@@ -1,0 +1,67 @@
+# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+
+#####################################################################
+#### nbu-{{ nbu_role|upper }}-install -> tasks -> t01_install_status.yml ####
+#####################################################################
+
+# These tasks will verify the workflow is being executed on a current NetBackup client
+# and will determine whether the NetBackup client software requires installing.
+# If the client is not a valid client or the client software doesnt require install, the install
+# workflow will exit after this task and no further tasks will be performed.
+
+# Verify whether the NetBackup client has the NetBackup client software installed
+# The install will not proceed if the NetBackup client software is not already installed. 
+- name: "NBU-{{ nbu_role|upper }}-INSTALL -> Verify whether NetBackup {{ nbu_role }} software ({{ item.key }}) is currently installed"
+  ansible.builtin.shell: ( rpm -qa | grep "{{ item.key }}" )
+  failed_when: false
+  changed_when: false
+  register: nbu_rpm_check_register
+
+# Verify new client, install NetBackup
+- name: "NBU-{{ nbu_role|upper }}-INSTALL -> Verify whether to install NetBackup {{ nbu_role }} ({{ item.key }}) - Set fact to 'install'"
+  ansible.builtin.set_fact:
+    nbu_install_counter: "{{ nbu_install_counter | default(0) | int + 1 }}"
+  when:
+    - ( nbu_rpm_check_register.rc == 1 )
+
+# TODO: Version check for each item.key and proceed if matches to nbu_version.
+# Verify what version of the NetBackup client software is currently installed.
+# Returned version is used to determine whether the NetBackup client sofware requires upgrading.
+- name: "NBU-{{ nbu_role|upper }}-INSTALL -> Verify what version of the NetBackup {{ nbu_role }} software ({{ item.key }}) is currently installed"
+  ansible.builtin.shell: ( rpm -qi "{{ item.key }}" | awk '/Version/ { print $3}' )
+  ignore_errors: true
+  changed_when: false
+  register: nbu_rpm_version_register
+  when:
+    - ( nbu_rpm_check_register.rc == 0 )
+
+- name: "NBU-{{ nbu_role|upper }}-INSTALL -> Setting the eventual install status"
+  ansible.builtin.set_fact:
+    nbu_install_status: install
+    nbu_failed_rpms: "{{ nbu_failed_rpms }}{{ item.key }},"
+  when:  ( nbu_install_counter |int > 0 )
+
+- name: "NBU-{{ nbu_role|upper }}-INSTALL -> Setting the eventual install status"
+  ansible.builtin.set_fact:
+    nbu_install_status: none
+  when:
+    - ( nbu_install_counter |int == 0 )
+    - install_phase == "PRE"
+
+- name: "NBU-{{ nbu_role|upper }}-INSTALL -> Get the [{{ item.key }}] rpm version from proposed version list"
+  ansible.builtin.set_fact:
+      rpm_proposed_version: "{{ rpm_data.value }}"
+  with_items: "{{ nbu_pkgs_ordered_list[nbu_role][nbu_version] | dict2items }}"
+  loop_control:
+    loop_var: rpm_data
+  when: rpm_data.key == item.key
+
+- name: Ansible::Log.info
+  fail:
+    msg:  "This machine has a different version {{ nbu_rpm_version_register.stdout }} of NetBackup {{ nbu_role | capitalize }} installed, therefore exit immediately."
+  when:
+    - ( nbu_rpm_check_register.rc == 0 )
+    - install_phase == "PRE"
+    - ( nbu_rpm_version_register.stdout is version_compare(rpm_proposed_version,'>') or nbu_rpm_version_register.stdout is version_compare(rpm_proposed_version,'<') )
+
+# EOF

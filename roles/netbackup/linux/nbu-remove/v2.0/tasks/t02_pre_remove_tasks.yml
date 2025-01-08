@@ -1,0 +1,78 @@
+#$Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved. $
+
+#####################################################################
+#### nbu-remove -> tasks -> t02_pre_remove_tasks.yml ####
+#####################################################################
+
+# Define the install start time as variable
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Start NetBackup Remove"
+  ansible.builtin.set_fact:
+    status: "started"
+    install_time: "{{ lookup('pipe','date +%Y%m%d%H%M%S') }}"
+
+# Kill the NetBackup daemons, so that the host ID-based certificates can be retained, in case of reinstalling NetBackup
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Check if /usr/openv/netbackup/bin/bp.kill_all exists"
+  stat:
+    path: "/usr/openv/netbackup/bin/bp.kill_all"
+  register: kill_all_check
+  failed_when: false
+  changed_when: false
+
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Stopping NetBackup services first try"
+  ansible.builtin.shell: "echo y | /usr/openv/netbackup/bin/bp.kill_all"
+  changed_when: false
+  when: kill_all_check.stat.exists
+
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }}  -> Stopping NetBackup services second try"
+  ansible.builtin.shell: "echo y | /usr/openv/netbackup/bin/bp.kill_all"
+  changed_when: false
+  when: kill_all_check.stat.exists
+
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Check if {{ os_path_nbu_vxss }} exists"
+  stat:
+    path: "{{ os_path_nbu_vxss }}"
+  register: vxss_check_register
+  failed_when: false
+  changed_when: false
+
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Check if {{ os_path_nbu_webtruststore }} exists"
+  stat:
+    path: "{{ os_path_nbu_webtruststore }}"
+  register: webtruststore_check_register
+  failed_when: false
+  changed_when: false
+
+# Save the NetBackup certificates, in case this removal is part of a re-install. The install Playbook will put the certificates back in place
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Archive the machine's NetBackup certificate, to use later if re-install"
+  archive: 
+    path:
+      - "{{ os_path_nbu_vxss }}"
+      - "{{ os_path_nbu_webtruststore }}"
+    dest: "/var/tmp/nbcerts.tar.gz"
+    mode: 0600
+    owner: root
+    group: root
+  when: 
+    - vxss_check_register.stat.exists and webtruststore_check_register.stat.exists
+
+# Make a backup copy of the NBU config files.
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Backup of bp.conf exclude_list and include_list"
+  copy:
+    src: "{{item}}"
+    dest: "/var/tmp/{{item | basename}}-{{ install_time }}"
+    remote_src: yes
+  failed_when: false
+  with_items:
+    - "{{ os_path_nbu_bpconf }}"
+    - "{{os_path_nbu_exclude_list}}"
+    - "{{ os_path_nbu_include_list }}"
+
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Save exclude_list files if they exist in /usr/openv/netbackup as files"
+  shell: "ls -latr /usr/openv/netbackup/exclude_list.* > /dev/null 2>&1 && tar cvfz /var/tmp/exclude_list-pol-specific-{{ install_time }}.tar.gz /usr/openv/netbackup/exclude_list.* > /dev/null 2>&1"
+  failed_when: false
+
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Save include_list files if they exist in /usr/openv/netbackup as files"
+  shell: "ls -latr /usr/openv/netbackup/include_list.* > /dev/null 2>&1 && tar cvfz /var/tmp/include_list-pol-specific-{{ install_time }}.tar.gz /usr/openv/netbackup/include_list.* > /dev/null 2>&1"
+  failed_when: false
+
+# EOF

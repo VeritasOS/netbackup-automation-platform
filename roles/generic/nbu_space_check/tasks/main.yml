@@ -1,4 +1,11 @@
-# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+
+# Execute the role which detect the partial install status
+- name: "NBU-STORAGE-COMPATIBILITY -> Execute the partial install status role"
+  ansible.builtin.include_role:
+    name: 'helper/detect_partial_install'
 
 - name: "NBU-STORAGE-COMPATIBILITY -> Include tasks for space check"
   ansible.builtin.include_tasks: "{{ansible_system|lower}}.yml"
+  when:
+    - ( not nbap_partial_install_detected )

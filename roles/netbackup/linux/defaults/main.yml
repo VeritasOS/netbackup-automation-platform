@@ -1,10 +1,8 @@
-# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
 
 # NetBackup - Packages
-nbu_server_rpm_name: VRTSnetbp
-nbu_client_rpm_name: VRTSnbcfg
 nbu_client_rpm_pddea: VRTSpddea
-nbu_client_rpm_vrtsnbcfg: VRTSnbcfg
+nbu_rpm_vrtsnbcfg: VRTSnbcfg
 nbu_client_rpm_pbx: VRTSpbx
 nbu_failed_rpms: ""
 
@@ -33,12 +31,12 @@ eeb_name: "{{ nbu_eeb_file_base.split(' ')[0] }}"
 nbu_eeb_rpm_marker_name: "VRTSnbeeb_{{ nbu_eeb_file_id }}-{{ nbu_eeb_file_ver }}-{{ nbu_version }}.x86_64"
 
 # Local static variable initialization
-nbu_client_install_counter: 0
-nbu_client_upgrade_counter: 0
 nbu_primary_server_ans_found: false
-nbu_server_install_counter: 0
-nbu_server_upgrade_counter: 0
 nbu_detected_role: "NOT_FOUND"
+nbu_install_counter: 0
+nbu_upgrade_counter: 0
+netbackup_failed_license_list_counter: 0 
+artifactory_repo: ""
 
 # Certificate management resources
 nbu_certificates_file_dir: certinfo                             # newly created directory for keeping cert management files
@@ -52,6 +50,8 @@ nbu_api_port: '1556'
 ignore_primary_connectivity_failures: false               # If using a masked primary for initial install, set the value to true to ignore connectivity validation and continue execution. 
 skip_primary_version_compatibility_check: false           # Skip Primary server version compatibility check
 install_pkgs_from_local_cache: false
+do_install_ita_dc: true
+nbap_partial_install_detected: false                      # Used to detect the partial/mixed installation case
 
 # OS - Files
 os_file_hosts: "{{ os_path_etc }}/hosts"
@@ -60,7 +60,8 @@ os_file_security_limits: "{{ os_path_etc }}/security/limits.conf"
 os_file_bpconf: bp.conf
 os_file_vmconf: vm.conf
 os_file_authconf: auth.conf
-os_file_custreg: veritas_customer_registration_key.json
+nbu_cust_reg_file_name: veritas_customer_registration_key.json
+nbu_cust_reg_path:  "{{os_path_openv_tmp}}/{{nbu_cust_reg_file_name}}"
 
 os_file_nbu_nbcertcmd: "{{ os_path_nbu_install_default }}/netbackup/bin/nbcertcmd"
 os_file_nbu_bpimagelist: "{{ os_path_nbu_install_default }}/netbackup/bin/admincmd/bpimagelist"
@@ -84,27 +85,55 @@ os_file_nbu_bpclntcmd: "{{ os_path_nbu_install_default }}/netbackup/bin/bpclntcm
 
 # OS - Directories
 os_dir_nbu_db: "{{ os_path_nbu_install_default }}/netbackup/db"
-os_dir_nbu_custreg: "{{ os_path_openv_tmp  }}/veritas_customer_registration_key.json"
+os_dir_nbu_backup: "{{ os_path_openv_tmp }}/upgrade_backup"
+os_dir_nbu_drfiles: "{{ os_path_openv_tmp }}/drfiles"
 
+nbu_db_data_path: "{{ os_path_nbu_install }}/db/data"
 
 # NBU - Config ("Limits")
 nbu_config_nbwebsvc_limit: "nbwebsvc  soft       nproc      8000"
+
+# OS - Packages
+os_rhel_system_packages:                                  # Additional system packages can be added here
+  "common":                                               #common for all os-versions and all nbu-roles
+    - libnsl
+    - ncurses-libs
+  "primary":                                              #primary specific. Similarly client and media specific list can be added
+    - bc
+    - gzip
+  "9":                                                    # RHEL 9 system packages
+    - libxcrypt-compat
+
+os_suse_system_packages:       
+  "primary":                                                    # SUSE 15 system packages
+    - insserv-compat 
+    - libXrender1
+    - libXtst6
+
 # Disk Space variables
 os_path_install_space_validation:
   client:
     - { path: "{{os_path_nbu_base}}", space_required_MB: 4500 }
-    - { path: "{{os_path_nbu_yum_cache_base}}", space_required_MB: 700 }
   media:
-    - { path: "{{os_path_nbu_base}}", space_required_MB: 7000 }
-    - { path: "{{os_path_nbu_yum_cache_base}}", space_required_MB: 5000 }
+    - { path: "{{os_path_nbu_base}}", space_required_MB: 4000 }
+  primary:
+    - { path: "{{os_path_nbu_base}}", space_required_MB: 8000 }
     
 os_path_upgrade_space_validation:
   client:
     - { path: "{{os_path_nbu_base}}", space_required_MB: 2800 }
-    - { path: "{{os_path_nbu_yum_cache_base}}", space_required_MB: 700 }
   media:
-    - { path: "{{os_path_nbu_base}}", space_required_MB: 7000 }
-    - { path: "{{os_path_nbu_yum_cache_base}}", space_required_MB: 5000 }
+    - { path: "{{os_path_nbu_base}}", space_required_MB: 4000 }
+  primary:
+    - { path: "{{os_path_nbu_base}}", space_required_MB: 8000 }
+
+os_path_cache_space_validation:
+  client:
+    - { path: "{{os_path_nbu_yum_cache_base}}", space_required_MB: 1000 }
+  media:
+    - { path: "{{os_path_nbu_yum_cache_base}}", space_required_MB: 7000 }
+  primary:
+    - { path: "{{os_path_nbu_yum_cache_base}}", space_required_MB: 10000 }
 
 #Inputs required for nbcheck
 nb_check_path: "{{ os_path_openv_tmp  }}/usr/openv/netbackup/bin/goodies/nbcheck"
@@ -158,4 +187,23 @@ nbu_pkgs_ordered_list:
     "8.3.0.2": { "VRTSnbpck": "8.3.0.2", "VRTSpbx": "1.12.27.0", "VRTSnbclt": "8.3.0.2", "VRTSnbjre": "8.3.0.2", "VRTSnbjava": "8.3.0.2",  "VRTSpddea": "13.0.2.0", "VRTSpddes": "13.0.2.0", "VRTSpddei": "3.0", "VRTSnbcfg": "8.3.0.2", "VRTSnetbp": "8.3.0.2"}
     "8.3.0.1": {"VRTSnbpck": "8.3.0.1", "VRTSpbx": "1.12.27.0", "VRTSnbclt": "8.3.0.1", "VRTSnbjre": "8.3.0.1", "VRTSnbjava": "8.3.0.1", "VRTSpddea": "13.0.1.0", "VRTSpddes": "13.0.1.0", "VRTSpddei": "1.0", "VRTSnbcfg": "8.3.0.1", "VRTSnetbp": "8.3.0.1"}
     "8.3.0.0": {"VRTSnbpck": "8.3.0.0", "VRTSpbx": "1.12.22.0", "VRTSnbclt": "8.3.0.0", "VRTSnbjre": "8.3.0.0", "VRTSnbjava": "8.3.0.0", "VRTSpddea": "13.0.0.0", "VRTSpddes": "13.0.0.0", "VRTSpddei": "1.0", "VRTSnbcfg": "8.3.0.0", "VRTSnetbp": "8.3.0.0"}
+  primary:
+    "10.5.0.0": {"VRTSnbpck": "10.5.0.0", "VRTSpbx": "1.19.37.0", "VRTSnbclt": "10.5.0.0", "VRTSnbclibs": "10.5.0.0", "VRTSnbjre": "10.5.0.0", "VRTSnbjava": "10.5.0.0", "VRTSpddes": "20.5.0.0", "VRTSpddeu": "20.5.0.0",  "VRTSpddea": "20.5.0.0", "VRTSnbcfg": "10.5.0.0", "VRTSnetbp": "10.5.0.0", "VRTSpostgresql":"16.4.1.0", "VRTSnbprimary":"10.5.0.0", "VRTSnbmqbrkr":"10.5.0.0", "VRTSnbweb":"10.5.0.0", "VRTSnbslibs": "10.5.0.0"}
+    "10.4.0.1": {"VRTSnbpck": "10.4.0.1", "VRTSpbx": "1.19.5.0", "VRTSnbclt": "10.4.0.1", "VRTSnbclibs": "10.4.0.1", "VRTSnbjre": "10.4.0.1", "VRTSnbjava": "10.4.0.1", "VRTSpddes": "20.4.0.1", "VRTSpddeu": "20.4.0.1", "VRTSpddea": "20.4.0.1", "VRTSpddei": "4.0", "VRTSnbcfg": "10.4.0.1", "VRTSpostgresql":"14.12.1.0", "VRTSnetbp": "10.4.0.1", "VRTSnbprimary":"10.4.0.1", "VRTSnbmqbrkr":"10.4.0.1", "VRTSnbweb":"10.4.0.1", "VRTSnbslibs": "10.4.0.1"}
+    "10.4.0.0": {"VRTSnbpck": "10.4.0.0", "VRTSpbx": "1.19.4.0", "VRTSnbclt": "10.4.0.0", "VRTSnbclibs": "10.4.0.0", "VRTSnbjre": "10.4.0.0", "VRTSnbjava": "10.4.0.0", "VRTSpddes": "20.4.0.0", "VRTSpddeu": "20.4.0.0",  "VRTSpddea": "20.4.0.0", "VRTSpddei": "4.0", "VRTSnbcfg": "10.4.0.0", "VRTSpostgresql":"14.11.1.0", "VRTSnetbp": "10.4.0.0", "VRTSnbprimary":"10.4.0.0", "VRTSnbmqbrkr":"10.4.0.0", "VRTSnbweb":"10.4.0.0", "VRTSnbslibs": "10.4.0.0"}
+    "10.3.0.1": {"VRTSnbpck": "10.3.0.1", "VRTSpbx": "1.18.8.0", "VRTSnbclt": "10.3.0.1", "VRTSnbclibs": "10.3.0.1", "VRTSnbjre": "10.3.0.1", "VRTSnbjava": "10.3.0.1", "VRTSpddes": "19.0.1.0", "VRTSpddeu": "19.0.1.0", "VRTSpddea": "19.0.1.0", "VRTSpddei": "4.0", "VRTSnbcfg": "10.3.0.1", "VRTSpostgresql":"14.10.1.0", "VRTSnetbp": "10.3.0.1", "VRTSnbprimary":"10.3.0.1", "VRTSnbmqbrkr":"10.3.0.1", "VRTSnbweb":"10.3.0.1", "VRTSnbslibs": "10.3.0.1"}
+    "10.3.0.0": {"VRTSnbpck": "10.3.0.0", "VRTSpbx": "1.18.8.0", "VRTSnbclt": "10.3.0.0", "VRTSnbclibs": "10.3.0.0", "VRTSnbjre": "10.3.0.0", "VRTSnbjava": "10.3.0.0", "VRTSpddes": "19.0.0.0", "VRTSpddeu": "19.0.0.0",  "VRTSpddea": "19.0.0.0", "VRTSpddei": "4.0", "VRTSnbcfg": "10.3.0.0", "VRTSpostgresql":"14.9.1.0", "VRTSnetbp": "10.3.0.0", "VRTSnbprimary":"10.3.0.0","VRTSnbmqbrkr":"10.3.0.0", "VRTSnbweb":"10.3.0.0", "VRTSnbslibs": "10.3.0.0"}
+    "10.2.0.1": {"VRTSnbpck": "10.2.0.1", "VRTSpbx": "1.17.62.5", "VRTSnbclt": "10.2.0.1", "VRTSnbclibs": "10.2.0.1", "VRTSnbjre": "10.2.0.1", "VRTSnbjava": "10.2.0.1", "VRTSpddes": "18.0.1.0", "VRTSpddeu": "18.0.1.0",  "VRTSpddea": "18.0.1.0", "VRTSpddei": "4.0", "VRTSnbcfg": "10.2.0.1", "VRTSpostgresql": "14.8.4.0", "VRTSnetbp": "10.2.0.1", "VRTSnbmqbrkr":"10.2.0.1", "VRTSnbweb":"10.2.0.1", "VRTSnbslibs": "10.2.0.1"}
+    "10.2.0.0": { "VRTSnbpck": "10.2.0.0", "VRTSpbx": "1.17.62.3", "VRTSnbclt": "10.2.0.0", "VRTSnbclibs": "10.2.0.0", "VRTSnbjre": "10.2.0.0", "VRTSnbjava": "10.2.0.0",  "VRTSpddea": "18.0.0.0", "VRTSpddes": "18.0.0.0", "VRTSpddei": "4.0", "VRTSnbcfg": "10.2.0.0", "VRTSpostgresql":"14.7.4.0", "VRTSnetbp": "10.2.0.0", "VRTSnbprimary":"10.2.0.0", "VRTSnbmqbrkr":"10.2.0.0", "VRTSnbweb":"10.2.0.0", "VRTSnbslibs": "10.2.0.0"}
+    "10.1.1.0": {"VRTSnbpck": "10.1.1.0", "VRTSpbx": "1.17.46.1", "VRTSnbclt": "10.1.1.0", "VRTSnbclibs": "10.1.1.0", "VRTSnbjre": "10.1.1.0", "VRTSnbjava": "10.1.1.0", "VRTSpddea": "17.1.0.0", "VRTSpddes": "17.1.0.0", "VRTSpddei": "4.0", "VRTSnbcfg": "10.1.1.0", "VRTSnetbp": "10.1.1.0", "VRTSnbmqbrkr":"10.1.1.0", "VRTSnbweb":"10.1.1.0", "VRTSnbslibs": "10.1.1.0"}
+    "10.1.0.0": { "VRTSnbpck": "10.1.0.0", "VRTSpbx": "1.17.43.0", "VRTSnbclt": "10.1.0.0", "VRTSnbclibs": "10.1.0.0", "VRTSnbjre": "10.1.0.0", "VRTSnbjava": "10.1.0.0",  "VRTSpddea": "17.0.0.0", "VRTSpddes": "17.0.0.0", "VRTSpddei": "3.0", "VRTSnbcfg": "10.1.0.0", "VRTSnetbp": "10.1.0.0", "VRTSnbmqbrkr":"10.1.0.0", "VRTSnbweb":"10.1.0.0", "VRTSnbslibs": "10.1.0.0"}
+    "10.0.0.1": { "VRTSnbpck": "10.0.0.1", "VRTSpbx": "1.17.14.0", "VRTSnbclt": "10.0.0.1", "VRTSnbjre": "10.0.0.1", "VRTSnbjava": "10.0.0.1",  "VRTSpddea": "16.0.1.0", "VRTSpddes": "16.0.1.0", "VRTSpddei": "3.0", "VRTSnbcfg": "10.0.0.1", "VRTSpostgresql":"13.4.11.0", "VRTSnetbp": "10.0.0.1", "VRTSnbmqbrkr":"10.0.0.1", "VRTSnbweb":"10.0.0.1"}
+    "10.0.0.0": { "VRTSnbpck": "10.0.0.0", "VRTSpbx": "1.17.11.0", "VRTSnbclt": "10.0.0.0", "VRTSnbjre": "10.0.0.0", "VRTSnbjava": "10.0.0.0",  "VRTSpddea": "16.0.0.0", "VRTSpddes": "16.0.0.0", "VRTSpddei": "3.0", "VRTSnbcfg": "10.0.0.0", "VRTSpostgresql":"13.4.11.0", "VRTSnetbp": "10.0.0.0", "VRTSnbmqbrkr":"10.0.0.0", "VRTSnbweb":"10.0.0.0"}
+    "9.1.0.1": { "VRTSnbpck": "9.1.0.1", "VRTSpbx": "1.15.3.0", "VRTSnbclt": "9.1.0.1", "VRT Snbjre": "9.1.0.1", "VRTSnbjava": "9.1.0.1",  "VRTSpddea": "15.0.2.0", "VRTSpddes": "15.0.2.0", "VRTSpddei": "3.0", "VRTSnbcfg": "9.1.0.1", "VRTSnetbp": "9.1.0.1"}
+    "9.1.0.0": { "VRTSnbpck": "9.1.0.0", "VRTSpbx": "1.15.3.0", "VRTSnbclt": "9.1.0.0", "VRTSnbjre": "9.1.0.0", "VRTSnbjava": "9.1.0.0",  "VRTSpddea": "15.0.0.0", "VRTSpddes": "15.0.0.0", "VRTSpddei": "3.0", "VRTSnbcfg": "9.1.0.0", "VRTSnetbp": "9.1.0.0"}
+    "9.0.0.0": { "VRTSnbpck": "9.0.0.0", "VRTSpbx": "1.13.5.0", "VRTSnbclt": "9.0.0.0", "VRTSnbjre": "9.0.0.0", "VRTSnbjava": "9.0.0.0",  "VRTSpddea": "14.0.0.0", "VRTSpddes": "14.0.0.0", "VRTSpddei": "2.0", "VRTSnbcfg": "9.0.0.0", "VRTSnetbp": "9.0.0.0"}
+    "8.3.0.2": { "VRTSnbpck": "8.3.0.2", "VRTSpbx": "1.12.27.0", "VRTSnbclt": "8.3.0.2", "VRTSnbjre": "8.3.0.2", "VRTSnbjava": "8.3.0.2",  "VRTSpddea": "13.0.2.0", "VRTSpddes": "13.0.2.0", "VRTSpddei": "3.0", "VRTSnbcfg": "8.3.0.2", "VRTSnetbp": "8.3.0.2"}
+    "8.3.0.1": {"VRTSnbpck": "8.3.0.1", "VRTSpbx": "1.12.27.0", "VRTSnbclt": "8.3.0.1", "VRTSnbjre": "8.3.0.1", "VRTSnbjava": "8.3.0.1", "VRTSpddea": "13.0.1.0", "VRTSpddes": "13.0.1.0", "VRTSpddei": "1.0", "VRTSnbcfg": "8.3.0.1", "VRTSnetbp": "8.3.0.1"}
+    "8.3.0.0": {"VRTSnbpck": "8.3.0.0", "VRTSpbx": "1.12.22.0", "VRTSnbclt": "8.3.0.0", "VRTSnbjre": "8.3.0.0", "VRTSnbjava": "8.3.0.0", "VRTSpddea": "13.0.0.0", "VRTSpddes": "13.0.0.0", "VRTSpddei": "1.0", "VRTSnbcfg": "8.3.0.0", "VRTSnetbp": "8.3.0.0"}
+
 # EOF

@@ -1,0 +1,59 @@
+# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+
+###########################################################
+#### Catalog Image Backup  - ("Linux/Windows") ####
+###########################################################
+
+- name: "NBU-CATALOG-IMAGES-BACKUP -> BLOCK: Execute the task based on partial installation state"
+  block:
+    - name: "NBU-CATALOG-IMAGES-BACKUP-> Check catalog backup is archived or not"
+      ansible.builtin.uri:
+        url: "{{ nbu_api_base_url + 'catalog/images?filter=policyName%20eq%20%27catarc%27%20and%20scheduleType%20eq%20%27USER_BACKUP%27%20and%20policyType%20eq%20%27Standard%27&page%5Blimit%5D=1&page%5Boffset%5D=1' }}"
+        method: GET
+        headers:
+          Content-Type: "{{ nbu_api_content_type }}"
+          Authorization: "Bearer {{ user_access_token }}" 
+        status_code: 200
+        validate_certs: no
+      no_log: true
+      failed_when: false
+      register: catalog_images_result
+      retries: 2
+      delay: 2
+      until:  catalog_images_result.status == 200
+
+    - name: "NBU-CATALOG-IMAGES-BACKUP -> Set the error message if unable to execute the API"
+      ansible.builtin.assert:
+        that: catalog_images_result.status == 200
+        fail_msg: "{{ catalog_images_result.json.errorMessage }}"
+        quiet: false
+      when: catalog_images_result.json.errorMessage is defined
+
+    - name: "NBU-CATALOG-IMAGES-BACKUP -> Check catarc policy existence"
+      block:
+        - name: "NBU-CATALOG-IMAGES-BACKUP -> Check catarc policy existence."
+          ansible.builtin.uri:
+            url: "{{ nbu_api_base_url + 'config/policies/catarc' }}"
+            method: GET
+            headers:
+              Content-Type: "{{ nbu_api_content_type }}"
+              Authorization: "Bearer {{ user_access_token }}" 
+            status_code: 200
+            validate_certs: no
+          failed_when: false
+          no_log: true
+          register: config_policies_catarc_result
+          retries: 2
+          delay: 2
+          until:  config_policies_catarc_result.status == 200     
+
+        - name: "NBU-CATALOG-IMAGES-BACKUP-> Failed if catalog images backup were present but catarc policy does not exist."
+          ansible.builtin.assert:
+            that: config_policies_catarc_result.status == 200
+            fail_msg: "Archived catalog images were found but 'catarc' policies does not exist. Archived images would not get migrated to EMM. We request you to re-run the playbook after creating a catalog archiving policy."
+            quiet: false
+      when: catalog_images_result.json.meta.pagination.count > 0
+  when:
+    - ( not nbap_partial_install_detected )
+
+#EOF

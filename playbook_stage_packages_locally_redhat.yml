@@ -1,4 +1,4 @@
-# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
 
 # NetBackup Stage Packages Locally
 - name: NETBACKUP -> Stage Packages Locally
@@ -16,12 +16,21 @@
       ansible.builtin.include_vars: "vars/linux.yml"
       tags: ["always"]
       no_log: True
+
+    - name: "NBU-STAGE-PACKAGES -> Input validation fo netbackup role"
+      fail:
+        msg: "'nbu_role' is required to proceed with staging playbook. Do provide the NetBackup role and re-run the playbook."
+      when:
+      - nbu_role == ""
+
   roles:
     - role: 'netbackup/linux'                   # Load netbackup default vars
     - role: 'generic/is_nbu_version_supported'
+    - role: 'generic/nbu_space_check'
+    - role: 'generic/nbu_compatibility'
     - role: 'netbackup/common/stage-package-locally'
   vars:
     nbu_playbook_type: "stage"
-    nbu_role: "client"
+    nbu_role: ""                  # Supported values ['primary','media','client'] 
 
 # EOF

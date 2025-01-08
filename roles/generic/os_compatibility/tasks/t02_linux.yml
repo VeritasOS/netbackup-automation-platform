@@ -1,4 +1,4 @@
-# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
 
 # These tasks will perform some OS related checks on the NetBackup server.
 # If any checks fail, the workflow will fail so the problem can be recified prior to
@@ -29,5 +29,5 @@
       register: db_mount_btrfs
       failed_when: db_mount_btrfs == 0
   when:
-   - ( nbu_role == "primary") or ( nbu_role == "master") or ( nbu_role == "media")
+   - ( nbu_role == "primary" ) or ( nbu_role == "media" )
 # EOF

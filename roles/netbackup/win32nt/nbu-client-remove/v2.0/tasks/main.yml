@@ -1,0 +1,13 @@
+# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+
+#############################################
+#### NetBackup Remove - Client ("WINDOWS") ####
+#############################################
+
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Verify whether the NetBackup Client is installed and is the version supported for removal by this Playbook"
+  ansible.builtin.include_tasks: t01_pre_remove_check.yml
+
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Remove the NetBackup Client"
+  ansible.builtin.include_tasks: t02_base_remove.yml
+
+# EOF

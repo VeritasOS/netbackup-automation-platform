@@ -1,0 +1,33 @@
+# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+
+# These vars are mostly customer-centric and would get updated.
+# Desired NetBackup Client Version to use in the format [x.x.x.x]
+# Supported versions: ['10.5.0.0', '10.4.0.1', '10.4.0.0', '10.3.0.1', '10.3.0.0', '10.2.0.1', '10.2.0.0', '10.1.1.0', '10.1.0.0', '10.0.0.1', '10.0.0.0']
+nbu_version: x.x.x.x
+
+# {{nbu_artifactory_repo_base_url}} should contain the base url (pre yum-enterprise-<awx_inventory_name>-local) so that it can be appended based on the {{awx_inventory_name}}.
+nbu_artifactory_repo_base_url: "https://nbartifactory.rsv.ven.veritas.com:443/artifactory/oem_local/ansible_repo/software/"
+# {{nbu_path_repo_client_base_pkg}} should contain relative path of base release version NetBackup packages
+nbu_path_repo_client_base_pkg:  "/netbackup/{{ nbu_version }}/{{ ansible_os_family }}/"
+# {{nbu_path_repo_client_eeb_pkg}} should contain relative path of EEB installer and its related EEB Marker file
+nbu_path_repo_client_eeb_pkg: "/netbackup/{{ nbu_version }}/eeb/{{ ansible_os_family }}/"
+
+# List of EEBs to be installed per version
+nbu_client_eeb_ordered:
+  10.1.1.0:
+    - "eebinstaller_4138919_1_AMD64"
+
+# NB Configuration variables
+nbu_primary_server_ans: PRIMARY01
+
+# FTO (Feature Toggle Options)                            # Valid options given can be true|false|yes|no|y|n|1|0
+include_eeb_rpm_marker: false                            # If set to true, playbook wil create/delete extra RPM marker
+nbu_cert_management: false                                # For include cert mangement playbook
+
+nbu_primary_certdetails:
+- hostname: 'PRIMARY01'                                     # Primary Server hostname
+  nbu_server_fingerPrint: ''                                # Certificate fingerprint
+  nbu_server_authorization_token: ''                        # Authorization Token
+
+# OS - NB Paths 
+os_path_nbu_install: C:\Program Files\Veritas

@@ -1,4 +1,4 @@
-# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
 
 # The install will not be performed if the playbook type is different from installed software on target host machine
 # Verify whether the NetBackup software(Client/Media/Primary) is completely installed
@@ -51,7 +51,7 @@
       block:
       # Verify whether target host machine has the NetBackup client software installed
         - name: "NBU-ROLE-STATUS -> Verify whether NetBackup client software is currently installed"
-          ansible.builtin.shell: ( rpm -qa | grep "{{ nbu_client_rpm_name }}" )
+          ansible.builtin.shell: ( rpm -qa | grep "{{ nbu_rpm_vrtsnbcfg }}" )
           changed_when: false
           register: nbu_client_rpm_check
           failed_when: false

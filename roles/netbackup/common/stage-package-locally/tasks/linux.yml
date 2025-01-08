@@ -1,0 +1,62 @@
+# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+
+#####################################################
+#### Stage Packages Locally - ("Linux/Windows") ####
+#####################################################
+
+# Set default Artifactory Respository 
+- name: "NBU-STAGE-PACKAGES -> Set Artifactory Repository based on type of environment as Fact"
+  ansible.builtin.set_fact:
+    artifactory_repo: ""
+
+# Discover Artifactory Respository based on the type of environment
+- name: "NBU-STAGE-PACKAGES -> Define Artifactory Repository based on type of environment"
+  block:
+    - name: "NBU-STAGE-PACKAGES -> Define Artifactory Repository - DEV"
+      ansible.builtin.set_fact:
+        artifactory_repo: yum-enterprise-dev-local/
+      when: "'DEV' in awx_inventory_name"
+
+    - name: "NBU-STAGE-PACKAGES -> Define Artifactory Repository - UAT"
+      ansible.builtin.set_fact:
+        artifactory_repo: yum-enterprise-test-local/
+      when: "'UAT' in awx_inventory_name"
+
+    - name: "NBU-STAGE-PACKAGES -> Define Artifactory Repository - PROD"
+      ansible.builtin.set_fact:
+        artifactory_repo: yum-enterprise-prod-local/
+      when:
+        - "'PROD' in awx_inventory_name"
+  when: awx_inventory_name is defined and awx_inventory_name != ""
+
+- name: "NBU-STAGE-PACKAGES -> Add YUM repository for NetBackup Software" 
+  ansible.builtin.yum_repository:
+    name: netbackup
+    description: NetBackup {{ nbu_version }} Client Binaries
+    baseurl: "{{ nbu_artifactory_repo_base_url }}{{ artifactory_repo }}{{ nbu_path_repo_base_pkg }}"
+    enabled: no
+    gpgcheck: no
+    state: present
+    sslverify: no
+  when:
+  - ansible_os_family == 'RedHat'
+
+# Stage NetBackup Software Packages -> Linux
+- name: "NBU-STAGE-PACKAGES -> Download NetBackup {{ nbu_role }} software locally"
+  ansible.builtin.yum:
+    name: 
+      - "{{ item.key }}"
+    state: latest
+    disablerepo: "*"
+    enablerepo: netbackup
+    validate_certs: no
+    download_only: true
+  register: download_result
+  with_items:
+    - "{{ nbu_pkgs_ordered_list[nbu_role][nbu_version] | dict2items }}"
+  when:
+    - not (download_result.rc|d(0)) # Make sure that the loop exits if any RPM installation fails.
+    - ansible_os_family == 'RedHat'
+
+
+# EOF

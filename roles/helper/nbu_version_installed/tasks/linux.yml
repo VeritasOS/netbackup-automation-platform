@@ -1,6 +1,6 @@
-# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
 
-# Verify whether the client machine has the NetBackup client software installed
+# Verify whether the machine has the NetBackup software installed
 - name: "NBU-VERSION-CHECK -> Verify if NetBackup Software is currently installed"
   ansible.builtin.stat:
     path: "{{ os_path_nbu_install }}/netbackup/bin/version"
@@ -17,7 +17,7 @@
 
 - name: "NBU-VERSION-CHECK -> Verify installed NetBackup software version"
   block:
-    - name: "NBU-VERSION-CHECK -> Set Client Version to value from version.txt"
+    - name: "NBU-VERSION-CHECK -> Set NetBackup Version from version.txt"
       ansible.builtin.set_fact:
         nbu_current_installed_version: "{{ nbu_version_register.stdout }}"
 

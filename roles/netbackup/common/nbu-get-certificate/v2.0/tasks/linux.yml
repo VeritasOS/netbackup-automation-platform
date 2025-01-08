@@ -1,0 +1,48 @@
+# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+
+- name: "NBU-CERTIFICATE-DEPLOYMENT -> Verify NetBackup file {{ os_file_nbu_nbcertcmd }} existence status"
+  ansible.builtin.stat:
+    path: "{{ os_file_nbu_nbcertcmd }}"
+  register: netbackup_nbcertcmd_file_register
+  failed_when: false
+  changed_when: false
+
+- name: "BLOCK: NBU-CERTIFICATE-DEPLOYMENT-> Retrieve certificate mode for primary server: {{ nbu_primary_server_ans }}"
+  block:
+    - name: "NBU-CERTIFICATE-DEPLOYMENT-> Retrieve certificate mode for primary server: {{ nbu_primary_server_ans }}"
+      block:
+        - name: "NBU-CERTIFICATE-DEPLOYMENT-> Retrieve certificate mode for primary server: {{ nbu_primary_server_ans }}"
+          ansible.builtin.shell: ( {{ os_file_nbu_nbcertcmd }} -getSecConfig -caUsage -server "{{ nbu_primary_server_ans }}" )
+          changed_when: false
+          register: nbu_primary_certificate_mode_register
+          failed_when: false
+
+        - name: "NBU-CERTIFICATE-DEPLOYMENT -> Verification failed for primary server ({{ nbu_primary_server_ans }})"
+          ansible.builtin.fail:
+            msg: "{{ nbu_primary_certificate_mode_register.stderr }}"
+          when:
+            - ( nbu_primary_certificate_mode_register.rc != 0 )
+            - nbu_primary_certificate_mode_register.stderr != ""
+
+        - name: "NBU-CERTIFICATE-DEPLOYMENT->Extract certificate mode of NBCA and ECA"
+          set_fact:
+            nbu_nbca_mode: "{{ nbu_primary_certificate_mode_register.stdout_lines[0].split(':')[1] | trim }}"
+            nbu_eca_mode: "{{ nbu_primary_certificate_mode_register.stdout_lines[1].split(':')[1] | trim }}"
+          
+      when: ( nbu_role == "media" ) or (nbu_role == "client")        
+
+    - name: "NBU-CERTIFICATE-DEPLOYMENT -> Load required tasks for Certificate deployment using ECA"
+      ansible.builtin.include_tasks: t01_{{ansible_system|lower}}_eca_certificate.yml
+      when: 
+        - ( nbu_role == "primary" ) or ( nbu_eca_mode == "ON" )
+
+    - name: "NBU-CERTIFICATE-DEPLOYMENT -> Load required tasks for Certificate deployment using NBCA"
+      ansible.builtin.include_tasks: t01_{{ansible_system|lower}}_nbca_certificate.yml
+      when: 
+        - ( nbu_role == "media" ) or (nbu_role == "client")  
+        - nbu_eca_mode == "OFF"
+        - nbu_nbca_mode == "ON"
+  when:
+    - netbackup_nbcertcmd_file_register.stat.exists
+
+# EOF

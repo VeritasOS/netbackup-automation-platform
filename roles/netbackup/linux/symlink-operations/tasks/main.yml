@@ -1,4 +1,4 @@
-# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
 
 # Check if base installation path exists
 - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Verify base installation path ({{ os_path_nbu_install_default }}) existence"
@@ -61,4 +61,19 @@
   when:
     - install_path_check_register.stat.exists == false
     - os_path_nbu_install != os_path_nbu_install_default
-    
+
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} Physical path creation"
+  block:
+    # Ensure the NetBackup install directory exists
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Ensure NetBackup {{ os_path_nbu_install }} directory exists"
+      ansible.builtin.file:
+        path: "{{ os_path_nbu_install }}"
+        state: directory
+        owner: "root"
+        group: "bin"
+        mode: "0755"
+  when:
+    - install_path_check_register.stat.exists == false
+    - os_path_nbu_install == os_path_nbu_install_default
+
+#EOF

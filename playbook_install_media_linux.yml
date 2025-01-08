@@ -1,4 +1,4 @@
-# $Copyright: Copyright (c) 2024 Veritas Technologies LLC. All rights reserved $
+# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
 
 # NetBackup Server - Install - Media Server
 - name: NETBACKUP -> MEDIA SERVER INSTALL
@@ -20,13 +20,12 @@
    - role: 'netbackup/linux'                                    # Load netbackup default vars
    - role: 'generic/os_compatibility'
    - role: 'generic/is_nbu_version_supported'
+   - role: 'helper/detect_partial_install'
    - role: 'generic/nbu_compatibility'
-   - role: 'netbackup/linux/pre-install-os-task/v1.1'           # Perform pre-upgrade tasks - OS related
-   - role: 'netbackup/linux/nbu-media-install/v1.1'
-   - role: 'netbackup/common/nbu-get-certificate/v1.1'
+   - role: 'netbackup/linux/nbu-server-install/v2.0'
+   - role: 'netbackup/common/nbu-get-certificate/v2.0'
    - role: 'generic/nbu_verification'                           # Verifies certificate specific checks and report 
-   - role: 'netbackup/linux/nbu-install-eeb/v1.1'
-
+   - role: 'netbackup/linux/nbu-install-eeb/v2.0'
   vars:
     # Role Control
     nbu_role: "media"

@@ -1,0 +1,19 @@
+# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+
+#############################################################
+#### NetBackup Certificate Deployment - Client ("RHEL/Windows") ####
+#############################################################
+- name: "NBU-ECA-CERTIFICATE-DEPLOYMENT -> Netbackup External Certificate deployment started"
+  block:
+    # Execute nbcertcmdtool -getSecConfig to check certificate mode of the master server for RHEL
+    - name: "NBU-CERTIFICATE-DEPLOYMENT -> Check certificate mode"
+      ansible.builtin.include_tasks: "{{ ansible_system|lower }}.yml"
+  when:
+    - nbu_cert_management or nbu_playbook_type == "certificate"
+
+- name: Ansible::Log.info
+  ansible.builtin.debug:
+    msg: "Skip fetching certificate as the FTO (nbu_cert_management) is turned off."
+  when: 
+    - nbu_playbook_type != "certificate"
+    - nbu_cert_management == false
