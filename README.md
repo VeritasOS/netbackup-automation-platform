@@ -175,7 +175,7 @@ This project contains Ansible playbooks, roles, vars for automating various depl
 | 02 | `generic/is_nbu_version_supported` | Validates that the given proposed version (`nbu_version`) is supported or not. |
 | 03 | `generic/nbu_compatibility` | Perform preventive check to validate NetBackup installed or not. Check the installed version of NetBackup is compatible with the NetBackup Primary server version |
 | 04 | `generic/nbu_space_check` | Validate that remote machine has sufficient space for install/upgrade of NetBackup |
-| 05 | `generic/nbu_verification` | validate the certificate-specific configurations |
+| 05 | `generic/nbu_verification` | Validate the certificate-specific configurations and connectivity between different NBU roles |
 | 06 | `generic/os_compatibility` | Verify the OS compatibility for all the supported NetBackup versions. It also installs system dependent packages, if missing. |
 
 
@@ -187,7 +187,7 @@ This project contains Ansible playbooks, roles, vars for automating various depl
 
 | # | Role Name (netbackup) | Role Description (Performs system level changes which includes installation, uninstallation, removal, etc ...) |
 | --- | --- |--- |
-| 01 | `netbackup/common/nbu-get-certificate` | This role initially checks Certificate mode of Primary Server, depending on that what mode we receive from primary(NBCA/ECA) performs certificate deployment of Client/Media installation. |
+| 01 | `netbackup/common/nbu-get-certificate` | - This role initially checks Certificate mode of Primary Server, depending on that what mode we receive from primary(NBCA/ECA) performs certificate deployment of Client/Media installation. <br> - With primary, this role configures ECA.|
 | 02 | `netbackup/common/stage-package-locally` | Staging playbook to download netbackup packages into local cache and use it during install-time. |
 | 03 | `netbackup/linux` <br> `netbackup/win32nt`</br> | Contains static playbook specifications required for different workflows |
 | 04 | `netbackup/linux/nbu-client-install` <br> `netbackup/linux/nbu-server-install` <br> `netbackup/win32nt/nbu-client-install`  | NetBackup Client/Media/Primary is installed/upgraded based on the below conditions :- <br> New Install: <br> - No NetBackup Client/Media/Primary is installed <br> - Proposed NetBackup Client/Media/Primary is installed <br> Upgrade: <br> - Older version of NetBackup Client/Media/Primary is installed <br> - Proposed NetBackup Client/Media/Primary is installed |
@@ -341,7 +341,7 @@ This project contains Ansible playbooks, roles, vars for automating various depl
          <tr>
             <td>10</td>
             <td>nbu_webservices_group: <code>nbwebgrp</code></td>
-            <td rowspan=5>We validate the specified user name and groups, create local users/groups if missing 
+            <td rowspan=5>We validate the specified user names and groups, create local users/groups if missing 
             <td rowspan=5>string</td>
         </tr>
          <tr>
@@ -350,15 +350,15 @@ This project contains Ansible playbooks, roles, vars for automating various depl
         </tr>
          <tr>
             <td>12</td>
-            <td><code>nbu_services_group</code></td>
+            <td>nbu_services_group:<code>''</code></td>
         </tr>
          <tr>
             <td>13</td>
-            <td><code>nbu_services_user</code></td>
+            <td>nbu_services_user:<code>''</code></td>
         </tr>
         <tr>
             <td>14</td>
-            <td><code>nbu_database_user</code></td>
+            <td>nbu_database_user:<code>"{{ nbu_services_user }}"</code></td>
         </tr>
         <tr>
             <td>15</td>
@@ -370,28 +370,28 @@ This project contains Ansible playbooks, roles, vars for automating various depl
          <tr>
             <td>16</td>
             <td><code>security_properties_params</code></td>
-            <td>This var is for global security setting
+            <td>This dictionary contains global security setting parameters. This could further be extended to remaining security settings.
             <br><code> &emsp;&emsp;certificateAutoDeployLevel: 1</code><br><code>&emsp;&emsp;dteGlobalMode: "PREFERRED_ON"</code><br><code>&emsp;&emsp;allowInsecureBackLevelHost: 0</code><br><code>&emsp;&emsp;aliasAutoAdd: 1</code></td>
             <td>string</td>
         </tr>
         <tr>
             <td>17</td>
             <td><code>setPassphraseConstraintsRequest</code></td>
-            <td>This var is for setting the passpharase constraint request
+            <td>This var is for setting the passpharase constraints
             <br><code> &emsp;&emsp;minPassphraseLength: 18</code><br><code>&emsp;&emsp;minUpperCaseRequired: 1</code><br><code>&emsp;&emsp;minLowerCaseRequired: 1</code></td>
             <td>string</td>
         </tr>
          <tr>
             <td>18</td>
             <td><code>drpkgpassphrase</code></td>
-            <td>This var is required for disaster recovery passphrase
+            <td>This var is to set the disaster recovery passphrase
             </td>
             <td>string</td>
         </tr>
          <tr>
             <td>19</td>
             <td><code>nbu_db_data_path</code></td>
-            <td>This var is required if specify the postgre database user path
+            <td>Specify the non-default database location, if need to install db on a custom location.
             </td>
             <td>string</td>
         </tr>
@@ -510,11 +510,11 @@ Once all the pre-requisites are met, below steps could be used to run playbooks.
 >     - If you would like to use `--extra-vars` CLI option , we recommend to specify in JSON format
 >         ```java
 >         For Linux:
->         [user@host ~]$ ansible-playbook playbook_install_client_redhat.yml -l linux -vv --extra-vars="nbu_version=10.3.0.0 os_path_nbu_install=/usr/openv"
+>         [user@host ~]$ ansible-playbook playbook_install_client_redhat.yml -l linux -vv --extra-vars ' {"nbu_version": "10.3.0.0", "os_path_nbu_install": "/usr/openv"} '
 >         ```
 >         ```java
 >         For Windows:
->         [user@host ~]$ ansible-playbook playbook_install_client_windows.yml -l win -vv --extra-vars="nbu_version=10.3.0.0 os_path_nbu_install=C:\Program Files\Veritas"
+>         [user@host ~]$ ansible-playbook playbook_install_client_windows.yml -l win -vv --extra-vars ' {"nbu_version": "10.3.0.0", "os_path_nbu_install": "C:\\Program Files\\Veritas"} '
 >         ```
 
 #### From within the Ansible Automation Platform
