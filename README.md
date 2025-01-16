@@ -17,7 +17,6 @@ The project contains Ansible roles and playbooks for automating the deployment a
 > * <span style="color:#cc9900"><b>10.0.0.1</b></span><br>
 > * <span style="color:#cc9900"><b>10.0.0.0</b></span><br>
 
-## Project Test
 ## Project Contents
 
 This project contains Ansible playbooks, roles, vars for automating various deployment tasks for <b>NetBackup Media, Primary & Client</b>. We support below functionalities with our ansible playbooks:
