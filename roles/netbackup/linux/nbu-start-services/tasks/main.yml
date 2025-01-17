@@ -16,7 +16,7 @@
   failed_when: false
   changed_when: false
 
-- name: "NBU-STOP-SERVICES -> Attempt to stop NetBackup processes"
+- name: "NBU-START-SERVICES -> Attempt to start NetBackup processes"
   block:
     - name: "NBU-START-SERVICES -> Checking pbx_exchange already running"
       ansible.builtin.shell: "{{ os_file_nbu_bpps }} -x | grep VRTSpbx | grep pbx_exchange | wc -l"
@@ -41,7 +41,7 @@
       no_log: true
       failed_when: false
 
-    - name: "NBU-START-SERVICES -> Force failure when all services are not started"
+    - name: "NBU-START-SERVICES -> Force failure when all services are not Started"
       ansible.builtin.assert:
         that:
           - service_start_register.rc is defined

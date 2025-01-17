@@ -9,12 +9,12 @@
 
 # Verify the OS distribution major release for RedHat
 # Expected result is Red Hat versions 7, 8 or 9
-- name: "NBU-OS-COMPATIBILITY -> Verify the OS distribution major version is compatible with NetBackup Version"
+- name: "NBU-OS-COMPATIBILITY -> Verify the OS distribution version is compatible with NetBackup Version"
   ansible.builtin.assert:  
-    that: (ansible_distribution_major_version  == '7'  and nbu_version is version_compare('10.5.0.0','<')) or (ansible_distribution_major_version  == '8') or (ansible_distribution_major_version  == '9')
-    success_msg: "PASS - Operating system distribution major version is compatible - OS distribution major version: {{ ansible_distribution_major_version }}"
-    fail_msg: "ERROR - Incompatible OS Distribution Major version - Detected OS Distribution Major Version is {{ ansible_distribution_major_version }}"
-    quiet: true
+    that: (ansible_distribution_major_version  == '7'  and nbu_version is version_compare('10.5.0.0','<')) or (ansible_distribution_version < '8.6' and nbu_version is version_compare('10.5.0.0','<')) or (ansible_distribution_version  >= '8.6' ) or (ansible_distribution_major_version  == '9')
+    success_msg: "PASS - Operating system distribution version is compatible - OS distribution version: {{ ansible_distribution_version }}"
+    fail_msg: "ERROR - Incompatible OS Distribution version - Detected OS Distribution Version is {{ ansible_distribution_version }}"
+    quiet: false
 
 # Special handling of native dependent packages for RHEL 8 & 9
 - name: "NBU-OS-COMPATIBILITY -> Check for system dependent packages on RHEL"

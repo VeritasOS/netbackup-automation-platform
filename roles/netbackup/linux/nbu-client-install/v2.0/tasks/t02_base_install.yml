@@ -119,11 +119,6 @@
     fail_msg: "ERROR: [{{ nbu_failed_rpms }}] Selected RPM's failed to install successfully."
     quiet: true
 
-- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }}  -> Remove [/tmp/client_traditional_install] file"
-  ansible.builtin.file:
-    path: /tmp/client_traditional_install
-    state: absent
-
 # Ensure the NetBackup Client java files are not installed on RedHat
 - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Remove NetBackup Client Java RPM files if installed by older Ansible package"
   ansible.builtin.yum:
