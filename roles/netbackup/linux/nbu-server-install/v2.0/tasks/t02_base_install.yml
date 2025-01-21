@@ -60,66 +60,6 @@
     - nbu_role == "primary"
     - "nbu_version is version_compare('10.2.0.1', '<=')"
 
-# Slic files should be present for nbu_version > 10.2.0.1 for Primary. Because its required in answer file.
-- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> SLIC licensing validation"
-  block:
-    - name: "NBU-{{ nbu_role|upper }} -> Download SLIC License files to {{ os_path_openv_tmp  }}"
-      get_url:
-        url: "{{ nbu_artifactory_repo_base_url }}{{ artifactory_repo }}{{ nbu_path_support_utilities }}{{ item }}"
-        dest: "{{ os_path_openv_tmp }}/{{ item }}"
-        mode: '744'
-      with_items: "{{ nbu_license_file_name_list }}"
-      failed_when: false
-      register: slic_license_file_download_register
-
-    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Slic license list counter"
-      ansible.builtin.set_fact:
-        nbu_license_list_counter: "{{ nbu_license_file_name_list | length }}"
-
-    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Aggregate SLIC files path existence results"
-      ansible.builtin.set_fact:
-        netbackup_failed_license_list_counter: "{{ netbackup_failed_license_list_counter | default(0) | int + 1 }}"
-      with_sequence: start=0 end="{{ slic_license_file_download_register.results | length -1 }}"
-      when:
-        - ( slic_license_file_download_register.results[item | int].status_code != 200 and slic_license_file_download_register.results[item | int].status_code != 304 ) or ( slic_license_file_download_register.results[item | int].item == "")
-
-    - name:  "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Set-fact qualified and failed slic license file list variable"
-      set_fact:
-        qualified_slic_license_file_list: "{{ qualified_slic_license_file_list | default([]) }}"
-        failed_slic_license_file_list: "{{ failed_slic_license_file_list | default([]) }}"
-
-    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Creating valid Slic license file list"
-      ansible.builtin.set_fact:
-        qualified_slic_license_file_list: "{{ qualified_slic_license_file_list + [ slic_license_file_download_register.results[item | int].item ] }}"
-      with_sequence: start=0 end="{{ slic_license_file_download_register.results | length -1 }}"
-      when:
-        - ( slic_license_file_download_register.results[item | int].status_code == 200 ) or ( slic_license_file_download_register.results[item | int].status_code == 304 )
-        - ( slic_license_file_download_register.results[item | int].item != "")
-
-    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Get the list of failed slic license file list"
-      ansible.builtin.set_fact:
-        failed_slic_license_file_list: "{{ failed_slic_license_file_list + [ slic_license_file_download_register.results[item | int].item ] }}"
-      with_sequence: start=0 end="{{ slic_license_file_download_register.results | length -1 }}"
-      when:
-        - ( slic_license_file_download_register.results[item | int].status_code != 200 and slic_license_file_download_register.results[item | int].status_code != 304 ) or ( slic_license_file_download_register.results[item | int].item == "")
-
-    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Failed slic license file list"
-      debug:
-        msg: "WARNING: We couldn't able to download all the provided license files [{{ failed_slic_license_file_list }}] and are continuing with [{{ qualified_slic_license_file_list }}]. Make sure to apply the failed license files later using NetBackup WebUI."
-      changed_when: true
-      when:
-        - ( failed_slic_license_file_list | length > 0 )
-        - ( netbackup_failed_license_list_counter != nbu_license_list_counter) 
-
-    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Check if all slic file path  entries exist on target host for version(> 10.2.0.1)"
-      ansible.builtin.fail:
-        msg: "ERROR -  Download of license/s files ({{nbu_license_file_name_list}}) failed from artifactory. Check and provide the correct SLF file name"
-      when:
-        - netbackup_failed_license_list_counter == nbu_license_list_counter 
-  when: 
-    - nbu_role == "primary"
-    - "nbu_version is version_compare('10.2.0.1', '>')"
-
 - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Verify file existence status"
   ansible.builtin.stat:
     path: "{{ netbackup_file }}"
@@ -218,13 +158,6 @@
       
   when: netbackup_files_register.results[2].stat.exists and nbu_playbook_type == "upgrade"
 
-# Upload NetBackup answer file ("Primary Server")
-- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Upload NetBackup Install Answer File ('{{ nbu_role }} Server')"
-  ansible.builtin.template:
-    src: "NBInstallAnswer-{{ nbu_role }}-linux.j2"
-    dest: "/tmp/NBInstallAnswer.conf"
-    mode: 0755
-
 # Update Yum configuration to skip SSL verifcation ("#### VERITAS LAB REQUIREMENT #####")
 - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Update YUM configuration to skip SSL verificaion on repository"
   ansible.builtin.lineinfile:
@@ -279,13 +212,46 @@
   when:
     - ansible_os_family == 'Suse'
 
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Load failed rpm pkg file, if any"
+  ansible.builtin.stat:
+    path: /tmp/previous_rpm_pkg_install_failed
+  register: pre_rpm_failed_file_stat_register
+  failed_when: false
+  changed_when: false
+
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Load failed rpm pkg file, if any"
+  block: # pre_rpm_failed_file_stat_register.stat.exists
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Gather facts if any RPM failed to installed"
+      ansible.builtin.shell:
+        cmd: "cat /tmp/previous_rpm_pkg_install_failed"
+      register: pre_rpm_failed_rpm_register
+      no_log: true
+    
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Set facts if any RPM failed to installed"
+      ansible.builtin.set_fact:
+        failed_rpm_name: "{{ pre_rpm_failed_rpm_register.stdout_lines[0] }}"
+        failed_rpm_logs: "{{ pre_rpm_failed_rpm_register.stdout_lines[1] }}"
+      no_log: true
+
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Stopping NetBackup daemons"
+      ansible.builtin.include_role:
+        name: 'netbackup/linux/nbu-stop-services'
+
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Starting NetBackup daemons"
+      ansible.builtin.include_role:
+        name: 'netbackup/linux/nbu-start-services'
+
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Install failure detected."
+      fail:
+        msg: "The {{ failed_rpm_name }} package did not install successfully. Please look at [{{ failed_rpm_logs }}] install trace for more details."
+  when: pre_rpm_failed_file_stat_register.stat.exists
+
 - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Delete NBCheck temporary files"
   ansible.builtin.file:
     path: "{{ item }}"
     state: absent
   with_items:
     - "/tmp/nb_mstr_ans"
-    - "/tmp/server_traditional_install"
 
 # Install NetBackup Software - RHEL Server
 - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> {{ nbu_playbook_type | capitalize }} the NetBackup server software {{ nbu_role|capitalize }} server"
@@ -356,14 +322,6 @@
         failed_rpm_name: "{{ post_rpm_failed_rpm_register.stdout_lines[0] }}"
         failed_rpm_logs: "{{ post_rpm_failed_rpm_register.stdout_lines[1] }}"
       no_log: true
-
-    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Remove the failed RPM ({{ failed_rpm_name }})"
-      ansible.builtin.yum:
-        name: "{{ failed_rpm_name }}"
-        state: absent
-        disablerepo: '*'
-        enablerepo: netbackup
-        cacheonly: "{{ install_pkgs_from_local_cache }}"
 
     - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Install failure detected."
       fail:

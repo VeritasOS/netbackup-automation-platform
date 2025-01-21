@@ -82,6 +82,82 @@
   when:
   - ansible_os_family == 'Suse'
 
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Load required tasks for symlink validation and creation"
+  ansible.builtin.include_role:
+    name: 'netbackup/linux/symlink-operations'
+
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Create [{{ os_path_openv_tmp }}] directory if it does not exist"
+  ansible.builtin.file:
+    path: "{{ os_path_openv_tmp }}"
+    state: directory
+
+# Slic files should be present for nbu_version > 10.2.0.1 for Primary. Because its required in answer file.
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> SLIC licensing validation"
+  block:
+    - name: "NBU-{{ nbu_role|upper }} -> Download SLIC License files to {{ os_path_openv_tmp  }}"
+      get_url:
+        url: "{{ nbu_artifactory_repo_base_url }}{{ artifactory_repo }}{{ nbu_path_support_utilities }}{{ item }}"
+        dest: "{{ os_path_openv_tmp }}/{{ item }}"
+        mode: '744'
+      with_items: "{{ nbu_license_file_name_list }}"
+      failed_when: false
+      register: slic_license_file_download_register
+
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Slic license list counter"
+      ansible.builtin.set_fact:
+        nbu_license_list_counter: "{{ nbu_license_file_name_list | length }}"
+
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Aggregate SLIC files path existence results"
+      ansible.builtin.set_fact:
+        netbackup_failed_license_list_counter: "{{ netbackup_failed_license_list_counter | default(0) | int + 1 }}"
+      with_sequence: start=0 end="{{ slic_license_file_download_register.results | length -1 }}"
+      when:
+        - ( slic_license_file_download_register.results[item | int].status_code != 200 and slic_license_file_download_register.results[item | int].status_code != 304 ) or ( slic_license_file_download_register.results[item | int].item == "")
+
+    - name:  "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Set-fact qualified and failed slic license file list variable"
+      set_fact:
+        qualified_slic_license_file_list: "{{ qualified_slic_license_file_list | default([]) }}"
+        failed_slic_license_file_list: "{{ failed_slic_license_file_list | default([]) }}"
+
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Creating valid Slic license file list"
+      ansible.builtin.set_fact:
+        qualified_slic_license_file_list: "{{ qualified_slic_license_file_list + [ slic_license_file_download_register.results[item | int].item ] }}"
+      with_sequence: start=0 end="{{ slic_license_file_download_register.results | length -1 }}"
+      when:
+        - ( slic_license_file_download_register.results[item | int].status_code == 200 ) or ( slic_license_file_download_register.results[item | int].status_code == 304 )
+        - ( slic_license_file_download_register.results[item | int].item != "")
+
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Get the list of failed slic license file list"
+      ansible.builtin.set_fact:
+        failed_slic_license_file_list: "{{ failed_slic_license_file_list + [ slic_license_file_download_register.results[item | int].item ] }}"
+      with_sequence: start=0 end="{{ slic_license_file_download_register.results | length -1 }}"
+      when:
+        - ( slic_license_file_download_register.results[item | int].status_code != 200 and slic_license_file_download_register.results[item | int].status_code != 304 ) or ( slic_license_file_download_register.results[item | int].item == "")
+
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Failed slic license file list"
+      debug:
+        msg: "WARNING: We couldn't able to download all the provided license files [{{ failed_slic_license_file_list }}] and are continuing with [{{ qualified_slic_license_file_list }}]. Make sure to apply the failed license files later using NetBackup WebUI."
+      changed_when: true
+      when:
+        - ( failed_slic_license_file_list | length > 0 )
+        - ( netbackup_failed_license_list_counter != nbu_license_list_counter) 
+
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Check if all slic file path  entries exist on target host for version(> 10.2.0.1)"
+      ansible.builtin.fail:
+        msg: "ERROR -  Download of license/s files ({{nbu_license_file_name_list}}) failed from artifactory. Check and provide the correct SLF file name"
+      when:
+        - netbackup_failed_license_list_counter == nbu_license_list_counter 
+  when: 
+    - nbu_role == "primary"
+    - "nbu_version is version_compare('10.2.0.1', '>')"
+
+# Upload NetBackup answer file
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Upload NetBackup Install Answer File ('{{ nbu_role }} Server')"
+  ansible.builtin.template:
+    src: "NBInstallAnswer-{{ nbu_role }}-linux.j2"
+    dest: "/tmp/NBInstallAnswer.conf"
+    mode: 0755
+
 - name: NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Find if any previous RPM couldn't install successfully"
   ansible.builtin.stat:
     path: /tmp/previous_rpm_pkg_install_failed
@@ -116,10 +192,6 @@
     name: 'generic/nbu_space_check'
   when: ( nbu_install_status == "install" ) or ( nbu_install_status == "upgrade" )
 
-- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Load required tasks for symlink validation and creation"
-  ansible.builtin.include_role:
-    name: 'netbackup/linux/symlink-operations'
-
 - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Load pre-install tasks"
   ansible.builtin.include_role:
     name: 'netbackup/linux/pre-install-os-task/v2.0'
@@ -131,5 +203,16 @@
   when:
     - do_perform_nbcheck_preinstall
     - ( nbu_install_status == "install" ) or ( nbu_install_status == "upgrade" )
+
+# Remove the temporary file from /tmp folder after all the rpms are installed successfully.
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Remove the nbap_partial_install_detected file from {{ os_path_openv_tmp }} "
+  ansible.builtin.file:
+     path: "{{ item }}"
+     state: absent
+  with_items:
+    - "{{ os_path_openv_tmp }}/nbap_partial_install_detected"
+    - "/tmp/previous_rpm_pkg_install_failed"
+  when:
+    - nbu_install_status == "none"
 
 # EOF

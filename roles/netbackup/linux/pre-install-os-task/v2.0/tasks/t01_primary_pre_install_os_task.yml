@@ -43,7 +43,7 @@
   ansible.builtin.group:
     name: '{{ nbu_services_group }}'
     state: present
-  when:   
+  when:
     - group_check_results.results[1].rc != 0
 
 - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Check if service and database users exist"
@@ -64,8 +64,8 @@
   when: 
     - user_check_results.results[0].rc != 0  
 
-- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Check if user {{ nbu_services_user }} is in secondary group {{ nbu_webservices_group }}"
-  ansible.builtin.shell: id -Gn {{ nbu_services_user }} | grep -q {{ nbu_services_group }}
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Determine if user '{{ nbu_services_user }}' belongs to the '{{ nbu_webservices_group }}' secondary group."
+  ansible.builtin.shell: ( id -Gn {{ nbu_services_user }} | grep -q {{ nbu_webservices_group }} )
   register: secondarygroup_check_result
   failed_when: false
  
