@@ -150,12 +150,16 @@
     - "{{ os_path_openv_tmp }}/nbap_partial_install_detected"
     - "/tmp/previous_rpm_pkg_install_failed"
 
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Delete NetBackup links"
+  ansible.builtin.shell: ( find {{ item }} -type l -print0 | xargs -0 rm -rf )
+  with_items: "{{ nbu_directory_list_to_be_removed }}"
+
 - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Delete NetBackup files"
-  ansible.builtin.shell: ( find {{ item }} -type f | xargs rm -rf )
+  ansible.builtin.shell: ( find {{ item }} -type f -print0 | xargs -0 rm -f )
   with_items: "{{ nbu_directory_list_to_be_removed }}"
 
 - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Delete NetBackup directories except mounted disks"
-  ansible.builtin.shell: ( find {{ item }} -type d | xargs rm -rf )
+  ansible.builtin.shell: ( find {{ item }} -type d -print0 | xargs -0 rm -rf )
   with_items: "{{ nbu_directory_list_to_be_removed }}"
   failed_when: false 
 
