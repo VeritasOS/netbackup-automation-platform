@@ -6,6 +6,7 @@ Veritas NetBackup is the most powerful and widely adopted data protection soluti
 The project contains Ansible roles and playbooks for automating the deployment and configuration of NetBackup. The roles and the playbooks are provided in order to demonstrate the automated NetBackup tasks and leverage NetBackup APIs in an automation workflow.<br>
 
 > <span style="color:#0000ff"><b>NOTE:- </b></span> These playbooks support below NetBackup Client/Media/Primary versions.<br>
+> * <span style="color:#cc9900"><b>10.5.0.1</b></span><br>
 > * <span style="color:#cc9900"><b>10.5.0.0</b></span><br>
 > * <span style="color:#cc9900"><b>10.4.0.1</b></span><br>
 > * <span style="color:#cc9900"><b>10.4.0.0</b></span><br>
