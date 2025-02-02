@@ -176,7 +176,7 @@
   
   - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Attempt to reinstall RPM ({{ failed_rpm_name_register.stdout }})"
     ansible.builtin.shell:
-      cmd: "yum reinstall -y --enablerepo=netbackup {{ failed_rpm_name_register.stdout }}"
+      cmd: "yum reinstall -y --disablerepo=* --enablerepo=netbackup {{ failed_rpm_name_register.stdout }}"
     changed_when: false
     failed_when: false
     no_log: true
