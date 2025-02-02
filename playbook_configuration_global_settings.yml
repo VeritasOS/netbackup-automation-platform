@@ -23,6 +23,7 @@
     - role: 'generic/nbu_compatibility'
     - role: 'netbackup/common/rest-api-integration'
     - role: 'netbackup/common/rest-api-integration/global_settings'
+    - role: 'custom/license_entitlement' # A custom role to apply new entitlement/s
   vars:
     nbu_playbook_type: "global-settings"
     nbu_role: "primary"                  # Supported values ['primary','media','client'] 
