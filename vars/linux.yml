@@ -91,7 +91,8 @@ nbu_license_key:
 
 # This option specifies the SLIC file names list valid for nbu_version > "10.2.0.1"
 nbu_license_file_name_list: 
-- "<slice_license1>"
+- "NFR_10.3_2024-07-19.slf"
+- "NFR_10.3_2025-05-16.slf"
 
 # NBCA configuration details
 nbu_primary_certdetails:

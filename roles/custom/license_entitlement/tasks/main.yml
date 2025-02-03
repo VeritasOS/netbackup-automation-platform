@@ -1,0 +1,50 @@
+# README
+# 1. The license files need to be uploaded to artifactory location
+# 2. Task 17: Would download files to the ansible controller node
+# 3. Task 26: Run the RESTapi to add the entitlements
+# 4. Task 43: Delete the downlaoded files from ansible control node 
+
+- name: "NBU-LICENSE_ENTITLEMENT -> Create destination path if doesn't exists"
+  ansible.builtin.file:
+    path: "{{ os_path_openv_tmp }}"
+    state: directory
+  delegate_to: localhost
+  run_once: true  
+
+- name: "NBU-LICENSE_ENTITLEMENT -> Download and add entitlements"
+  block:
+    - name: "NBU-LICENSE_ENTITLEMENT -> Download SLIC License files to {{ os_path_openv_tmp  }}"
+      ansible.builtin.get_url:
+        url: "{{ nbu_artifactory_repo_base_url }}{{ artifactory_repo }}{{ nbu_path_support_utilities }}{{ item }}"
+        dest: "{{ os_path_openv_tmp }}/{{ item }}"
+        mode: '744'
+      delegate_to: localhost
+      run_once: true
+      with_items: "{{ nbu_license_file_name_list }}"
+
+    - name: "NBU-LICENSE_ENTITLEMENT -> Adds an entitlement to NetBackup"
+      ansible.builtin.uri:
+        url: "{{ nbu_api_base_url + 'licensing/entitlements' }}"
+        method: POST
+        headers:
+          Authorization: "Bearer {{ user_access_token }}"
+          Content-Type: "multipart/form-data"
+        body_format: form-multipart
+        body:
+          file:
+            content: "{{ lookup('file', '/usr/openv/tmp/{{ item }}') }}"
+            filename: "{{ item }}"
+        status_code: 201, 409
+        validate_certs: no
+      with_items: "{{ nbu_license_file_name_list }}"
+
+  always:
+    - name: "NBU-LICENSE_ENTITLEMENT -> Delete locally stored license files"
+      ansible.builtin.file:
+        path: "{{ os_path_openv_tmp}}/{{ item }}"
+        state: absent
+      delegate_to: localhost
+      run_once: true
+      with_items: "{{ nbu_license_file_name_list }}"
+
+#EOF
