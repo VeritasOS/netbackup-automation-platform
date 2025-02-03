@@ -3,30 +3,29 @@
 # These vars are mostly customer-centric and would get updated.
 # Desired NetBackup Client Version to use in the format [x.x.x.x]
 # Supported versions: ['10.5.0.1', '10.5.0.0', '10.4.0.1', '10.4.0.0', '10.3.0.1', '10.3.0.0', '10.2.0.1', '10.2.0.0', '10.1.1.0', '10.1.0.0', '10.0.0.1', '10.0.0.0']
-nbu_version: x.x.x.x
+nbu_version: 10.5.0.0
 
-Comment: >
-  # NetBackup Package Artifactory Repository
-  # {{nbu_artifactory_repo_base_url}} should contain the base url (pre yum-enterprise-<awx_inventory_name>-local) so that it can be appended based on the {{awx_inventory_name}}.
-  nbu_artifactory_repo_base_url: ""
-  # {{nbu_path_repo_client_base_pkg}} should contain relative path of base release version NetBackup packages
-  nbu_path_repo_base_pkg: ""
-  # {{nbu_path_repo_client_eeb_pkg}} should contain relative path of EEB installer and its related RPM Marker file
-  nbu_path_repo_eeb_pkg: ""
-  # {{nbu_path_support_utilities}} should contain relative path of support utilities
-  nbu_path_support_utilities: ""
+# NetBackup Package Artifactory Repository
+# {{nbu_artifactory_repo_base_url}} should contain the base url (pre yum-enterprise-<awx_inventory_name>-local) so that it can be appended based on the {{awx_inventory_name}}.
+nbu_artifactory_repo_base_url: "https://artifactory.veritas.com:443/artifactory/oem_local/ansible_repo/software/"
+# {{nbu_path_repo_client_base_pkg}} should contain relative path of base release version NetBackup packages
+nbu_path_repo_base_pkg: "netbackup/{{ nbu_version }}/{{ ansible_os_family }}/"
+# {{nbu_path_repo_client_eeb_pkg}} should contain relative path of EEB installer and its related RPM Marker file
+nbu_path_repo_eeb_pkg: "/netbackup/{{ nbu_version }}/eeb/{{ ansible_os_family }}/"
+# {{nbu_path_support_utilities}} should contain relative path of support utilities
+nbu_path_support_utilities: "/netbackup/{{ nbu_version }}/utilities/{{ ansible_system }}/"
 
-  # List of EEBs to be installed per nbu_role and version
-  nbu_eeb_ordered:
-    client:
-        10.1.1.0:
-         - "<eebinstall_name>"
-    media:
-        10.1.1.0:
-         - "<eebinstall_name>"
-    primary:
-        10.1.1.0:
-         - "<eebinstall_name>"    
+# List of EEBs to be installed per nbu_role and version
+nbu_eeb_ordered:
+  client:
+      10.5.0.0:
+  media:
+      10.5.0.0:
+  primary:
+      10.5.0.0:
+        - "eebinstaller_4188986_4_linuxR_x86 -uninstall"
+        - "eebinstaller_4189743_3_linuxR_x86"
+        - "eebinstaller_4189478_1_linuxR_x86" # Obselete 4188986_4 
 
 # NB Configuration variables
 nbu_primary_server_ans: PRIMARY01                          # Primary Server hostname can be given here
@@ -36,8 +35,8 @@ skip_primary_version_compatibility_check: false           # Skip Primary server 
 nbu_webservices_group: nbwebgrp
 nbu_webservices_user: nbwebsvc
 # NetBackup - Services Account
-nbu_services_group: ''
-nbu_services_user: ''
+nbu_services_group: 'nbsvcgrp'
+nbu_services_user: 'nbsvcusr'
 nbu_database_user: "{{ nbu_services_user }}"
 postgresql_pooler_odbc_port: ''
 
@@ -60,7 +59,7 @@ do_perform_nbcheck_preinstall: true                       # If set to true nbche
 should_force_process_termination: false                   # After 3 attempts of graceful shutdown, forcefully terminate the running processes
 
 # primary specific options
-do_install_ita_dc: false                                  # If set to true, will attempt to install ITA Data Collector along with Primary Server
+do_install_ita_dc: true                                  # If set to true, will attempt to install ITA Data Collector along with Primary Server
 # This option specifies if an upgrade from a 10.1.1 or earlier primary server is allowed to proceed. 
 # NetBackup 10.2 and later versions check if a catalog backup was performed in the last 24 hours.
 skip_missing_catalog_backup_check: false
@@ -90,8 +89,9 @@ nbu_license_key:
 - '<nbu_license_key1>'
 
 # This option specifies the SLIC file names list valid for nbu_version > "10.2.0.1"
-nbu_license_file_name_list: 
-- "<slice_license1>"
+nbu_license_file_name_list:
+- "NFR_10.3_2024-07-19.slf"
+- "NFR_10.3_2025-05-16.slf"
 
 # NBCA configuration details
 nbu_primary_certdetails:
