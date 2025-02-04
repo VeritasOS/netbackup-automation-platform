@@ -5,7 +5,7 @@
 # Supported versions: ['10.5.0.1', '10.5.0.0', '10.4.0.1', '10.4.0.0', '10.3.0.1', '10.3.0.0', '10.2.0.1', '10.2.0.0', '10.1.1.0', '10.1.0.0', '10.0.0.1', '10.0.0.0']
 nbu_version: 10.5.0.0
 
-nbu_artifactory_repo_base_url: "https://nbartifactory.rsv.ven.veritas.com:443/artifactory/oem_local/ansible_repo/software/"
+nbu_artifactory_repo_base_url: "https://artifactory.example.com:443/artifactory/oem_local/ansible_repo/software/"
 # {{nbu_path_repo_base_pkg}} should contain relative path of base release version NetBackup packages
 nbu_path_repo_base_pkg: "netbackup/{{ nbu_version }}/{{ ansible_os_family }}/"
 # {{nbu_path_repo_client_eeb_pkg}} should contain relative path of EEB installer
@@ -20,7 +20,7 @@ nbu_eeb_ordered:
         - "eebinstaller_4181227_1_linuxR_x86_4_18_0"
 
 # NB Configuration variables
-nbu_primary_server_ans: nbddevlnx312.vxindia.veritas.com                          # Primary Server hostname can be given here
+nbu_primary_server_ans: netbackup.example.com                          # Primary Server hostname can be given here
 ignore_primary_connectivity_failures: false               # If using a masked primary for initial install, set the value to true to ignore connectivity validation and continue execution. 
 skip_primary_version_compatibility_check: false           # Skip Primary server version compatibility check
 
@@ -45,9 +45,9 @@ should_force_process_termination: false                   # After 3 attempts of 
 
 # NBCA configuration details
 nbu_primary_certdetails:
-- hostname: 'nbddevlnx312.vxindia.veritas.com'                                   # Primary Server hostname
-  nbu_server_fingerPrint: 'AB:CD:EF:GH:IJ:KL'                              # Certificate fingerprint
-  nbu_server_authorization_token: 'ABCDEFGH'                      # Authorization Token 
+- hostname: 'netbackup.example.com'                                   # Primary Server hostname
+  nbu_server_fingerPrint: 'AB:CD:EF:GH:IJ:KL.....'                    # Certificate fingerprint
+  nbu_server_authorization_token: 'ABCDEFGH12345....'                     # Authorization Token 
 
 # OS - Packages
 os_rhel_system_packages:                                  # Additional system packages can be added here
