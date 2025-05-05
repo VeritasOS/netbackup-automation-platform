@@ -159,7 +159,7 @@
     mode: 0755
 
 - name: NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Find if any previous RPM couldn't install successfully"
-  ansible.builtin.stat:
+  ansible.builtin.stat: # Determines if reinstall will run
     path: /tmp/previous_rpm_pkg_install_failed
   register: pre_rpm_failed_register
   failed_when: false
@@ -167,21 +167,55 @@
 
 - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Read the previous failed RPM and attempt a reinstall"
   block:
-  - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Found instance of previous failed RPM"
-    ansible.builtin.shell:
-      cmd: "sed -n '1p' /tmp/previous_rpm_pkg_install_failed"
-    changed_when: false
-    failed_when: false
-    register: failed_rpm_name_register
-  
-  - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Attempt to reinstall RPM ({{ failed_rpm_name_register.stdout }})"
-    ansible.builtin.shell:
-      cmd: "yum reinstall -y --disablerepo=* --enablerepo=netbackup {{ failed_rpm_name_register.stdout }}"
-    changed_when: false
-    failed_when: false
-    no_log: true
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Found instance of previous failed RPM"
+      ansible.builtin.shell:
+        cmd: "sed -n '1p' /tmp/previous_rpm_pkg_install_failed"
+      changed_when: false
+      failed_when: false
+      register: failed_rpm_name_register
+    
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Attempt to reinstall RPM ({{ failed_rpm_name_register.stdout }})"
+      ansible.builtin.shell:
+        cmd: "yum reinstall -y --disablerepo=* --enablerepo=netbackup {{ failed_rpm_name_register.stdout }}"
+      register: failed_rpm_reinstall_register
+      failed_when: false
+      no_log: true
+
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Setting marker file previous_rpm_pkg_install_failed state to absent."
+      ansible.builtin.file:
+        path: "/tmp/previous_rpm_pkg_install_failed"
+        state: absent
+      when: 
+        - ( failed_rpm_reinstall_register.stderr == "" )
   when: 
     - ( pre_rpm_failed_register.stat.exists )
+
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Find if any previous RPM couldn't reinstall successfully"
+  ansible.builtin.stat: # Determines if we display the error and terminate.
+    path: /tmp/previous_rpm_pkg_install_failed
+  register: failed_rpm_marker_register
+  failed_when: false
+  changed_when: false
+
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Load failed rpm pkg file, if any"
+  block: # pre_rpm_failed_register.stat.exists
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Gather facts if any RPM failed to be installed"
+      ansible.builtin.shell:
+        cmd: "cat /tmp/previous_rpm_pkg_install_failed"
+      register: previous_failed_rpm_register
+      no_log: true
+    
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Set facts if any RPM failed to installed"
+      ansible.builtin.set_fact:
+        failed_rpm_name: "{{ previous_failed_rpm_register.stdout_lines[0] }}"
+        failed_rpm_logs: "{{ previous_failed_rpm_register.stdout_lines[1] }}"
+      no_log: true
+
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Display the failed rpm log details"
+      fail:
+        msg: "The {{ failed_rpm_name }} package did not install successfully. Please look at [{{ failed_rpm_logs }}] install trace for more details."
+  when: 
+    - ( failed_rpm_marker_register.stat.exists )
 
 - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Load required tasks for install verification"
   ansible.builtin.include_role:

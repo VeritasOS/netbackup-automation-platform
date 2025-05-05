@@ -267,7 +267,7 @@
     - "{{ nbu_pkgs_ordered_list[nbu_role][nbu_version] | dict2items  }}"
   when:
     - ansible_os_family == 'RedHat'
-    - ( nbu_role == "primary" ) or ( (item.key not in ['VRTSnbjava', 'VRTSnbjre']) or (item.key in ['VRTSnbjava', 'VRTSnbjre'] and nb_include_java_jre_install) )
+    - ((( nbu_role == "media" ) and (item.key not in ['VRTSnbjava', 'VRTSnbjre']) or (item.key in ['VRTSnbjava', 'VRTSnbjre'] and nb_include_java_jre_install)) or (( nbu_role == "primary" ) and (( nbu_version is version_compare('11.0.0.0', '<' )) or (item.key not in ['VRTSnbjava']) or (item.key in ['VRTSnbjava'] and nb_include_java_jre_install))))
     - not (result.rc|d(0)) # Make sure that the loop exits if any RPM installation fails.
 
 # Install NetBackup Software - SUSE Server
@@ -284,7 +284,7 @@
     - ansible_os_family == 'Suse'
     - item.key not in ['VRTSpddei']
     - (item.key not in ['VRTSpddeu']) or (item.key in ['VRTSpddeu'] and nbu_version is version_compare('10.4.0.0', '>=')) 
-    - ( nbu_role == "primary" ) or ( (item.key not in ['VRTSnbjava', 'VRTSnbjre']) or (item.key in ['VRTSnbjava', 'VRTSnbjre'] and nb_include_java_jre_install) )
+    - ((( nbu_role == "media" ) and (item.key not in ['VRTSnbjava', 'VRTSnbjre']) or (item.key in ['VRTSnbjava', 'VRTSnbjre'] and nb_include_java_jre_install)) or (( nbu_role == "primary" ) and (( nbu_version is version_compare('11.0.0.0', '<' )) or (item.key not in ['VRTSnbjava']) or (item.key in ['VRTSnbjava'] and nb_include_java_jre_install))))
     - not (result.rc|d(0)) # Make sure that the loop exits if any RPM installation fails.
 
 - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Set fact for install-phase"
@@ -371,6 +371,20 @@
     - nbu_role == "media"
     - not nb_include_java_jre_install
 
+# Ensure the NetBackup Server java files are not installed when fto is set to false and netbackup version is 11.0 onwards for redhat
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Remove NetBackup {{ nbu_role | capitalize }} Java RPM files if installed by older Ansible package"
+  ansible.builtin.yum:
+    name:
+      - VRTSnbjava
+    state: absent
+    disablerepo: '*'
+    enablerepo: netbackup
+    cacheonly: "{{ install_pkgs_from_local_cache }}"
+  when:
+    - ansible_os_family == 'RedHat'
+    - ( nbu_role == "primary" and nbu_version is version_compare('11.0.0.0' , '>=' ))
+    - not nb_include_java_jre_install
+
  # Ensure the NetBackup Server java files are not installed
 - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Remove NetBackup {{ nbu_role | capitalize }} Java RPM files if installed by older Ansible package"
   zypper:
@@ -381,6 +395,17 @@
   when:  
     - ansible_os_family == 'Suse'
     - nbu_role == "media"
+    - not nb_include_java_jre_install
+
+ # Ensure the NetBackup Server java files are not installed when fto is set to false and netbackup version is 11.0 onwards for suse
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Remove NetBackup {{ nbu_role | capitalize }} Java RPM files if installed by older Ansible package"
+  zypper:
+    name:
+      - VRTSnbjava
+    state: absent
+  when:
+    - ansible_os_family == 'Suse'
+    - ( nbu_role == "primary" and nbu_version is version_compare('11.0.0.0' , '>=' ))
     - not nb_include_java_jre_install
 
 # Remove the previous NetBackup EEB RPM marker files

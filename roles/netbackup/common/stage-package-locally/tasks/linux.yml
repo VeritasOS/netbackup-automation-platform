@@ -4,31 +4,6 @@
 #### Stage Packages Locally - ("Linux/Windows") ####
 #####################################################
 
-# Set default Artifactory Respository 
-- name: "NBU-STAGE-PACKAGES -> Set Artifactory Repository based on type of environment as Fact"
-  ansible.builtin.set_fact:
-    artifactory_repo: ""
-
-# Discover Artifactory Respository based on the type of environment
-- name: "NBU-STAGE-PACKAGES -> Define Artifactory Repository based on type of environment"
-  block:
-    - name: "NBU-STAGE-PACKAGES -> Define Artifactory Repository - DEV"
-      ansible.builtin.set_fact:
-        artifactory_repo: yum-enterprise-dev-local/
-      when: "'DEV' in awx_inventory_name"
-
-    - name: "NBU-STAGE-PACKAGES -> Define Artifactory Repository - UAT"
-      ansible.builtin.set_fact:
-        artifactory_repo: yum-enterprise-test-local/
-      when: "'UAT' in awx_inventory_name"
-
-    - name: "NBU-STAGE-PACKAGES -> Define Artifactory Repository - PROD"
-      ansible.builtin.set_fact:
-        artifactory_repo: yum-enterprise-prod-local/
-      when:
-        - "'PROD' in awx_inventory_name"
-  when: awx_inventory_name is defined and awx_inventory_name != ""
-
 - name: "NBU-STAGE-PACKAGES -> Add YUM repository for NetBackup Software" 
   ansible.builtin.yum_repository:
     name: netbackup

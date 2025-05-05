@@ -74,7 +74,11 @@
   when:
   - ansible_os_family == 'Suse'
 
-- name: NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Find if any previous RPM couldn't install successfully"
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Load required tasks for symlink validation and creation"
+  ansible.builtin.include_role:
+    name: 'netbackup/linux/symlink-operations'
+
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Find if any previous RPM couldn't install successfully"
   ansible.builtin.stat:
     path: /tmp/previous_rpm_pkg_install_failed
   register: pre_rpm_failed_register
@@ -108,10 +112,6 @@
     name: 'generic/nbu_space_check'
   when: ( nbu_install_status == "install" ) or ( nbu_install_status == "upgrade" )
 
-- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Load required tasks for symlink validation and creation"
-  ansible.builtin.include_role:
-    name: 'netbackup/linux/symlink-operations'
-
 # Running NBChecks for critical and non-critical checks
 - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Start NBCheck execution for NetBackup  {{ nbu_role|capitalize }}"
   ansible.builtin.include_role:
@@ -119,5 +119,16 @@
   when:
     - do_perform_nbcheck_preinstall
     - ( nbu_install_status == "install" ) or ( nbu_install_status == "upgrade" )
+
+# Remove the temporary file from /tmp folder after all the rpms are installed successfully.
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Remove the nbap_partial_install_detected file from {{ os_path_openv_tmp }} "
+  ansible.builtin.file:
+     path: "{{ item }}"
+     state: absent
+  with_items:
+    - "{{ os_path_openv_tmp }}/nbap_partial_install_detected"
+    - "/tmp/previous_rpm_pkg_install_failed"
+  when:
+    - nbu_install_status == "none"
 
 # EOF

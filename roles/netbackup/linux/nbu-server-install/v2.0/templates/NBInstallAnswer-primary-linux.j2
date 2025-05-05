@@ -7,6 +7,9 @@ SERVICE_USER = {{ nbu_services_user }}
 {% if nbu_version > "10.1.1.0" %}
 DATABASE_USER = {{ nbu_database_user }}
 {% endif %}
+{% if nbu_version > "10.2.0.1" %}
+IGNORE_MISSING_CATALOG_BACKUP = {{ 'YES' if skip_missing_catalog_backup_check else 'NO' }}
+{% endif %}
 {% if nbu_version >= "10.4.0.0" %}
 INSTALL_ITA_DATA_COLLECTOR = {{ 'YES' if do_install_ita_dc else 'NO' }}
 {% endif %}

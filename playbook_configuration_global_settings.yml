@@ -21,8 +21,9 @@
     - role: 'netbackup/linux'                   # Load netbackup default vars
     - role: 'generic/is_nbu_version_supported'
     - role: 'generic/nbu_compatibility'
-    - role: 'netbackup/common/rest-api-integration'
+    - { role: 'netbackup/common/rest-api-integration',  action: "login" }
     - role: 'netbackup/common/rest-api-integration/global_settings'
+    - { role: 'netbackup/common/rest-api-integration',  action: "logout" }
   vars:
     nbu_playbook_type: "global-settings"
     nbu_role: "primary"                  # Supported values ['primary','media','client'] 

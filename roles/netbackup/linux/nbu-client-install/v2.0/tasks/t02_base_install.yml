@@ -9,13 +9,51 @@
   ansible.builtin.include_role:
     name: 'generic/nbu_compatibility'
 
-# If the /usr/openv/netbackup/bp.conf file exists, make sure that master_01 is not listed in a SERVER = line
-- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Check if /usr/openv/netbackup/bp.conf exists"
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Verify file existence status"
   ansible.builtin.stat:
-    path: /usr/openv/netbackup/bp.conf
-  register: bpconf
+    path: "{{ netbackup_file }}"
+  register: netbackup_files_register
+  with_items:
+    - "{{ os_file_nbu_bpstart }}"
+    - "{{ os_file_nbu_bpdbjobs }}"
+    - "{{ os_file_nbu_bpconf }}"
+  loop_control:
+    loop_var: netbackup_file
   failed_when: false
   changed_when: false
+
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Skip few operational tasks as partial install detected."
+  block: #(not nbap_partial_install_detected)
+    # Stop the NetBackup services
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Stopping NetBackup daemons"
+      ansible.builtin.include_role:
+        name: 'netbackup/linux/nbu-stop-services'
+
+    # Start the NetBackup services
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Start the NetBackup Services"
+      ansible.builtin.shell:  ( {{ os_file_nbu_bpstart }} )
+      when: netbackup_files_register.results[0].stat.exists
+
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Verify running jobs and cancel it"
+      block:
+        # Cancel any running jobs - None should be running because policies and SLPs are disabled
+        - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Cancel any running jobs"
+          ansible.builtin.shell: ( {{ os_file_nbu_bpdbjobs }} -cancel_all)
+          changed_when: false
+
+        # Check there're no running jobs - There shouldn't be because policies and SLP are disabled but double check
+        - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Check there're no jobs running"
+          ansible.builtin.shell: ( {{ os_file_nbu_bpdbjobs }} -summary | grep -v MASTER | awk '{print $2}')
+          changed_when: false
+          register: nbu_running_jobs_check
+          until: nbu_running_jobs_check.stdout | int == 0
+          delay: 5
+          retries: 30
+      when:
+        - netbackup_files_register.results[1].stat.exists
+        - ( nbu_role == "primary" )
+  when:
+    - (not nbap_partial_install_detected)
 
  # Update CLIENT and SERVER in the NBInstallAnswer-client-linux.j2 template, when upgrade is being performed
 - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} ->  Update the CLIENT and SERVER in the NBInstallAnswer-client-linux.j2 template"
@@ -24,7 +62,7 @@
     # to reach bravura and defaulted to SERVER = master_01 as Primary Server
     - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Remove pseudo NetBackup Primary Server name from bp.conf file - make RFC compliant"
       ansible.builtin.shell: ( sed -i 's/SERVER = master_01/SERVER = master01/g' /usr/openv/netbackup/bp.conf )
-      when: bpconf.stat.exists
+      when: netbackup_files_register.results[2].stat.exists
       failed_when: false
       changed_when: false
 
@@ -50,7 +88,7 @@
         nbu_client_name_ans: "{{ nbu_client_name_register.stdout }}"
       when: nbu_client_name_register.stdout != ""
 
-  when: bpconf.stat.exists and nbu_playbook_type == "upgrade"
+  when: netbackup_files_register.results[2].stat.exists and nbu_playbook_type == "upgrade"
 
 # Upload NetBackup answer file ("Client - Linux")
 - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Upload NetBackup Install Answer File ('Client - Linux')"
@@ -58,6 +96,71 @@
     src: "NBInstallAnswer-client-linux.j2"
     dest: "/tmp/NBInstallAnswer.conf"
     mode: 0755
+
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Create partial install touch file and insert nbu_role."
+  ansible.builtin.lineinfile:
+    dest: "{{ os_path_openv_tmp }}/nbap_partial_install_detected"
+    line: "{{ item }}"
+    create: yes
+  with_items:
+    - "{{ nbu_role }}"
+    - "{{ nbu_playbook_type }}"
+
+# Install NetBackup VRTSnbpck package - RHEL
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> {{ nbu_playbook_type | capitalize }} the NetBackup VRTSnbpck for RHEL"
+  ansible.builtin.package:
+    name:
+      - "VRTSnbpck"
+    state: latest
+    validate_certs: no
+    disablerepo: '*'
+    enablerepo: netbackup
+  when:
+    - ansible_os_family == 'RedHat'
+
+# Install NetBackup VRTSnbpck package - Suse
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> {{ nbu_playbook_type | capitalize }} the NetBackup VRTSnbpck for Suse"
+  zypper:
+    name:
+      - "VRTSnbpck"
+    state: latest
+    disable_gpg_check: no
+  when:
+    - ansible_os_family == 'Suse'
+
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Load failed rpm pkg file, if any"
+  ansible.builtin.stat:
+    path: /tmp/previous_rpm_pkg_install_failed
+  register: pre_rpm_failed_file_stat_register
+  failed_when: false
+  changed_when: false
+
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Load failed rpm pkg file, if any"
+  block: # pre_rpm_failed_file_stat_register.stat.exists
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Gather facts if any RPM failed to installed"
+      ansible.builtin.shell:
+        cmd: "cat /tmp/previous_rpm_pkg_install_failed"
+      register: pre_rpm_failed_rpm_register
+      no_log: true
+
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Set facts if any RPM failed to installed"
+      ansible.builtin.set_fact:
+        failed_rpm_name: "{{ pre_rpm_failed_rpm_register.stdout_lines[0] }}"
+        failed_rpm_logs: "{{ pre_rpm_failed_rpm_register.stdout_lines[1] }}"
+      no_log: true
+
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Stopping NetBackup daemons"
+      ansible.builtin.include_role:
+        name: 'netbackup/linux/nbu-stop-services'
+
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Starting NetBackup daemons"
+      ansible.builtin.include_role:
+        name: 'netbackup/linux/nbu-start-services'
+
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Install failure detected."
+      fail:
+        msg: "The {{ failed_rpm_name }} package did not install successfully. Please look at [{{ failed_rpm_logs }}] install trace for more details."
+  when: pre_rpm_failed_file_stat_register.stat.exists
 
 # Install NetBackup Software - RHEL Client
 - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> {{ nbu_playbook_type | capitalize }} the NetBackup client software ('Client - RHEL')"
@@ -107,6 +210,32 @@
   ansible.builtin.include_role:
     name: 'netbackup/linux/nbu-install-verification'
 
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Load failed rpm pkg file, if any"
+  ansible.builtin.stat:
+    path: /tmp/previous_rpm_pkg_install_failed
+  register: post_rpm_failed_file_stat_register
+  failed_when: false
+  changed_when: false
+
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Load failed rpm pkg file, if any"
+  block: # post_rpm_failed_file_stat_register.stat.exists
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Gather facts if any RPM failed to installed"
+      ansible.builtin.shell:
+        cmd: "cat /tmp/previous_rpm_pkg_install_failed"
+      register: post_rpm_failed_rpm_register
+      no_log: true
+
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Set facts if any RPM failed to installed"
+      ansible.builtin.set_fact:
+        failed_rpm_name: "{{ post_rpm_failed_rpm_register.stdout_lines[0] }}"
+        failed_rpm_logs: "{{ post_rpm_failed_rpm_register.stdout_lines[1] }}"
+      no_log: true
+
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Install failure detected."
+      fail:
+        msg: "The {{ failed_rpm_name }} package did not install successfully. Please look at [{{ failed_rpm_logs }}] install trace for more details."
+  when: post_rpm_failed_file_stat_register.stat.exists
+
 - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Remove the trailing empty item from RPM list"
   ansible.builtin.set_fact:
     nbu_failed_rpms: "{{ nbu_failed_rpms[:-1] }}"
@@ -118,6 +247,12 @@
     success_msg: "PASS: All NetBackup RPM's for proposed version are installed successfully."
     fail_msg: "ERROR: [{{ nbu_failed_rpms }}] Selected RPM's failed to install successfully."
     quiet: true
+
+# Remove the temporary file from /tmp folder after all the rpms are installed successfully.
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Remove the nbap_partial_install_detected file from {{ os_path_openv_tmp }} "
+  ansible.builtin.file:
+     path: "{{ os_path_openv_tmp }}/nbap_partial_install_detected"
+     state: absent
 
 # Ensure the NetBackup Client java files are not installed on RedHat
 - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Remove NetBackup Client Java RPM files if installed by older Ansible package"

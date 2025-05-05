@@ -3,7 +3,7 @@
 - name: "NBU-PARTIAL-INSTALL-DETECTION -> Setting facts for Windows"
   ansible.builtin.set_fact:
     nbap_partial_install_detected: false
-    nbap_partial_role_detected: "{{ nbu_role }}"
+    nbap_partial_role_detected: "{{ nbu_detected_role }}"
     nbap_previous_playbook_type: "{{ nbu_playbook_type }}"
 
 #EOF

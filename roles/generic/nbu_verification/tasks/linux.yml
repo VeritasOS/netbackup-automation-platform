@@ -52,9 +52,21 @@
 
 - name: "NBU-VERIFICATION -> Setting a custom message for Connectivity failures"
   ansible.builtin.set_fact:
-    custom_error_msg: "NetBackup {{ nbu_role }} got sucessfully installed but option(nbu_cert_management) seems to be turned off, connectivity to Primary Server has not been established and would result into failure. We recommend that the configuration option be turned on and provide the security specifications."
+    custom_error_msg: "NetBackup {{ nbu_role }} got sucessfully installed but option(nbu_cert_management) seems to be turned off, connectivity to Primary Server has not been established and would result into failure. We recommend that the configuration option be turned on and re-run the playbook."
   no_log: true
-  when: nbu_role == "client" or nbu_role == "media"
+  when: 
+    - ( nbu_role == "media" ) or (nbu_role == "client")
+    - nbu_playbook_type == "install"
+    - not nbu_cert_management
+
+- name: "NBU-VERIFICATION -> Setting a custom message for Connectivity failures"
+  ansible.builtin.set_fact:
+    custom_error_msg: "We found that the existing NetBackup {{ nbu_role }} could not establish connectivity with the Primary server. It could be either certificate deployment is incomplete or services might be down."
+  no_log: true
+  when: 
+    - ( nbu_role == "media" ) or (nbu_role == "client")
+    - nbu_playbook_type == "upgrade"
+    - install_phase is not defined # install_phase is not defined at the time of pre verification
 
 - name: "NBU-VERIFICATION -> Setting a custom message for Connectivity failures"
   ansible.builtin.set_fact:
@@ -64,7 +76,7 @@
 
 - name: "NBU-VERIFICATION -> Verification failed for ({{ netbackup_failed_cmd }})"
   ansible.builtin.fail:
-    msg: "{{ custom_error_msg }} {{ netbackup_failed_stderr }}"
+    msg: "{{ custom_error_msg | default('') }} {{ netbackup_failed_stderr }}"
   ignore_errors: "{{ ignore_primary_connectivity_failures }}"
   when: 
     - netbackup_failed_rc | default(0)
