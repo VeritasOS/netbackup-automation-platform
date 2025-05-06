@@ -9,8 +9,8 @@
   changed_when: false 
 
 - name: "NBU-VERSION-CHECK -> Verify what version of the NetBackup software is currently installed"
-  ansible.builtin.shell:
-    cmd: "cat {{ os_path_nbu_install }}/netbackup/bin/version | awk -F ' ' '{print $2}'"
+  ansible.builtin.shell: 
+    cmd: "rpm -q --queryformat '%{VERSION}' VRTSnbclibs" 
   changed_when: false
   failed_when: false
   register: nbu_version_register
@@ -31,6 +31,6 @@
       ansible.builtin.debug:
         msg: "The NetBackup version ({{ nbu_current_installed_version }}) is currently installed."
   when:
-    - ( nbu_version_register.stdout != "" )
+    - ( nbu_version_register.rc == 0 )
 
 # EOF

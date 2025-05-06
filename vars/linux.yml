@@ -2,7 +2,7 @@
  
 # These vars are mostly customer-centric and would get updated.
 # Desired NetBackup Client Version to use in the format [x.x.x.x]
-# Supported versions: ['10.5.0.1', '10.5.0.0', '10.4.0.1', '10.4.0.0', '10.3.0.1', '10.3.0.0', '10.2.0.1', '10.2.0.0', '10.1.1.0', '10.1.0.0', '10.0.0.1', '10.0.0.0']
+# Supported versions: ['11.0.0.0', '10.5.0.1', '10.5.0.0', '10.4.0.1', '10.4.0.0', '10.3.0.1', '10.3.0.0', '10.2.0.1', '10.2.0.0', '10.1.1.0', '10.1.0.0', '10.0.0.1', '10.0.0.0']
 nbu_version: x.x.x.x
 
 Comment: >
@@ -29,7 +29,9 @@ Comment: >
          - "<eebinstall_name>"    
 
 # NB Configuration variables
-nbu_primary_server_ans: PRIMARY01                          # Primary Server hostname can be given here
+
+# This is requried only in case of Media and Client
+nbu_primary_server_ans: PRIMARY01
 ignore_primary_connectivity_failures: false               # If using a masked primary for initial install, set the value to true to ignore connectivity validation and continue execution. 
 skip_primary_version_compatibility_check: false           # Skip Primary server version compatibility check
 # NetBackup - Web Services Account
@@ -44,7 +46,6 @@ postgresql_pooler_odbc_port: ''
 # Update { os_path_nbu_install } in case you want to install on a custom path. We recommend that the path
 # ends with openv. This will make sure that we remove only the NetBackup installed directories.
 os_path_nbu_install: /usr/openv
-os_path_nbu_base: /usr
 os_path_nbu_yum_cache_base: /var
 nbu_db_data_path: "{{ os_path_nbu_install }}/db/data"
 

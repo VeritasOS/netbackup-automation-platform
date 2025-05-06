@@ -5,6 +5,9 @@
   gather_facts: true
   become: yes
   hosts: all
+  environment:
+    NB_TMPDIR: "/usr/openv/tmp"
+    PAR_GLOBAL_TMPDIR: "/usr/openv/tmp"
   pre_tasks:
     - name: Retrieving host distribution
       setup:
@@ -24,10 +27,10 @@
    - role: 'helper/detect_partial_install'
    - role: 'generic/nbu_compatibility'
    - role: 'generic/nbu_verification'                           # Verifies certificate specific checks and report
-   - role: 'netbackup/common/rest-api-integration'
+   - { role: 'netbackup/common/rest-api-integration', action: "login" }
    - role: 'netbackup/common/rest-api-integration/catalog_images'
+   - { role: 'netbackup/common/rest-api-integration', action: "logout" }
    - role: 'netbackup/linux/nbu-server-install/v2.0'
-   - role: 'netbackup/linux/post-install-task/v2.0'
    - role: 'generic/nbu_verification'                           # Verifies certificate specific checks and report
    - role: 'netbackup/linux/nbu-install-eeb/v2.0'
   vars:

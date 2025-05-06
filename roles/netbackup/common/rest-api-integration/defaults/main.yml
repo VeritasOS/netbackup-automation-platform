@@ -5,6 +5,7 @@ nbu_api_hostname: "{{ nbu_primary_server_ans }}"
 nbu_api_port: '1556'
 nbu_api_base_url: "{{ 'https://' + nbu_api_hostname + ':' + nbu_api_port + '/netbackup/' }}"
 nbu_api_content_type: application/vnd.netbackup+json;version=7.0
+userLoggedIn: false
 
 #Primary Security Settings
 security_properties_params:

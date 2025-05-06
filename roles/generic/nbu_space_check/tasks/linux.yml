@@ -15,8 +15,8 @@
 - name: "NBU-STORAGE-COMPATIBILITY -> Add os_path_cache_space_validation according to its requirement"
   ansible.builtin.set_fact:
     os_path_space_validation: "{{ os_path_space_validation | default ([]) + os_path_cache_space_validation[nbu_role] }}"
-  when: 
-  - (nbu_playbook_type=="stage")
+  when:
+    - (nbu_playbook_type=="stage") or (not install_pkgs_from_local_cache)
 
 - name: "NBU-STORAGE-COMPATIBILITY -> Adding VXDBMS NB DATA space check for Primary"
   block:

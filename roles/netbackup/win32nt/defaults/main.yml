@@ -20,6 +20,7 @@ setup_vcredist_params_default: "/STOP_NB_BEFORE_VCREDIST:'YES' /VCREDIST_ATTEMPT
 
 # Windows DVD image name for each NetBackup release.
 nbu_pkgs_ordered_list:
+  11.0.0.0: 'NetBackup_11.0_Win'
   10.5.0.1: 'NetBackup_10.5.0.1_Win'
   10.5.0.0: 'NetBackup_10.5_Win'
   10.4.0.1: 'NetBackup_10.4.0.1_Win'

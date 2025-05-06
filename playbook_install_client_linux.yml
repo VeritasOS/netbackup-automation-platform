@@ -5,6 +5,9 @@
   gather_facts: true
   become: yes
   hosts: all
+  environment:
+    NB_TMPDIR: "/usr/openv/tmp"
+    PAR_GLOBAL_TMPDIR: "/usr/openv/tmp"
   pre_tasks:
     - name: Retrieving host distribution
       setup:
@@ -22,6 +25,7 @@
     - role: 'netbackup/linux'                               # Load netbackup default vars
     - role: 'generic/os_compatibility'
     - role: 'generic/is_nbu_version_supported'
+    - role: 'helper/detect_partial_install'
     - role: 'generic/nbu_compatibility'
     - role: 'netbackup/linux/nbu-client-install/v2.0'
     - role: 'netbackup/common/nbu-get-certificate/v2.0'

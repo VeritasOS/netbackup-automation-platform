@@ -5,7 +5,8 @@
 Veritas NetBackup is the most powerful and widely adopted data protection solution in the world. NetBackup streamlines data protection management, protects your enterprise from the unforeseen, ensures business-critical resilience and delivers customer choice with a single platform supporting any workload, cloud and architecture at any scale.
 The project contains Ansible roles and playbooks for automating the deployment and configuration of NetBackup. The roles and the playbooks are provided in order to demonstrate the automated NetBackup tasks and leverage NetBackup APIs in an automation workflow.<br>
 
-> <span style="color:#0000ff"><b>NOTE:- </b></span> These playbooks support below NetBackup Client/Media/Primary versions.<br>
+> <span style="color:#0000ff"><b>NOTE:- </b></span> These playbooks support below NetBackup Primary/Media/Client versions.<br>
+> * <span style="color:#cc9900"><b>11.0.0.0</b></span><br>
 > * <span style="color:#cc9900"><b>10.5.0.1</b></span><br>
 > * <span style="color:#cc9900"><b>10.5.0.0</b></span><br>
 > * <span style="color:#cc9900"><b>10.4.0.1</b></span><br>
@@ -20,11 +21,11 @@ The project contains Ansible roles and playbooks for automating the deployment a
 
 ## Project Contents
 
-This project contains Ansible playbooks, roles, vars for automating various deployment tasks for <b>NetBackup Media, Primary & Client</b>. We support below functionalities with our ansible playbooks:
-- Fresh installation of NB Client on Windows/SuSE/RHEL.
+This project contains Ansible playbooks, roles, vars for automating various deployment tasks for <b>NetBackup Primary, Media & Client</b>. We support below functionalities with our ansible playbooks:
+- Fresh installation of NB Client on Windows/SuSE/RHEL/Rocky Linux/Oracle Linux.
 
-- Fresh installation of NetBackup Media & Primary on SuSE/RHEL.
-- Upgrade NetBackup <b>[to and from NB version 10.x].</b>
+- Fresh installation of NetBackup Media & Primary on SuSE/RHEL/Oracle Linux.
+- Upgrade NetBackup <b>[to and from NB version 10.x onwards].</b>
 - Independent certificate deployment, could be used when :-
   - <i>Certificate deployment wasn't done at the first time with installation
   - Addition of new primary server</i>
@@ -62,7 +63,7 @@ This project contains Ansible playbooks, roles, vars for automating various depl
         <tr>
             <td>01</td>
             <td rowspan=6>Client</td>
-             <td rowspan=6>1.Linux(Rhel/SuSE)<br>2. Windows</td>
+             <td rowspan=6>1. Linux <br> - Rhel<br> - SuSE<br> - Rocky Linux<br> - Oracle Linux<br><br>2. Windows</td>
             <td><a href='./playbook_install_client_linux.yml'>playbook_install_client_linux.yml</a></code></td>
             <td rowspan=4>This playbook goes through sequence of tasks defined within each role to perform fresh install or upgrade to the proposed version on the target host machine. The NetBackup Client is installed based on the successful execution of each role described in Roles section. <br> <b><u> High level workflow and capabilities - </u></b> <br> &emsp; - Platform compatibility :- <br> &emsp;&emsp; 1. Checks ansible distribution os family and version. <br> &emsp;&emsp; 2. Checks native dependent packages and installs them if found missing. <br> &emsp;&emsp; 3. Creates required soft-link on linux of native dependent libraries if required. <br> &emsp; - Runs a defensive check and exits if the given target host is a NetBackup Primary/Media server. <br> &emsp; - Validates if the target host is at the desired state to either perform installation/upgrade. <br> &emsp; - If matches the desired state, performs installation/upgrade. <br> &emsp; - If FTO <a href="#nbu_cert_management">[nbu_cert_management]</a> is set to true, deploy certificates based on primary server CA usage.
             <br> &emsp; - At different stages, we perform connectivity validation with given Primary server. <br> &emsp; - If any, NetBackup Client EEB list is provided, installs them and creates individual marker entry for each EEB.</td>
@@ -91,10 +92,10 @@ This project contains Ansible playbooks, roles, vars for automating various depl
         <tr>
             <td>07</td>
             <td rowspan=6>Server(Primary/Media)</td>
-            <td rowspan=6>Linux(Rhel/SuSE)</td>
+            <td rowspan=6>1. Linux <br>- Rhel <br>- SuSE<br>- Oracle Linux</td>
             <td><a href='./playbook_install_media_linux.yml'>playbook_install_media_linux.yml</a></code></td>
-            <td rowspan=4>This playbook goes through sequence of tasks defined within each role to perform fresh install or upgrade to the proposed version on the target host machine. The NetBackup Media/Primary is installed based on the successful execution of each role described in Roles section. <br> <b><u> High level workflow and capabilities - </u></b> <br> &emsp; - Platform compatibility :- <br> &emsp;&emsp; 1. Checks ansible distribution os family and version. <br> &emsp;&emsp; 2. Checks native dependent packages and installs them if found missing. <br> &emsp;&emsp; 3. Creates required soft-link on linux of native dependent libraries if required.<br> &emsp;&emsp; 4. Perform space check for remote host machine. If remote machine doesn't have sufficient for install/upgrade. it exists with proper custom error message. <br> &emsp; - Runs a defensive check and exits if the given target host is a NetBackup Primary/Client server. <br> &emsp; - Runs a defensive check and exits if the proposed netbackup media/primary version is not supported. <br> &emsp; - Validates if the target host is at the desired state to either perform installation/upgrade. <br> &emsp; - If matches the desired state, performs installation/upgrade. <br> &emsp; - For Primary, ITA Data Collector is installed/upgraded based on <code>do_install_ita_dc</code> option. <br> &emsp; - If FTO <a href="#nbu_cert_management">[nbu_cert_management]</a> is set to true, deploy certificates based on primary server CA usage.
-            <br> &emsp; - For media at different stages, we perform connectivity validation with given Primary server.<br> &emsp; - If any, NetBackup Media/Primary EEB list is provided, installs them and creates individual RPM marker entry for each EEB.</td>
+            <td rowspan=4>This playbook goes through sequence of tasks defined within each role to perform fresh install or upgrade to the proposed version on the target host machine. The NetBackup Primary/Media is installed based on the successful execution of each role described in Roles section. <br> <b><u> High level workflow and capabilities - </u></b> <br> &emsp; - Platform compatibility :- <br> &emsp;&emsp; 1. Checks ansible distribution os family and version. <br> &emsp;&emsp; 2. Checks native dependent packages and installs them if found missing. <br> &emsp;&emsp; 3. Creates required soft-link on linux of native dependent libraries if required.<br> &emsp;&emsp; 4. Perform space check for remote host machine. If remote machine doesn't have sufficient for install/upgrade. it exists with proper custom error message. <br> &emsp; - Runs a defensive check and exits if the given target host is a NetBackup Primary/Client server. <br> &emsp; - Runs a defensive check and exits if the proposed netbackup primary/media version is not supported. <br> &emsp; - Validates if the target host is at the desired state to either perform installation/upgrade. <br> &emsp; - If matches the desired state, performs installation/upgrade. <br> &emsp; - For Primary, ITA Data Collector is installed/upgraded based on <code>do_install_ita_dc</code> option. <br> &emsp; - If FTO <a href="#nbu_cert_management">[nbu_cert_management]</a> is set to true, deploy certificates based on primary server CA usage.
+            <br> &emsp; - For media at different stages, we perform connectivity validation with given Primary server.<br> &emsp; - If any, NetBackup Primary/Media EEB list is provided, installs them and creates individual RPM marker entry for each EEB.</td>
         </tr>
         <tr>
             <td>08</td>
@@ -120,7 +121,7 @@ This project contains Ansible playbooks, roles, vars for automating various depl
         <tr>
             <td>13</td>
              <td rowspan=8>Common</td>
-             <td rowspan=8>1.Linux(Rhel/SuSE)<br>2.Windows</td>
+             <td rowspan=8>1. Linux <br> - Rhel<br>- SuSE<br>- Rocky Linux <br> Oracle Linux<br><br>2. Windows</td>
             <td ><a href='./playbook_certificate_deployment_linux.yml'>playbook_certificate_deployment_linux.yml</a></td>
             <td rowspan=2>This playbook handles security configuration to establish connection between NetBackup primary server and respective Clients/Media. This playbook could be used <br> - when there is a need to add new primary server onto client/media. <br> - when there is need to enroll external certificate authority with primary server. <b><u> High level workflow and capabilities - </u></b> <br> &emsp; - For media server playbooks it runs a defensive check and exits if the given target host is a NetBackup Primary. <br> &emsp; - Perform version check and proceed only if specified version is found installed. <br> &emsp; - If FTO <a href="#nbu_cert_management">[nbu_cert_management]</a> is set to true, use the security specifications (NBCA/ECA) provided as part of vars given below:<br>&emsp;&emsp; <a href="#nbu_eca_certdetails">[nbu_eca_certdetails]</a>- To configure a host to use an external signed certificate. <br>&emsp;&emsp; <a href="#nbu_primary_certdetails">[nbu_primary_certdetails]</a>- To configure a host to use NetBackup CA signed certificate. </td>
         </tr>
@@ -176,7 +177,7 @@ This project contains Ansible playbooks, roles, vars for automating various depl
 | 02 | `generic/is_nbu_version_supported` | Validates that the given proposed version (`nbu_version`) is supported or not. |
 | 03 | `generic/nbu_compatibility` | Perform preventive check to validate NetBackup installed or not. Check the installed version of NetBackup is compatible with the NetBackup Primary server version |
 | 04 | `generic/nbu_space_check` | Validate that remote machine has sufficient space for install/upgrade of NetBackup |
-| 05 | `generic/nbu_verification` | Validate the certificate-specific configurations and connectivity between different NBU roles |
+| 05 | `generic/nbu_verification` | validate the certificate-specific configurations |
 | 06 | `generic/os_compatibility` | Verify the OS compatibility for all the supported NetBackup versions. It also installs system dependent packages, if missing. |
 
 
@@ -188,12 +189,12 @@ This project contains Ansible playbooks, roles, vars for automating various depl
 
 | # | Role Name (netbackup) | Role Description (Performs system level changes which includes installation, uninstallation, removal, etc ...) |
 | --- | --- |--- |
-| 01 | `netbackup/common/nbu-get-certificate` | - This role initially checks Certificate mode of Primary Server, depending on that what mode we receive from primary(NBCA/ECA) performs certificate deployment of Client/Media installation. <br> - With primary, this role configures ECA.|
+| 01 | `netbackup/common/nbu-get-certificate` | This role initially checks Certificate mode of Primary Server, depending on that what mode we receive from primary(NBCA/ECA) performs certificate deployment of Client/Media installation. |
 | 02 | `netbackup/common/stage-package-locally` | Staging playbook to download netbackup packages into local cache and use it during install-time. |
 | 03 | `netbackup/linux` <br> `netbackup/win32nt`</br> | Contains static playbook specifications required for different workflows |
-| 04 | `netbackup/linux/nbu-client-install` <br> `netbackup/linux/nbu-server-install` <br> `netbackup/win32nt/nbu-client-install`  | NetBackup Client/Media/Primary is installed/upgraded based on the below conditions :- <br> New Install: <br> - No NetBackup Client/Media/Primary is installed <br> - Proposed NetBackup Client/Media/Primary is installed <br> Upgrade: <br> - Older version of NetBackup Client/Media/Primary is installed <br> - Proposed NetBackup Client/Media/Primary is installed |
+| 04 | `netbackup/linux/nbu-client-install` <br> `netbackup/linux/nbu-server-install` <br> `netbackup/win32nt/nbu-client-install`  | NetBackup Primary/Media/Client is installed/upgraded based on the below conditions :- <br> New Install: <br> - No NetBackup Primary/Media/Client is installed <br> - Proposed NetBackup Primary/Media/Client is installed <br> Upgrade: <br> - Older version of NetBackup Primary/Media/Client is installed <br> - Proposed NetBackup Primary/Media/Client is installed |
 | 05 | `netbackup/linux/nbu-install-eeb`<br>`netbackup/win32nt/nbu-install-eeb` | Installs the list of EEBs provided as part of initial configuration and creates a marker if FTO `include_eeb_rpm_marker` is set to `true`  |
-| 06 | `netbackup/linux/nbu-remove` <br> `netbackup/win32nt/nbu-remove`</br> | Removes NetBackup Client/Primary/Media only if proposed version is found installed |
+| 06 | `netbackup/linux/nbu-remove` <br> `netbackup/win32nt/nbu-remove`</br> | Removes NetBackup Primary/Media/Client only if proposed version is found installed |
 | 07 | `netbackup/linux/nbu-stop-services` | This role deals with nbu service moves NetBackup only if proposed version is found installed
 | 08 | `netbackup/linux/symlink-operations` | This role deals with validation and creation of symlink on linux. |
 | 09 | `netbackup/linux/nbu-install-verification` | This role deals with below validation.<br> - Check NetBackup installed or not and depend on it set the installation status to install/none<br> - Check installed NetBackup version is less than proposed version and need upgrade. Set install status to upgrade, if upgrade it required<br> - If current version is equal to proposed version it set install status to none |
@@ -247,7 +248,7 @@ This project contains Ansible playbooks, roles, vars for automating various depl
         <tr>
             <td>05</td>
             <td><span style="color:red">*</span><code>nbu_primary_server_ans</code></td>
-            <td>You must specify the Primary Server hostname in case it's not determined, we can continue with dummy server name as given below<br><b>Required</b>:&nbsp;<code>Yes</code><br><b>Default</b>:&nbsp;<code>PRIMARY01</code></td>
+            <td>You must specify the Primary Server hostname in case it's not determined, we can continue with dummy server name as given below<br><b>Required</b>:&nbsp;<code>Yes, Only for Media/Client</code><br><b>Default</b>:&nbsp;<code>PRIMARY01</code></td>
             <td>string</td>
         </tr>
         <tr>
@@ -342,7 +343,7 @@ This project contains Ansible playbooks, roles, vars for automating various depl
          <tr>
             <td>10</td>
             <td>nbu_webservices_group: <code>nbwebgrp</code></td>
-            <td rowspan=5>We validate the specified user names and groups, create local users/groups if missing 
+            <td rowspan=5>We validate the specified user name and groups, create local users/groups if missing 
             <td rowspan=5>string</td>
         </tr>
          <tr>
@@ -351,15 +352,15 @@ This project contains Ansible playbooks, roles, vars for automating various depl
         </tr>
          <tr>
             <td>12</td>
-            <td>nbu_services_group:<code>''</code></td>
+            <td><code>nbu_services_group</code></td>
         </tr>
          <tr>
             <td>13</td>
-            <td>nbu_services_user:<code>''</code></td>
+            <td><code>nbu_services_user</code></td>
         </tr>
         <tr>
             <td>14</td>
-            <td>nbu_database_user:<code>"{{ nbu_services_user }}"</code></td>
+            <td><code>nbu_database_user</code></td>
         </tr>
         <tr>
             <td>15</td>
@@ -371,28 +372,28 @@ This project contains Ansible playbooks, roles, vars for automating various depl
          <tr>
             <td>16</td>
             <td><code>security_properties_params</code></td>
-            <td>This dictionary contains global security setting parameters. This could further be extended to remaining security settings.
+            <td>This var is for global security setting
             <br><code> &emsp;&emsp;certificateAutoDeployLevel: 1</code><br><code>&emsp;&emsp;dteGlobalMode: "PREFERRED_ON"</code><br><code>&emsp;&emsp;allowInsecureBackLevelHost: 0</code><br><code>&emsp;&emsp;aliasAutoAdd: 1</code></td>
             <td>string</td>
         </tr>
         <tr>
             <td>17</td>
             <td><code>setPassphraseConstraintsRequest</code></td>
-            <td>This var is for setting the passpharase constraints
+            <td>This var is for setting the passpharase constraint request
             <br><code> &emsp;&emsp;minPassphraseLength: 18</code><br><code>&emsp;&emsp;minUpperCaseRequired: 1</code><br><code>&emsp;&emsp;minLowerCaseRequired: 1</code></td>
             <td>string</td>
         </tr>
          <tr>
             <td>18</td>
             <td><code>drpkgpassphrase</code></td>
-            <td>This var is to set the disaster recovery passphrase
+            <td>This var is required for disaster recovery passphrase
             </td>
             <td>string</td>
         </tr>
          <tr>
             <td>19</td>
             <td><code>nbu_db_data_path</code></td>
-            <td>Specify the non-default database location, if need to install db on a custom location.
+            <td>This var is required if specify the postgre database user path
             </td>
             <td>string</td>
         </tr>
@@ -483,7 +484,7 @@ This project contains Ansible playbooks, roles, vars for automating various depl
 4. Configure an artifact repository manager and upload all the NetBackup RPMs with respective repodata along with it. The repository type could be selected as yum repository.<br>
    All respective NetBackup Client RPMs can be found in `<NB_Package_DIR>/NetBackup_<NB_VERSION>_CLIENTS2/NBClients/anb/Clients/usr/openv/netbackup/client/Linux/RedHat3.10.0`
    <br>
-   and All respective NetBackup Media/Primary RPMs can be found in `<NB_Package_DIR>/NetBackup_<NB_VERSION>_LinuxR_x86_64/linuxR_x86/anb`
+   and All respective NetBackup Primary/Media RPMs can be found in `<NB_Package_DIR>/NetBackup_<NB_VERSION>_LinuxR_x86_64/linuxR_x86/anb`
    <br>
    All respective NetBackup client windows DVD packages can be found in
    `<NB_Package_DIR>/NetBackup_<NB_VERSION>_Win\`
@@ -511,11 +512,11 @@ Once all the pre-requisites are met, below steps could be used to run playbooks.
 >     - If you would like to use `--extra-vars` CLI option , we recommend to specify in JSON format
 >         ```java
 >         For Linux:
->         [user@host ~]$ ansible-playbook playbook_install_client_redhat.yml -l linux -vv --extra-vars ' {"nbu_version": "10.3.0.0", "os_path_nbu_install": "/usr/openv"} '
+>         [user@host ~]$ ansible-playbook playbook_install_client_redhat.yml -l linux -vv --extra-vars="nbu_version=10.3.0.0 os_path_nbu_install=/usr/openv"
 >         ```
 >         ```java
 >         For Windows:
->         [user@host ~]$ ansible-playbook playbook_install_client_windows.yml -l win -vv --extra-vars ' {"nbu_version": "10.3.0.0", "os_path_nbu_install": "C:\\Program Files\\Veritas"} '
+>         [user@host ~]$ ansible-playbook playbook_install_client_windows.yml -l win -vv --extra-vars="nbu_version=10.3.0.0 os_path_nbu_install=C:\Program Files\Veritas"
 >         ```
 
 #### From within the Ansible Automation Platform

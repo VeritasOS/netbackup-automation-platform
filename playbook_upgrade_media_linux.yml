@@ -5,6 +5,9 @@
   gather_facts: true
   become: yes
   hosts: all
+  environment:
+    NB_TMPDIR: "/usr/openv/tmp"
+    PAR_GLOBAL_TMPDIR: "/usr/openv/tmp"
   pre_tasks:
     - name: Retrieving host distribution
       setup:

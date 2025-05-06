@@ -41,7 +41,7 @@
   when:
     - install_path_check_register.stat.exists
 
-- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} Symlink path creation"
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Symlink path creation"
   block:
     # Ensure the NetBackup install directory exists
     - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Ensure NetBackup {{ os_path_nbu_install }} directory exists"
@@ -62,7 +62,7 @@
     - install_path_check_register.stat.exists == false
     - os_path_nbu_install != os_path_nbu_install_default
 
-- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} Physical path creation"
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Physical path creation"
   block:
     # Ensure the NetBackup install directory exists
     - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Ensure NetBackup {{ os_path_nbu_install }} directory exists"
@@ -75,5 +75,10 @@
   when:
     - install_path_check_register.stat.exists == false
     - os_path_nbu_install == os_path_nbu_install_default
+
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Create [{{ os_path_openv_tmp }}] directory if it does not exist"
+  ansible.builtin.file:
+    path: "{{ os_path_openv_tmp }}"
+    state: directory
 
 #EOF

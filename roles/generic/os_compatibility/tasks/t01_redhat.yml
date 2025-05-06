@@ -9,9 +9,14 @@
 
 # Verify the OS distribution major release for RedHat
 # Expected result is Red Hat versions 7, 8 or 9
+- name: "NBU-OS-COMPATIBILITY -> Get the OS distribution version"
+  ansible.builtin.set_fact:
+    ansible_major_version: "{{ ansible_distribution_version.split('.')[0] }}"
+    ansible_minor_version: "{{ ansible_distribution_version.split('.')[1] }}"
+
 - name: "NBU-OS-COMPATIBILITY -> Verify the OS distribution version is compatible with NetBackup Version"
   ansible.builtin.assert:  
-    that: (ansible_distribution_major_version  == '7'  and nbu_version is version_compare('10.5.0.0','<')) or (ansible_distribution_version < '8.6' and nbu_version is version_compare('10.5.0.0','<')) or (ansible_distribution_version  >= '8.6' ) or (ansible_distribution_major_version  == '9')
+    that: (ansible_distribution_major_version  == '7'  and nbu_version is version_compare('10.5.0.0','<')) or ((ansible_major_version|int  == 8 and ansible_minor_version|int >= 6) and nbu_version is version_compare('10.5.0.0','>=')) or (ansible_distribution_major_version == '8' and nbu_version is version_compare('10.5.0.0','<'))  or (ansible_distribution_major_version  == '9')
     success_msg: "PASS - Operating system distribution version is compatible - OS distribution version: {{ ansible_distribution_version }}"
     fail_msg: "ERROR - Incompatible OS Distribution version - Detected OS Distribution Version is {{ ansible_distribution_version }}"
     quiet: false
