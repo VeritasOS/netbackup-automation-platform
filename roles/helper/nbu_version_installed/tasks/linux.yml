@@ -10,7 +10,7 @@
 
 - name: "NBU-VERSION-CHECK -> Verify what version of the NetBackup software is currently installed"
   ansible.builtin.shell: 
-    cmd: "rpm -q --queryformat '%{VERSION}' VRTSnbclibs" 
+    cmd: "rpm -q --queryformat '%{VERSION}' VRTSnbcfg"
   changed_when: false
   failed_when: false
   register: nbu_version_register

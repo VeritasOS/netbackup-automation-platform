@@ -112,7 +112,7 @@
         netbackup_failed_license_list_counter: "{{ netbackup_failed_license_list_counter | default(0) | int + 1 }}"
       with_sequence: start=0 end="{{ slic_license_file_download_register.results | length -1 }}"
       when:
-        - ( slic_license_file_download_register.results[item | int].status_code != 200 and slic_license_file_download_register.results[item | int].status_code != 304 ) or ( slic_license_file_download_register.results[item | int].item == "")
+        - ( slic_license_file_download_register.results[item|int].msg is search('failed') ) or ( slic_license_file_download_register.results[item | int].item == "")
 
     - name:  "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Set-fact qualified and failed slic license file list variable"
       set_fact:
@@ -124,7 +124,7 @@
         qualified_slic_license_file_list: "{{ qualified_slic_license_file_list + [ slic_license_file_download_register.results[item | int].item ] }}"
       with_sequence: start=0 end="{{ slic_license_file_download_register.results | length -1 }}"
       when:
-        - ( slic_license_file_download_register.results[item | int].status_code == 200 ) or ( slic_license_file_download_register.results[item | int].status_code == 304 )
+        - ( slic_license_file_download_register.results[item|int].msg is search('OK') )
         - ( slic_license_file_download_register.results[item | int].item != "")
 
     - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Get the list of failed slic license file list"
@@ -132,7 +132,7 @@
         failed_slic_license_file_list: "{{ failed_slic_license_file_list + [ slic_license_file_download_register.results[item | int].item ] }}"
       with_sequence: start=0 end="{{ slic_license_file_download_register.results | length -1 }}"
       when:
-        - ( slic_license_file_download_register.results[item | int].status_code != 200 and slic_license_file_download_register.results[item | int].status_code != 304 ) or ( slic_license_file_download_register.results[item | int].item == "")
+        - ( slic_license_file_download_register.results[item|int].msg is search('failed') ) or ( slic_license_file_download_register.results[item | int].item == "")
 
     - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Failed slic license file list"
       debug:
