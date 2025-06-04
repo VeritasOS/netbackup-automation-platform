@@ -1,5 +1,6 @@
 CLIENT_NAME = {{ 'XLOCALHOSTX' }}
-MACHINE_ROLE = PRIMARY
+MACHINE_ROLE = {% if nbu_version is version_compare('10.1.1.0', '<') %}MASTER{% else %}PRIMARY{% endif %}
+
 SERVER = {{ inventory_hostname_short }}
 WEBSVC_GROUP = {{ nbu_webservices_group | default('nbwebgrp') }}
 WEBSVC_USER = {{ nbu_webservices_user | default('nbwebsvc') }}

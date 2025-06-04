@@ -22,7 +22,7 @@
     - name: "NBU-ROLE-STATUS -> Load required tasks for NetBackup Role Check for nbu version 10.0 onwards"
       ansible.builtin.include_tasks: "t01_{{ ansible_system|lower }}_bpclntcmd_method.yml"
       when: 
-        - nbu_current_installed_version is version_compare("10.0.0.0",'>')
+        - nbu_current_installed_version is version_compare("10.0.0.0",'>=')
         - ( nbu_is_master_valid_register.rc == 0 )
 
     - name: "NBU-ROLE-STATUS -> Load required tasks for NetBackup Role Check for nbu version below 10.0"
