@@ -1,0 +1,17 @@
+# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+
+- name: RECOVERY SERVER IMPORT IMAGE
+  gather_facts: true
+  become: yes
+  hosts: all
+
+  roles:
+   - role: 'recovery-server'                 # Load  default vars
+   - role: 'recovery-server/import-images'
+  vars:
+    clientlist: []
+    policylist: []
+    #Examples
+    #clientlist: ["test1.veritas.com","test2.veritas.com"]
+    #policylist: ["test-policy1","test-policy2"]
+

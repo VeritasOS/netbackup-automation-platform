@@ -1,0 +1,26 @@
+# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+- name: "CONFIGURE-CRS -> Copy crs payload file."
+  ansible.builtin.copy:
+    src: crs_api_payload_template.json
+    dest: /tmp/.crs_api_payload_template.json
+
+- name: "CONFIGURE-CRS -> Copy kms file to remote if kms was enabled."
+  ansible.builtin.copy:
+    src: "{{ kms_file_name }}"
+    dest: "{{ kms_file_name }}"
+  when: kms_enabled == 1
+
+- name: "CONFIGURE-CRS -> Configure CRS when kms was enabled."
+  ansible.builtin.script:
+    cmd: ims_system_config.py --cloud_provider {{ cloud_provider }} --crs_type {{ crs_type}} --key_id {{ storage_account }} --secret_key {{ storage_credential }} --bucket_name {{ bucket_name }} --bucket_sub_name {{ volume_name }} --mount_point {{ mount_point }}  --kms_enabled {{ kms_enabled }} --kms_file_name {{ kms_file_name }} --kms_key_group {{ kms_key_group }}  --kms_passphrase {{ kms_passphrase }}
+  when: kms_enabled == 1
+
+- name: "CONFIGURE-CRS -> Configure CRS when kms was disabled."
+  ansible.builtin.script:
+    cmd: ims_system_config.py --cloud_provider {{ cloud_provider }} --crs_type {{ crs_type}} --key_id {{ storage_account }} --secret_key {{ storage_credential }} --bucket_name {{ bucket_name }} --bucket_sub_name {{ volume_name }} --mount_point {{ mount_point }}
+  when: kms_enabled == 0
+
+- name: "CONFIGURE-CRS -> Delete remote crs payload file."
+  ansible.builtin.file:
+    path: /tmp/.crs_api_payload_template.json
+    state: absent

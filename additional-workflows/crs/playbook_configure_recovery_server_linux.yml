@@ -1,0 +1,18 @@
+# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+
+- name: RECOVERY SERVER CONFIGURE
+  gather_facts: true
+  become: yes
+  hosts: all
+
+  roles:
+   - role: 'recovery-server'                                        # Load  default vars
+   - role: 'recovery-server/install-packages'                       # install nginx
+   - { role: 'recovery-server/configure-crs', when: configure_crs }
+   - { role: 'recovery-server/register-crs-on-alta', when: register_crs }
+   - { role: 'recovery-server/add-vcenter-to-crs', when: add_vcenter }
+  vars:
+      configure_crs: yes
+      register_crs: yes
+      add_vcenter: yes
+

@@ -1,0 +1,8 @@
+# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+#
+# ###############################################################
+# #### Import images for recovery server - ("Linux/Windows") ####
+# ###############################################################
+
+- name: "IMPORT-IMAGES -> Import images for recovery server."
+  ansible.builtin.include_tasks: "{{ ansible_system|lower }}.yml"

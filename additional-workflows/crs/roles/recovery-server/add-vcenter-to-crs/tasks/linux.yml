@@ -1,0 +1,14 @@
+# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+- name: "ADD-VCENTER-TO-CRS -> set parameters."
+  ansible.builtin.set_fact:
+    paras:
+      crs_server: "{{ crs_server }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      vcenter_server_name: "{{ vcenter_server_name }}"
+      vcenter_user: "{{ vcenter_user }}"
+      vcenter_password: "{{ vcenter_password }}"
+
+- name: "ADD-VCENTER-TO-CRS -> Add vcenter to recovery server."
+  ansible.builtin.script:
+    cmd: add_vcenter.py "{{ dict(paras) }}"

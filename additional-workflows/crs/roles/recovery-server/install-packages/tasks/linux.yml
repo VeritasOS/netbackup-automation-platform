@@ -1,0 +1,13 @@
+# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+
+- name: "INSTALL-PACKAGES -> Install nginx."
+  yum: 
+    name: nginx
+    state: present
+
+- name: "INSTALL-PACKAGES -> Start nginx."
+  service:
+    name: nginx
+    state: started
+    enabled: yes
+   
