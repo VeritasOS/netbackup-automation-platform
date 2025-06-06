@@ -1,0 +1,8 @@
+# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+#
+# #######################################################
+# #### Configure recovery server - ("Linux/Windows") ####
+# #######################################################
+
+- name: "CONFIGURE-CRS -> Configure recovery server."
+  ansible.builtin.include_tasks: "{{ ansible_system|lower }}.yml"

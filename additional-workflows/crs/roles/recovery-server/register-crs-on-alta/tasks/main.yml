@@ -1,0 +1,8 @@
+# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+#
+# ##################################################
+# #### Register CRS on alta - ("Linux/Windows") ####
+# ##################################################
+
+- name: "REGISTER-CRS-ON-ALTA -> Register CRS on Alta."
+  ansible.builtin.include_tasks: "{{ ansible_system|lower }}.yml"

@@ -1,0 +1,35 @@
+# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+# Configure cloud recovery server vars
+
+
+cloud_provider: "azure"    # azure or aws
+crs_type: "msdp-c"         # msdp-c or rvlt
+storage_account: "msdpqazurenormal" # Amazon Web Services access key ID or Microsoft Azure storage account name, for aws rvlt configure, this value is not needed.
+storage_credential: "***" # Amazon Web Services secret access key or Microsoft Azure storage access key.
+bucket_name: "qing-test-bucket"  # Amazon Web Services S3 bucket name or Microsoft Azure storage container name
+volume_name: "qing-vol" # Amazon Web Services S3 bucket sub name or Microsoft Azure storage container sub name
+mount_point: "/data/msdp"        # storage path
+kms_enabled: 0                   # 0 is disbaled, 1 is enabled
+kms_file_name: ""                # kms key file path and name
+kms_key_group: ""                # kms key group name
+kms_passphrase: ""               # kms passphrase
+
+
+# Cloud recovery server(CRS) vars, server name and credentials for CRS.
+crs_server: "vraqingv20042"
+#crs_server: "vraqingv20042.rsv.ven.veritas.com"
+username: "root"
+password: "***"
+
+# Import image vars
+start_time: 30  # 30 days ago, from which day for image import.
+end_time: 0     # now, before which day for image import.
+  
+# Recovery server registration file, include path and filename, please make sure cro_user has access permission for this full path.
+crs_registry_to_alta_json: "/tmp/***-registration.json"
+
+# Vcenter vars
+vcenter_server_name: "test.vxindia.veritas.com"
+vcenter_user: "svc.test@veritas.com"
+vcenter_password: "***"
+

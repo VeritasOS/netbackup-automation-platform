@@ -1,0 +1,18 @@
+# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+
+- name: "IMPORT-IMAGES -> Set parameters."
+  ansible.builtin.set_fact:
+    paras:
+      crs_server: "{{ crs_server }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      filters:
+        start_time: "{{ start_time }}"
+        end_time: "{{ end_time }}"
+        clients: "{{ clientlist }}"
+        policies: "{{ policylist }}"
+
+- name: "IMPORT-IMAGES -> Import images for recovery server."
+  ansible.builtin.script:
+    cmd: import_image.py "{{ dict(paras) }}" 
+  

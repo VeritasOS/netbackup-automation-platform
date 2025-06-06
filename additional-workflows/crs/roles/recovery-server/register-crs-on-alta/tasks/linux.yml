@@ -1,0 +1,19 @@
+# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+
+- name: "REGISTER-CRS-ON-ALTA -> Copy registration json file."
+  copy:
+    src: "{{ crs_registry_to_alta_json }}"
+    dest: "{{ crs_registry_to_alta_json }}"
+
+- name: "REGISTER-CRS-ON-ALTA -> Set parameter."
+  ansible.builtin.set_fact:
+    paras:
+      crs_server: "{{ crs_server }}"
+      username: "{{ username }}"
+      password: "{{ password }}"
+      alta_registry_file: "{{ crs_registry_to_alta_json }}"
+
+- name: "REGISTER-CRS-ON-ALTA -> Register CRS on Alta."
+  ansible.builtin.script:
+    cmd: register_crs.py "{{ dict(paras) }}"
+
