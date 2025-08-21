@@ -33,25 +33,16 @@
 
 - name: Ansible::Log.info
   fail:
-    msg: "The length of SHA1 fingerprint and authorization token should be 59 and 16 uppercase characters respectively."
+    msg: |
+      The provided fingerprint and/or authorization token are not of valid length:
+      At least one valid fingerprint (SHA1: 59 or SHA256: 95 chars) is required.
+      At least one valid authorization token (16 uppercase chars) is required.
+      Note: Please check your input values.
   when: 
-    - ( nbu_authorization_fingerprint | length != 59 ) and ( nbu_authorization_token | length != 16 ) 
-    - ( nbu_authorization_fingerprint is defined ) and ( nbu_authorization_token is defined )
-
-- name: Ansible::Log.info
-  fail:
-    msg: "The length of SHA1 fingerprint of root certificate is not as per expected length of 59."
-  when: 
-    - ( nbu_authorization_fingerprint | length != 59 )  
-    - ( nbu_authorization_fingerprint is defined ) 
+    - ((nbu_authorization_fingerprint | length != 59) and (nbu_authorization_fingerprint | length != 95))
+      or (nbu_authorization_token | length != 16)
+    - (nbu_authorization_fingerprint is defined and nbu_authorization_token is defined)
     
-- name: Ansible::Log.info
-  fail:
-    msg: "The length of authorization token should be 16 uppercase characters"
-  when: 
-    - ( nbu_authorization_token | length != 16 ) 
-    - ( nbu_authorization_token is defined )
-
 - name: "NBU-NBCA-CERTIFICATE-DEPLOYMENT -> Create temporary directory to store certificate details on destination host"
   win_file:
     path: "{{ nbu_certificates_file_path }}\\{{ nbu_certificates_file_dir}}"
