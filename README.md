@@ -30,6 +30,7 @@ This platform offers comprehensive automation capabilities for NetBackup Primary
 
 These playbooks support the following NetBackup Primary, Media, and Client versions:
 
+* `11.0.0.1`
 * `11.0.0.0`
 * `10.5.0.1`
 * `10.5.0.0`
@@ -231,7 +232,7 @@ These boolean variables enable or disable specific features.
 
 Before running the playbooks, ensure the following:
 
-1.  **Ansible Core**: Supports `ansible-core 2.11` onwards.
+1.  **Ansible Core**: Supports `ansible-core 2.15` onwards.
 2.  **Ansible Automation Platform**: Must be configured and ready for use.
 3.  **Non-interactive Connection**: Establish a non-interactive connection to all managed nodes/target hosts.
 4.  **Artifact Repository Manager**: Configure an artifact repository manager (e.g., a yum repository) and upload all NetBackup RPMs with their respective repodata. This can be a web server accessible via URL, or a local/mounted file-system path.
