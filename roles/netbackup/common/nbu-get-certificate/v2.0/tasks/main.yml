@@ -1,4 +1,4 @@
-# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
 
 #############################################################
 #### NetBackup Certificate Deployment - Client ("RHEL/Windows") ####
@@ -7,7 +7,7 @@
   block:
     # Execute nbcertcmdtool -getSecConfig to check certificate mode of the master server for RHEL
     - name: "NBU-CERTIFICATE-DEPLOYMENT -> Check certificate mode"
-      ansible.builtin.include_tasks: "{{ ansible_system|lower }}.yml"
+      ansible.builtin.include_tasks: "{{ nbap_ansible_system }}.yml"
   when:
     - nbu_cert_management or nbu_playbook_type == "certificate"
 

@@ -1,4 +1,4 @@
-# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
 
 ###############################################################
 #### nbu-client-install -> tasks -> t01_base_patch_eeb.yml ####
@@ -155,29 +155,29 @@
     path: "{{ nbu_tmp_dir }}\\{{ eeb_name }}.exe"
     state: absent
 
-- name: "NBU-EEB-INSTALL -> Install NetBackup EEB Marker File - {{ nbu_eeb_marker_name }}"
+- name: "NBU-EEB-INSTALL -> Install NetBackup EEB Marker File - {{ nbu_eeb_package_marker_name }}"
   block:
       # Check whether EEB marker file exists
-    - name: "NBU-EEB-INSTALL -> Check whether NetBackup EEB marker is already {{ eeb_task_type }}ed - {{ nbu_eeb_marker_name }}"
+    - name: "NBU-EEB-INSTALL -> Check whether NetBackup EEB marker is already {{ eeb_task_type }}ed - {{ nbu_eeb_package_marker_name }}"
       win_stat:
         path: "{{ os_path_nbu_install }}\\Patch\\EEB-Marker\\{{ nbu_eeb_file_id }}_{{ nbu_eeb_file_ver }}.ini"
       register: eeb_marker_check_register
 
-    - name: "NBU-EEB-INSTALL -> Install NetBackup EEB Marker File - {{ nbu_eeb_marker_name }}"
+    - name: "NBU-EEB-INSTALL -> Install NetBackup EEB Marker File - {{ nbu_eeb_package_marker_name }}"
       block:
-        - name: "NBU-EEB-INSTALL -> Download NetBackup {{ nbu_eeb_marker_name }} Marker to {{ nbu_tmp_dir }}"
+        - name: "NBU-EEB-INSTALL -> Download NetBackup {{ nbu_eeb_package_marker_name }} Marker to {{ nbu_tmp_dir }}"
           win_get_url:
             url: "{{ nbu_artifactory_repo_base_url }}{{ artifactory_repo }}{{ nbu_path_repo_client_eeb_pkg }}/Veritas NetBackup Client EEB ({{ nbu_eeb_file_id }}_{{ nbu_eeb_file_ver }}).msi"
             dest: "{{ nbu_tmp_dir }}"
             force: "{{ nbu_repo_force }}"
             validate_certs: "{{ nbu_repo_validate_certs }}"
 
-        - name: "NBU-EEB-INSTALL -> Install NetBackup EEB Marker from {{ nbu_tmp_dir }} - {{ nbu_eeb_marker_name }}"
+        - name: "NBU-EEB-INSTALL -> Install NetBackup EEB Marker from {{ nbu_tmp_dir }} - {{ nbu_eeb_package_marker_name }}"
           win_package:
             path: "{{ nbu_tmp_dir }}\\Veritas NetBackup Client EEB ({{ nbu_eeb_file_id }}_{{ nbu_eeb_file_ver }}).msi"
             state: present
 
-        - name: "NBU-EEB-INSTALL -> Remove NetBackup EEB Marker from {{ nbu_tmp_dir }} - {{ nbu_eeb_marker_name }}.msi"
+        - name: "NBU-EEB-INSTALL -> Remove NetBackup EEB Marker from {{ nbu_tmp_dir }} - {{ nbu_eeb_package_marker_name }}.msi"
           win_file:
             path: "{{ nbu_tmp_dir }}\\Veritas NetBackup Client EEB ({{ nbu_eeb_file_id }}_{{ nbu_eeb_file_ver }}).msi"
             state: absent
@@ -186,7 +186,7 @@
 
     - name: Ansible::Log.info
       debug:
-        msg:  "The provided NetBackup EEB Marker [{{ nbu_eeb_marker_name }}] is already installed."
+        msg:  "The provided NetBackup EEB Marker [{{ nbu_eeb_package_marker_name }}] is already installed."
       when:
         - eeb_marker_check_register.stat.exists
   when: eeb_task_type == "install"

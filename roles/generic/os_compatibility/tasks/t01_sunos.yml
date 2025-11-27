@@ -1,0 +1,74 @@
+# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
+
+##############################################################################
+####  - Check existence of OS native dependent packages and install if    ####
+####    found missing                                                     ####
+##############################################################################
+
+# Special handling of native dependent packages for SunOS
+- name: "NBU-OS-COMPATIBILITY -> Check for system dependent packages on SunOS"
+  block:
+    - name: "NBU-OS-COMPATIBILITY -> Get installed Solaris packages"
+      ansible.builtin.shell: "pkg list -H | awk '{print $1}'"
+      register: installed_pkgs
+      changed_when: false
+      no_log: true
+
+    - name: "NBU-OS-COMPATIBILITY -> Set installed package list"
+      set_fact:
+        installed_packages: "{{ installed_pkgs.stdout_lines }}"
+      no_log: true
+
+    - name: "NBU-OS-COMPATIBILITY -> Initialize native dependent missing_packages variable"
+      set_fact:
+        missing_packages: []
+
+    - name: "NBU-OS-COMPATIBILITY -> Set-fact common native dependent missing packages"
+      set_fact:
+        missing_packages: "{{ missing_packages + (os_system_packages['sunos']['common'] | difference(installed_packages)) }}"
+      when:
+        - os_system_packages['sunos']['common'] is defined
+        - (os_system_packages['sunos']['common'] | difference(installed_packages)) | length > 0
+
+    - name: "NBU-OS-COMPATIBILITY -> Set-fact {{ nbu_role | capitalize }} native dependent missing packages"
+      set_fact:
+        missing_packages: "{{ missing_packages + (os_system_packages['sunos'][nbu_role] | difference(installed_packages)) }}"
+      when:
+        - os_system_packages['sunos'][nbu_role] is defined
+        - (os_system_packages['sunos'][nbu_role] | difference(installed_packages)) | length > 0
+
+    - name: "NBU-OS-COMPATIBILITY -> Set-fact SunOS:{{ ansible_distribution_major_version }} native dependent missing packages"
+      set_fact:
+        missing_packages: "{{ missing_packages + (os_system_packages['sunos'][ansible_distribution_major_version] | difference(installed_packages)) }}"
+      when:
+        - os_system_packages['sunos'][ansible_distribution_major_version] is defined
+        - (os_system_packages['sunos'][ansible_distribution_major_version] | difference(installed_packages)) | length > 0
+
+    - name: "NBU-OS-COMPATIBILITY -> Install native dependent packages if missing"
+      community.general.pkg5:
+        name: "{{ item }}"
+        state: present
+        accept_licenses: true
+      loop: "{{ missing_packages }}"
+      when:
+        - missing_packages | length > 0
+
+    - name: "NBU-OS-COMPATIBILITY -> Reload the installed package list"
+      ansible.builtin.shell: "pkg list -H | awk '{print $1}'"
+      register: installed_pkgs_after
+      changed_when: false
+      no_log: true
+
+    - name: "NBU-OS-COMPATIBILITY -> Set installed package list after install"
+      set_fact:
+        installed_packages_after: "{{ installed_pkgs_after.stdout_lines }}"
+      no_log: true
+
+    - name: "NBU-OS-COMPATIBILITY -> Verify the existence of native dependent packages"
+      fail:
+        msg: "One or more required system packages are not installed: {{ absent_packages }}"
+      when: absent_packages | length > 0
+      vars:
+        absent_packages: "{{ missing_packages | difference(installed_packages_after) }}"
+
+# EOF

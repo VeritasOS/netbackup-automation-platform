@@ -1,4 +1,4 @@
-# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
 
 - name: "NBU-COMPATIBILITY -> Load target machine hostname for Primary Server"
   set_fact: 
@@ -22,7 +22,7 @@
   ansible.builtin.include_tasks: "role_check.yml"
 
 - name: "NBU-COMPATIBILITY -> Include tasks for NetBackup compatibility check"
-  ansible.builtin.include_tasks: "primary_version_check_{{ansible_system|lower}}.yml"
+  ansible.builtin.include_tasks: "primary_version_check_{{ nbap_ansible_system }}.yml"
   when:
     - not skip_primary_version_compatibility_check
     - ( nbu_playbook_type is defined )

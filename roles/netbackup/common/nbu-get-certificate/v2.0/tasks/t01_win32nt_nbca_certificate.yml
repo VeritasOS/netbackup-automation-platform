@@ -1,4 +1,4 @@
-# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
 
 #################################################################################
 #### NBU-NBCA-CERTIFICATE-DEPLOYMENT -> tasks -> t01_win32nt_nbca_certificate.yml ####
@@ -42,7 +42,7 @@
     - ((nbu_authorization_fingerprint | length != 59) and (nbu_authorization_fingerprint | length != 95))
       or (nbu_authorization_token | length != 16)
     - (nbu_authorization_fingerprint is defined and nbu_authorization_token is defined)
-    
+
 - name: "NBU-NBCA-CERTIFICATE-DEPLOYMENT -> Create temporary directory to store certificate details on destination host"
   win_file:
     path: "{{ nbu_certificates_file_path }}\\{{ nbu_certificates_file_dir}}"

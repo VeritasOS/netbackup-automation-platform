@@ -1,0 +1,113 @@
+# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
+
+# Perform disk space validation for the required file systems
+# Gather file system disk space usage
+- name: "NBU-STORAGE-COMPATIBILITY -> set os_path_space_validation fact based on playbook type"
+  ansible.builtin.set_fact:
+    os_path_space_validation: "{{ os_path_install_space_validation[nbu_role] }}" 
+  when: nbu_playbook_type == "install"
+
+- name: "NBU-STORAGE-COMPATIBILITY -> set os_path_space_validation fact based on playbook type"
+  ansible.builtin.set_fact:
+    os_path_space_validation: "{{ os_path_upgrade_space_validation[nbu_role] }}"
+  when: nbu_playbook_type == "upgrade"
+
+- name: "NBU-STORAGE-COMPATIBILITY -> Add os_path_cache_space_validation according to its requirement"
+  ansible.builtin.set_fact:
+    os_path_space_validation: "{{ os_path_space_validation | default ([]) + os_path_cache_space_validation[nbu_role] }}"
+  when:
+    - (nbu_playbook_type=="stage") or (not install_pkgs_from_local_cache)
+
+- name: "NBU-STORAGE-COMPATIBILITY -> Adding VXDBMS NB DATA space check for Primary"
+  block:
+      # If the /usr/openv/netbackup/bp.conf file exists
+    - name: "NBU-STORAGE-COMPATIBILITY -> Check if {{ os_file_nbu_bpconf }} exists"
+      ansible.builtin.stat:
+        path: "{{ os_file_nbu_bpconf }}"
+      register: bpconf_status_register
+      failed_when: false
+      changed_when: false
+
+      # Get the NetBackup primary VXDBMS_NB_DATA from the bp.conf file
+    - name: "NBU-STORAGE-COMPATIBILITY -> Retrieve VXDBMS_NB_DATA path from bp.conf file"
+      ansible.builtin.shell: ( cat  {{ os_file_nbu_bpconf }} | egrep -v "^#" | grep VXDBMS_NB_DATA | awk 'NR==1 {print $3}' )
+      changed_when: false
+      register: primary_vxdbms_data_register
+      when: bpconf_status_register.stat.exists
+
+    - name: "NBU-STORAGE-COMPATIBILITY -> Target path of vxdbms data"
+      ansible.builtin.set_fact:
+        db_data_path: "{{ nbu_db_data_path if not bpconf_status_register.stat.exists or primary_vxdbms_data_register.stdout == '' else primary_vxdbms_data_register.stdout }}"
+
+    - name: "NBU-STORAGE-COMPATIBILITY -> Get disk space information for {{ db_data_path }}"
+      ansible.builtin.shell: ( du -sh --block-size=1M {{ db_data_path }} )
+      register: db_data_path_used_register
+      no_log: false
+      changed_when: false
+
+    - name: "NBU-STORAGE-COMPATIBILITY -> Filtering to get actual used size of {{ db_data_path }} path"
+      ansible.builtin.set_fact:
+        db_data_path_size: "{{ item.split()[0] }}"
+      with_items: "{{ db_data_path_used_register.stdout_lines }}"
+
+    - name: "NBU-STORAGE-COMPATIBILITY -> Add VXDBMS NB DATA path in os_path_space_validation"
+      ansible.builtin.set_fact:
+        os_path_space_validation: "{{ os_path_space_validation | default([]) + [ { 'path': db_data_path , 'space_required_MB': 3*(db_data_path_size | int ) } ] }}"
+  when:
+    - nbu_role == "primary"
+    - nbu_playbook_type == "upgrade"
+
+- name: "NBU-STORAGE-COMPATIBILITY -> Get disk space information for each path"
+  ansible.builtin.shell: >
+    {% if 'Linux' in ansible_system %}
+    df -m --output=source,avail,target {{ item.path }}
+    {% elif 'AIX' in ansible_system %}
+    df -m {{ item.path }} | awk 'NR==2 {print "Filesystem  Free  Mounted on \n"$1" "$3" "$7}'
+    {% elif 'SunOS' in ansible_system %}
+    df -k {{ item.path }} | awk 'NR==1{print "Filesystem  Free  Mounted on"} NR==2{print $1" "$4/1024" "$6}'
+    {% else %}
+    ''
+    {% endif %}
+  register: path_mount_register
+  with_items: "{{ os_path_space_validation }}"
+  no_log: false
+  changed_when: false
+
+# Create an complete array with elements (path, mount, space_required & space_available)
+- name: "NBU-STORAGE-COMPATIBILITY -> Add source mount to each path"
+  ansible.builtin.set_fact:
+    os_path_space_validation_array: "{{ os_path_space_validation_array | default([]) + [ { 'path': item.item.path , 'mount': item.stdout_lines[1].split()[2], 'space_required': item.item.space_required_MB, 'space_available': item.stdout_lines[1].split()[1] } ] }}"
+  loop: "{{ path_mount_register.results }}"
+  no_log: True
+
+- name: "NBU-STORAGE-COMPATIBILITY -> Space required in {{ os_path_root_file_system }}"
+  ansible.builtin.set_fact:
+    space_required_root_path: "{{ space_required_root_path | default() | int + item.space_required }}"
+  loop: "{{ os_path_space_validation_array }}"
+  when: item.mount == os_path_root_file_system
+  no_log: True
+
+# Set file_system_array ['path':,'space_required':,'space_available']
+# Run through the entire list of paths and find space required for '/'
+- name: "NBU-STORAGE-COMPATIBILITY -> Space required in {{ os_path_root_file_system }}"
+  ansible.builtin.set_fact:
+    file_system_array: "{{ [ { 'path': os_path_root_file_system, 'space_required': space_required_root_path | int, 'space_available': item.space_available | int } ] }}"
+  loop: "{{ os_path_space_validation_array }}"
+  when: item.mount == os_path_root_file_system
+
+# Run through the entire list of paths and find space required for specific mounted filesystem
+- name: "NBU-STORAGE-COMPATIBILITY -> Space required in specific mounted filesystem"
+  ansible.builtin.set_fact:
+    file_system_array: "{{ file_system_array | default([]) + [ { 'path': item.mount, 'space_required': item.space_required | int, 'space_available': item.space_available | int } ] }}"
+  loop: "{{ os_path_space_validation_array }}"
+  when: item.mount != os_path_root_file_system
+
+- name: "NBU-STORAGE-COMPATIBILITY -> Verify the available disk space on required file systems"
+  ansible.builtin.assert:
+      that: "{{ item.space_available > item.space_required }}"
+      success_msg: "PASS - {{ item.path }} have required available disk space - {{ item.space_available }} MB free"
+      fail_msg: "FAILED - Insufficient disk space in {{ item.path }}. Required {{ item.space_required }} MB of free diskspace"
+      quiet: false
+  with_items: "{{ file_system_array }}"
+     
+ # EOF

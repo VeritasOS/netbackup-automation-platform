@@ -1,7 +1,0 @@
-# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
-
-# This workflow will perform pre-install OS tasks
-- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Include tasks for pre-install OS configuration."
-  ansible.builtin.include_tasks: "t01_primary_pre_install_os_task.yml"
-  when:
-    - ( nbu_role == "primary" )

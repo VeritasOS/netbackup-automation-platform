@@ -1,4 +1,4 @@
-# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
 
 # These tasks validate the certificate-specific configurations that you have provided and shows a report of all successful and failed validations.
 # If any checks fail, the workflow will fail so the problem can be recified prior to

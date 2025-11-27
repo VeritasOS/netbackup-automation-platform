@@ -1,8 +1,8 @@
-# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
 
 # These vars are mostly customer-centric and would get updated.
 # Desired NetBackup Client Version to use in the format [x.x.x.x]
-# Supported versions: ['11.0.0.1', '11.0.0.0', '10.5.0.1', '10.5.0.0', '10.4.0.1', '10.4.0.0', '10.3.0.1', '10.3.0.0', '10.2.0.1', '10.2.0.0', '10.1.1.0', '10.1.0.0', '10.0.0.1', '10.0.0.0']
+# Supported versions: ['11.1.0.0', '11.0.0.1', '11.0.0.0','10.5.0.1', '10.5.0.0' ]
 nbu_version: x.x.x.x
 
 Comment: >
@@ -24,8 +24,12 @@ ignore_primary_connectivity_failures: false               # If using a masked pr
 skip_primary_version_compatibility_check: false           # Skip Primary server version compatibility check
 
 # FTO (Feature Toggle Options)                            # Valid options given can be true|false|yes|no|y|n|1|0
-include_eeb_rpm_marker: false                            # If set to true, playbook wil create/delete extra RPM marker
+include_eeb_rpm_marker: false                             # If set to true, playbook wil create/delete extra RPM marker
 nbu_cert_management: false                                # For include cert mangement playbook
+include_directio_install: 'MATCH'                          #   DirectIO package installation behavior:
+                                                           #   INCLUDE - Include the NetBackup DirectIO
+                                                           #   EXCLUDE - Exclude the NetBackup DirectIO
+                                                           #   MATCH   - Match the existing configuration on the host
 # Set this to true if packages are cached locally independently or by using staging playbook to avoid downloading the pakcages at install-time.
 install_pkgs_from_local_cache: false
 
@@ -50,4 +54,4 @@ nbu_eca_certdetails:
     nbu_eca_crl_path:                                   # The file system directory path where CRLs are available
 
 # OS - NB Paths 
-os_path_nbu_install: C:\Program Files\Veritas
+# os_path_nbu_install:                                  # Uncomment and specify custom installation path if needed (not supported during upgrade)

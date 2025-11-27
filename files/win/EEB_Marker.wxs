@@ -2,7 +2,7 @@
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
   <Product Id="*"
            Language="1033"
-           Manufacturer="Veritas Technologies LLC"
+           Manufacturer="Cohesity, Inc"
            Name="Veritas NetBackup Client EEB - $(var.EEB_VER)"
            Version="$(var.NB_VERSION)">
 

@@ -1,23 +1,61 @@
-# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
 
 ##############################################################################
 ####  Generic tasks to verify OS specification                            ####
 ####  - OS version compatibility against provided production version      ####  
 ####  - OS related changes                                                ####
 ##############################################################################
+- name: "NBU-OS-COMPATIBILITY -> Fail if unsupported OS architecture for primary/media role"
+  fail:
+    msg: "ERROR - nbu_role '{{ nbu_role }}' is only supported for platforms RedHat:x86_64 and Suse:x86_64. Detected platform: {{ nbu_current_os_arch }}."
+  when:
+    - nbu_role in ["primary", "media"]
+    - nbu_current_os_arch not in ["RedHat:x86_64", "Suse:x86_64"]
+    
+- name: "NBU-OS-COMPATIBILITY -> Verify if the NetBackup Version is compatible"
+  ansible.builtin.assert:  
+    that: 
+      - ( nbu_compatibility_matrix | selectattr('appversion', 'equalto', nbu_version) | first | default(None)) is not none
+    success_msg: "PASS - NetBackup version {{ nbu_version }} is compatible"
+    fail_msg: "ERROR - The automation platform requires NetBackup version {{ nbu_compatibility_matrix[-1].appversion }} or higher."
+    quiet: false
 
 - name: "NBU-OS-COMPATIBILITY -> Verify the OS distribution is compatible with NetBackup Version"
   ansible.builtin.assert:  
-    that: (ansible_os_family == 'Windows') or (ansible_os_family == 'RedHat') or (ansible_os_family == 'Suse')
+    that: 
+      - ( nbu_compatibility_matrix | selectattr('appversion', 'equalto', nbu_version))[0].os_min_support[ansible_os_family] is defined
     success_msg: "PASS - Operating system distribution is compatible - OS distribution: {{ ansible_os_family }}"
     fail_msg: "ERROR - Incompatible OS Distribution - Detected OS Distribution is {{ ansible_os_family }}"
-    quiet: true
+    quiet: false
+
+- name: "NBU-OS-COMPATIBILITY -> Verify the OS distribution version is compatible with NetBackup Version"
+  ansible.builtin.assert:  
+    that: 
+      - ansible_distribution_version is version_compare(( nbu_compatibility_matrix | selectattr('appversion', 'equalto', 
+        nbu_version))[0].os_min_support[ansible_os_family], '>=')
+    success_msg: "PASS - Operating system distribution version is compatible - OS distribution: {{ ansible_distribution_version }}"
+    fail_msg: "ERROR - Incompatible OS Distribution version - Detected OS Distribution is {{ ansible_distribution_version }}"
+    quiet: false
 
 # Import required tasks - OS compatibility and OS verification
-- name: "NBU-OS-COMPATIBILITY -> Load NetBackup required tasks"
-  ansible.builtin.include_tasks: t01_{{ansible_os_family|lower}}.yml
+- name: "NBU-OS-COMPATIBILITY -> Check existence of OS native dependent packages and install"
+  ansible.builtin.include_tasks: t01_posix.yml
   when:
-   - nbu_playbook_type != "remove"
+    - nbu_playbook_type != "remove"
+    - os_system_packages[ansible_os_family|lower] is defined
+    - ansible_os_family|lower != "solaris"
+
+- name: "NBU-OS-COMPATIBILITY -> Solaris-specific package handling"
+  ansible.builtin.include_tasks: t01_sunos.yml
+  when:
+    - nbu_playbook_type != "remove"
+    - ansible_os_family|lower == "solaris"
+
+# Import required tasks - OS compatibility and OS verification
+- name: "NBU-OS-COMPATIBILITY -> OS specific handling task"
+  ansible.builtin.include_tasks: t01_{{ ansible_os_family|lower }}.yml
+  when:
+   - nbu_playbook_type != "remove" and ansible_os_family == "RedHat"
 
 # Import required tasks (All Linux) - OS compatibility and OS verification
 - name: "NBU-OS-COMPATIBILITY -> Load NetBackup required tasks"

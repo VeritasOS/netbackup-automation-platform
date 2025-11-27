@@ -1,0 +1,15 @@
+- name: "NBU-INITIALIZE-{{ nbu_playbook_type|upper }} -> Validate include_directio_install value"
+  ansible.builtin.assert:
+    that:
+      - include_directio_install is defined
+      - include_directio_install | upper in ['INCLUDE', 'EXCLUDE', 'MATCH']
+    fail_msg: "ERROR: include_directio_install must be exactly one of: INCLUDE, EXCLUDE, MATCH (no spaces allowed). Current value: '{{ include_directio_install }}'"
+    success_msg: "PASS: include_directio_install value '{{ include_directio_install | upper }}' is valid"
+
+- name: "NBU-INITIALIZE-{{ nbu_playbook_type|upper }} -> Validate include_vrtspddeu_client_install value"
+  ansible.builtin.assert:
+    that:
+      - include_vrtspddeu_client_install is defined
+      - include_vrtspddeu_client_install | upper in ['INCLUDE', 'EXCLUDE', 'MATCH']
+    fail_msg: "ERROR: include_vrtspddeu_client_install must be exactly one of: INCLUDE, EXCLUDE, MATCH (no spaces allowed). Current value: '{{ include_vrtspddeu_client_install }}'"
+    success_msg: "PASS: include_vrtspddeu_client_install value '{{ include_vrtspddeu_client_install | upper }}' is valid"

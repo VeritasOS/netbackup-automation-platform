@@ -1,0 +1,12 @@
+CLIENT_NAME = {{ nbu_client_name_ans | default('XLOCALHOSTX') }}
+MACHINE_ROLE = MEDIA
+SERVER = {{ nbu_primary_server_ans }}
+AUTHORIZATION_TOKEN = SKIP
+CA_CERTIFICATE_FINGERPRINT = SKIP
+{% if nbu_version <= "10.0.0.1" %}
+LICENSE = {{ nbu_license_key }}
+{% endif %}
+INCLUDE_JAVA_GUI_AND_JRE = {{ 'INCLUDE' if nb_include_java_jre_install else 'EXCLUDE' }}
+{% if nbu_version >= "11.1.0.0" %}
+INCLUDE_NBDIRECTIO = {{ include_directio_install | upper | default('MATCH')}} 
+{% endif %}

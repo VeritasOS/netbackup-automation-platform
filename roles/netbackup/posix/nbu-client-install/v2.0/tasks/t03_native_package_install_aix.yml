@@ -1,0 +1,62 @@
+# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
+
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Create temporary directory for NetBackup packages"
+  ansible.builtin.file:
+    path: "{{ os_path_openv_tmp  }}/netbackup_aix_packages/"
+    state: directory
+    mode: '0755'
+
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Verify whether ({{ item.name }}) package is currently installed"
+  ansible.builtin.shell: "{{ pkg_status_check_cmd | replace('ITEM_PACKAGE_NAME', item.name ) }}"
+  failed_when: false
+  changed_when: false
+  register: nbu_pkg_check_register
+
+- name: "NBU-{{ nbu_role|upper }}-INSTALL -> Verify what version of the NetBackup {{ nbu_role }} software ({{ item.name }}) is currently installed"
+  ansible.builtin.shell: "{{ version_check_cmd | replace('ITEM_PACKAGE_NAME', item.name ) }}"
+  ignore_errors: true
+  changed_when: false
+  register: nbu_pkg_version_register
+  when:
+    - ( nbu_pkg_check_register.rc == 0 )
+
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Start NetBackup Client installation"
+  block:
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Download NetBackup {{ item.name }}.image.gz package"
+      ansible.builtin.get_url:
+        url: "{{ nbu_artifactory_repo_base_url }}{{ artifactory_repo }}{{ nbu_path_repo_base_pkg }}/{{ item.name }}.image.gz"
+        dest: "{{ os_path_openv_tmp  }}/netbackup_aix_packages/{{ item.name }}.image.gz"
+        mode: '0644'
+        force: true
+        validate_certs: no
+
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Extract {{ item.name }}.image.gz package"
+      ansible.builtin.shell: ( gunzip -f "{{ item.name }}.image.gz" )
+      args:
+        chdir: "{{ os_path_openv_tmp }}/netbackup_aix_packages"
+      register: extract_result
+      failed_when: extract_result.rc != 0
+
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Cleanup any inconsistent state packages"
+      ansible.builtin.shell: ( installp -C {{ item.name }} )
+      when: nbu_playbook_type == 'install'
+
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Install NetBackup {{ item.name }}.image package"
+      ansible.builtin.shell: ( installp -ad {{ os_path_openv_tmp }}/netbackup_aix_packages/{{ item.name }}.image all )
+      register: install_status_register
+      failed_when: install_status_register.rc not in [0, 1]
+  when:
+    - nbu_pkg_check_register.rc != 0 or (nbu_pkg_version_register.stdout is version(item.version, '<'))
+
+  always:
+  - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Clean up {{ item.name }} package"
+    ansible.builtin.file:
+      path: "{{ item_to_delete }}"
+      state: absent
+    loop:
+      - "{{ os_path_openv_tmp  }}/netbackup_aix_packages/{{ item.name }}.image.gz"
+      - "{{ os_path_openv_tmp  }}/netbackup_aix_packages/{{ item.name }}.image"
+    loop_control:
+      loop_var: item_to_delete
+
+# EOF

@@ -4,6 +4,9 @@ SECURITY_CONFIGURATION:
 FINGERPRINT:SKIP
 ADDITIONALSERVERS:SKIP
 NETBACKUPCLIENTINSTALL:1
+{% if nbu_version >= "11.1.0.0" %}
+INCLUDE_NBDIRECTIO:{{ include_directio_install | upper | default('MATCH') }} 
+{% endif %}
 SERVERS:{{ nbu_primary_server_ans }}
 CLIENTNAME:{{ inventory_hostname_short }}
 NBSTARTTRACKER:

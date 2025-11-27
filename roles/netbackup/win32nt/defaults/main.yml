@@ -1,8 +1,8 @@
-# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
 
 # OS Path
 nbu_tmp_dir: C:\Windows\Temp
-os_path_nbu_install: C:\Program Files\Veritas
+os_path_nbu_install: "{{ 'C:\\Program Files\\Cohesity NetBackup' if nbu_version is version('11.1', '>=') else 'C:\\Program Files\\Veritas' }}"
 os_path_nbu_base: "{{ os_path_nbu_install.split(':')[0] }}"
 nbu_registry_path: HKLM:\SOFTWARE\Veritas\NetBackup
 nbu_client_product_name: "NetBackup Client"
@@ -20,26 +20,28 @@ setup_vcredist_params_default: "/STOP_NB_BEFORE_VCREDIST:'YES' /VCREDIST_ATTEMPT
 
 # Windows DVD image name for each NetBackup release.
 nbu_pkgs_ordered_list:
-  11.0.0.1: 'NetBackup_11.0.0.1_Win'
-  11.0.0.0: 'NetBackup_11.0_Win'
-  10.5.0.1: 'NetBackup_10.5.0.1_Win'
-  10.5.0.0: 'NetBackup_10.5_Win'
-  10.4.0.1: 'NetBackup_10.4.0.1_Win'
-  10.4.0.0: 'NetBackup_10.4_Win'
-  10.3.0.1: 'NetBackup_10.3.0.1_Win'
-  10.3.0.0: 'NetBackup_10.3_Win'
-  10.2.0.1: 'NetBackup_10.2.0.1_Win'
-  10.2.0.0: 'NetBackup_10.2_Win'
-  10.1.1.0: 'NetBackup_10.1.1_Win'
-  10.1.0.0: 'NetBackup_10.1_Win'
-  10.0.0.1: 'NetBackup_10.0.0.1_Win'
-  10.0.0.0: 'NetBackup_10.0_Win'
-  9.1.0.1: 'NetBackup_9.1.0.1_Win'
-  9.1.0.0: 'NetBackup_9.1_Win'
-  9.0.0.0: 'NetBackup_9.0_Win'
-  8.3.0.2: 'NetBackup_8.3.0.2_Win'
-  8.3.0.1: 'NetBackup_8.3.0.1_Win'
-  8.3.0.0: 'NetBackup_8.3_Win'
+  client:
+    11.1.0.0: 'NetBackup_11.1_Win'
+    11.0.0.1: 'NetBackup_11.0.0.1_Win'
+    11.0.0.0: 'NetBackup_11.0_Win'
+    10.5.0.1: 'NetBackup_10.5.0.1_Win'
+    10.5.0.0: 'NetBackup_10.5_Win'
+    10.4.0.1: 'NetBackup_10.4.0.1_Win'
+    10.4.0.0: 'NetBackup_10.4_Win'
+    10.3.0.1: 'NetBackup_10.3.0.1_Win'
+    10.3.0.0: 'NetBackup_10.3_Win'
+    10.2.0.1: 'NetBackup_10.2.0.1_Win'
+    10.2.0.0: 'NetBackup_10.2_Win'
+    10.1.1.0: 'NetBackup_10.1.1_Win'
+    10.1.0.0: 'NetBackup_10.1_Win'
+    10.0.0.1: 'NetBackup_10.0.0.1_Win'
+    10.0.0.0: 'NetBackup_10.0_Win'
+    9.1.0.1: 'NetBackup_9.1.0.1_Win'
+    9.1.0.0: 'NetBackup_9.1_Win'
+    9.0.0.0: 'NetBackup_9.0_Win'
+    8.3.0.2: 'NetBackup_8.3.0.2_Win'
+    8.3.0.1: 'NetBackup_8.3.0.1_Win'
+    8.3.0.0: 'NetBackup_8.3_Win'
 
 os_version_supported_minimum: 6.2
 
@@ -54,7 +56,7 @@ nbu_eeb_file_id: "{{ nbu_eeb_file_base.split('_')[1] }}"        # Extract EEB ET
 nbu_eeb_file_ver: "{{ nbu_eeb_file_base.split('_')[2] }}"       # Extract EEB Version from EEB path
 eeb_name: "{{ nbu_eeb_file_base.split(' ')[0] }}"               # Extract EEB ET-ID from EEB path
 eeb_execution_flag: "{{ nbu_eeb_file_base.split(' ')[1] |default('') }}"     # Extract EEB Version from EEB path
-nbu_eeb_marker_name: "Veritas NetBackup Client EEB ({{ nbu_eeb_file_id }}_{{ nbu_eeb_file_ver }})"
+nbu_eeb_package_marker_name: "Veritas NetBackup Client EEB ({{ nbu_eeb_file_id }}_{{ nbu_eeb_file_ver }})"
 
 # Certificate management resources
 nbu_certificates_file_dir: certinfo                             # newly created directory for keeping cert management files

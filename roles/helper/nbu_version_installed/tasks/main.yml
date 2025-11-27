@@ -1,6 +1,6 @@
-## $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
 
 # run client check depending on OS family
 - name: "NBU-VERSION-CHECK -> Load required tasks to check installed NetBackup version"
-  ansible.builtin.include_tasks: "{{ ansible_system|lower }}.yml"
+  ansible.builtin.include_tasks: "{{ nbap_ansible_system }}.yml"
   when: nbu_current_installed_version is not defined

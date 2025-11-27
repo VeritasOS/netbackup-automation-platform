@@ -1,0 +1,219 @@
+# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
+
+#######################################################################################
+#### NBU-ECA-CERTIFICATE-DEPLOYMENT -> tasks -> t01_linux_eca_certificate.yml ####
+#######################################################################################
+
+# Define the Certification start time as variable
+- name: "NBU-ECA-CERTIFICATE-DEPLOYMENT -> Netbackup External Certificate deployment started"
+  ansible.builtin.set_fact:
+    status: "started"
+    install_time: "{{ lookup('pipe','date +%Y%m%d%H%M%S') }}"
+
+- name: "NBU-ECA-CERTIFICATE-DEPLOYMENT-> Set fact for each dictionary item of [ nbu_eca_certdetails ]"
+  set_fact:
+    nbu_eca_cert_path: "{{ nbu_eca_certdetails.nbu_eca_cert_path }}"
+    nbu_eca_private_key_path: "{{ nbu_eca_certdetails.nbu_eca_private_key_path }}"
+    nbu_eca_trust_store_path: "{{ nbu_eca_certdetails.nbu_eca_trust_store_path }}"
+    nbu_eca_key_passphrasefile: "{{ nbu_eca_certdetails.nbu_eca_key_passphrasefile }}"
+    nbu_eca_crl_check_level: "{{ nbu_eca_certdetails.eca_crl.nbu_eca_crl_check_level if nbu_eca_certdetails.eca_crl.nbu_eca_crl_check_level else 'DISABLED' }}"
+    nbu_eca_crl_path: "{{ nbu_eca_certdetails.eca_crl.nbu_eca_crl_path }}"
+    
+- name: Ansible::Log.info
+  block:
+    - name: Ansible::Log.info
+      fail:
+        msg: "The given Primary server is configured to work with external certificates. You must specify ECA_CERT_PATH, ECA_PRIVATE_KEY_PATH, and ECA_TRUST_STORE_PATH values to proceed with certificate deployment."
+      when:
+        - ( nbu_role == "media" ) or (nbu_role == "client")
+      
+    - name: Ansible::Log.info
+      fail:
+        msg: "The option (nbu_cert_management:{{nbu_cert_management}}) is turned on expecting that ECA need to be configured with Primary deployment. You must specify ECA_CERT_PATH, ECA_PRIVATE_KEY_PATH, and ECA_TRUST_STORE_PATH values to proceed with certificate deployment."
+      when:
+        - ( nbu_role == "primary" )
+  when:
+    - ( nbu_eca_cert_path is defined )
+    - ( nbu_eca_private_key_path is defined )
+    - ( nbu_eca_trust_store_path is defined ) 
+    - ( nbu_eca_cert_path | length == 0 ) or ( nbu_eca_private_key_path | length == 0 ) or ( nbu_eca_trust_store_path | length == 0 )
+    
+- name: "NBU-ECA-CERTIFICATE-DEPLOYMENT-> Should a CRL be honored for the external certificate?"
+  fail:
+    msg: "nbu_eca_crl_check_level:'{{ nbu_eca_crl_check_level }}' is not a valid option. Must be ( 'USE_CDP', 'USE_PATH', 'DISABLED' )."
+  when: 
+    - ( nbu_eca_crl_check_level | string )  not in ["USE_CDP", "USE_PATH", "DISABLED"]
+
+- name: "NBU-ECA-CERTIFICATE-DEPLOYMENT -> Verify External CA-signed certificate files existence status"
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  register: ECA_Certificate_File_register
+  with_items: 
+    - "{{ nbu_eca_cert_path }}"
+    - "{{ nbu_eca_private_key_path }}"
+    - "{{ nbu_eca_trust_store_path }}"
+    - "{{ nbu_eca_key_passphrasefile }}"
+    - "{{ nbu_eca_crl_path }}"
+  failed_when: false
+  changed_when: false
+  no_log: True
+
+- name: "NBU-ECA-CERTIFICATE-DEPLOYMENT -> Aggregate ECA files path existence results"
+  set_fact:
+    nbu_paths_not_exist: "{{ nbu_paths_not_exist | default([]) + [item.item] }}"
+  with_items: 
+    - "{{ ECA_Certificate_File_register.results[0] }}"
+    - "{{ ECA_Certificate_File_register.results[1] }}"
+    - "{{ ECA_Certificate_File_register.results[2] }}"
+  when:
+    - ( not item.stat.exists ) or ( item.stat.isdir is defined and item.stat.isdir )
+
+- name: "NBU-ECA-CERTIFICATE-DEPLOYMENT -> Fail if Cert/Private/Trust Store path does not satisfy given requirements"
+  fail:
+    msg: 
+      - "Either of the given condition is true for given specified variable ({{ nbu_paths_not_exist }})"
+      - "1) Path does not exist."
+      - "2) Is a directory, should contain file path."
+  when: 
+    - nbu_paths_not_exist is defined and nbu_paths_not_exist | length > 0
+
+- name: "NBU-ECA-CERTIFICATE-DEPLOYMENT -> Fail if CRL path does not satisfy given requirements"
+  fail:
+    msg: 
+      - "Either of the given condition is not met for given CRL location path [nbu_eca_crl_path:'{{ nbu_eca_crl_path }}']"
+      - "1) CRL location path value is required." 
+      - "2) Not a valid directory"
+      - "3) CRL location path does not exist."
+  when:
+    - ( nbu_role == "media" ) or (nbu_role == "client")
+    - nbu_eca_crl_check_level == "USE_PATH"
+    - nbu_eca_crl_path is defined
+    - ( ECA_Certificate_File_register.results[4].stat.exists and not ECA_Certificate_File_register.results[4].stat.isdir ) or ( not ECA_Certificate_File_register.results[4].stat.exists and nbu_eca_crl_path | length > 0 ) or nbu_eca_crl_path | length == 0
+ 
+- name: "NBU-ECA-CERTIFICATE-DEPLOYMENT -> Update bp.conf with required external certificate parameters on target host"
+  ansible.builtin.shell: ( echo {{ item }} | /usr/openv/netbackup/bin/nbsetconfig )
+  changed_when: false
+  with_items: 
+    - "ECA_CERT_PATH = {{ nbu_eca_cert_path }}"
+    - "ECA_PRIVATE_KEY_PATH = {{ nbu_eca_private_key_path }}"
+    - "ECA_TRUST_STORE_PATH = {{ nbu_eca_trust_store_path }}"
+  failed_when: false
+
+- name: "NBU-ECA-CERTIFICATE-DEPLOYMENT -> Update bp.conf with required ECA_KEY_PASSPHRASEFILE value on target host"
+  ansible.builtin.shell: ( echo ECA_KEY_PASSPHRASEFILE={{ nbu_eca_key_passphrasefile }} | /usr/openv/netbackup/bin/nbsetconfig )
+  changed_when: false
+  failed_when: false
+  when: 
+    - nbu_eca_key_passphrasefile is defined
+    - nbu_eca_key_passphrasefile | length > 0
+
+- name: "NBU-ECA-CERTIFICATE-DEPLOYMENT -> Update the bp.conf entry for client and media"
+  block:
+    - name: "NBU-ECA-CERTIFICATE-DEPLOYMENT -> Update bp.conf with required ECA_CRL_CHECK_LEVEL value on target host"
+      ansible.builtin.shell: ( echo ECA_CRL_CHECK_LEVEL={{ nbu_eca_crl_check_level }} | /usr/openv/netbackup/bin/nbsetconfig )
+      changed_when: false
+      failed_when: false
+ 
+    - name: "NBU-ECA-CERTIFICATE-DEPLOYMENT -> Update bp.conf with required ECA_CRL_PATH value on target host"
+      ansible.builtin.shell: ( echo ECA_CRL_PATH={{ nbu_eca_crl_path }} | /usr/openv/netbackup/bin/nbsetconfig )
+      changed_when: false
+      failed_when: false
+      when:
+        - nbu_eca_crl_check_level == "USE_PATH"
+        - nbu_eca_crl_path | length > 0
+  when:
+    - ( nbu_role == "media" ) or (nbu_role == "client")
+
+# Adding external host for primary server
+- name: "NBU-ECA-CERTIFICATE-DEPLOYMENT -> Configure external certificate for primary server"
+  block:
+  - name: "NBU-ECA-CERTIFICATE-DEPLOYMENT -> Configure external certificate for primary server"
+    ansible.builtin.shell: (/usr/openv/wmc/bin/install/configureWebServerCerts -addExternalCert -all -certPath {{ nbu_eca_cert_path }} -privatekeypath {{ nbu_eca_private_key_path }} -truststorepath {{ nbu_eca_trust_store_path }})
+    register: nbu_addExternalCert_register
+
+  - name: "NBU-ECA-CERTIFICATE-DEPLOYMENT -> Stopping NetBackup daemons"
+    ansible.builtin.include_role:
+      name: 'netbackup/{{ nbap_ansible_system }}/nbu-stop-services'
+    no_log: true
+    when: ( nbu_addExternalCert_register.rc == 0 )
+
+  - name: "NBU-ECA-CERTIFICATE-DEPLOYMENT -> Starting the NetBackup daemons"
+    ansible.builtin.shell: (/usr/openv/netbackup/bin/bp.start_all)
+    no_log: true
+    when: ( nbu_addExternalCert_register.rc == 0 )
+  when:
+    - ( nbu_role == "primary" )
+
+- name: "NBU-ECA-CERTIFICATE-DEPLOYMENT -> Run -precheck to ensure no issues with Certificates configured"
+  ansible.builtin.shell: ( /usr/openv/netbackup/bin/nbcertcmd -enrollCertificate -precheck )
+  changed_when: false
+  register: nbu_eca_precheck_register
+  failed_when: false
+  no_log: true
+
+- name: "NBU-ECA-CERTIFICATE-DEPLOYMENT -> Force a failure when precheck gives an error"
+  block:
+    - name: "NBU-ECA-CERTIFICATE-DEPLOYMENT -> Remove the enrollment if precheck fails"
+      ansible.builtin.shell: ( /usr/openv/netbackup/bin/nbcertcmd -removeEnrollment )
+      changed_when: false
+      register: nbu_remove_enrollment_register
+      failed_when: false
+
+    - name: "NBU-ECA-CERTIFICATE-DEPLOYMENT - Remove the external certificate details with respect to primary server: {{ nbu_primary_server_ans }} "
+      lineinfile:
+        path: /usr/openv/netbackup/bp.conf
+        state: absent
+        regexp: "{{ item }}"
+      loop:
+        - '^ECA_CERT_PATH =.*$'
+        - '^ECA_PRIVATE_KEY_PATH =.*$'
+        - '^ECA_TRUST_STORE_PATH =.*$'
+        - '^ECA_CRL_CHECK_LEVEL =.*$'
+        - '^ECA_KEY_PASSPHRASEFILE =.*$'
+        - '^ECA_CRL_PATH =.*$'
+
+    - name: "NBU-ECA-FILEBASED-CERTIFICATE-DEPLOYMENT -> Force a failure when precheck gives an error:"
+      fail:
+        msg: "{{ nbu_eca_precheck_register.stderr_lines }}{{ nbu_eca_precheck_register.stdout }}"
+  when:
+    - ( nbu_eca_precheck_register.rc != 0 )
+
+- name: "NBU-ECA-CERTIFICATE-DEPLOYMENT -> Enroll an external certificate with the primary server domain"
+  ansible.builtin.shell: ( /usr/openv/netbackup/bin/nbcertcmd -enrollCertificate )
+  changed_when: false
+  register: nbu_enroll_certificate_register
+  failed_when: false
+  no_log: true
+
+- name: "NBU-ECA-CERTIFICATE-DEPLOYMENT -> Display Enroll certificate Output"
+  debug:
+    msg: "{{ nbu_enroll_certificate_register.stdout }}"
+  when: 
+    - ( nbu_enroll_certificate_register.rc == 0 )     
+
+- name: "NBU-ECA-CERTIFICATE-DEPLOYMENT -> Remove enrollment when ECA certificate enrollment fails"
+  block:
+    - name: "NBU-ECA-CERTIFICATE-DEPLOYMENT -> Remove enrollment when ECA certificate enrollment fails"
+      ansible.builtin.shell: ( /usr/openv/netbackup/bin/nbcertcmd -removeEnrollment )
+      changed_when: false
+      register: nbu_remove_enrollment_register
+      failed_when: false
+
+    - name: "NBU-ECA-CERTIFICATE-DEPLOYMENT - Remove the external certificate details with respect to primary server: {{ nbu_primary_server_ans }} "
+      lineinfile:
+        path: /usr/openv/netbackup/bp.conf
+        state: absent
+        regexp: "{{ item }}"
+      loop:
+        - '^ECA_CERT_PATH =.*$'
+        - '^ECA_PRIVATE_KEY_PATH =.*$'
+        - '^ECA_TRUST_STORE_PATH =.*$'
+        - '^ECA_CRL_CHECK_LEVEL =.*$'
+        - '^ECA_KEY_PASSPHRASEFILE =.*$'
+        - '^ECA_CRL_PATH =.*$'
+
+    - name: "NBU-ECA-CERTIFICATE-DEPLOYMENT -> Force a failure when precheck gives an error:"
+      fail:
+        msg: "{{ nbu_remove_enrollment_register.stdout }}"  
+  when:
+    - ( nbu_enroll_certificate_register.rc != 0 )  

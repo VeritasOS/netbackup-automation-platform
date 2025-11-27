@@ -1,0 +1,12 @@
+CLIENT_NAME = {{ nbu_client_name_ans | default('XLOCALHOSTX') }}
+MACHINE_ROLE = CLIENT
+SERVER = {{ nbu_primary_server_ans }}
+SERVICES = yes
+AUTHORIZATION_TOKEN = SKIP
+CA_CERTIFICATE_FINGERPRINT = SKIP
+ACCEPT_REVERSE_CONNECTION = FALSE
+INCLUDE_JAVA_GUI_AND_JRE = {{ 'INCLUDE' if nb_include_java_jre_install else 'EXCLUDE' }}
+{% if nbu_version >= "11.1.0.0" %}
+INCLUDE_NBDIRECTIO = {{ include_directio_install | upper | default('MATCH') }} 
+{% endif %}
+INCLUDE_VRTSPDDEU_CLIENT = {{ include_vrtspddeu_client_install | upper | default('MATCH') }}

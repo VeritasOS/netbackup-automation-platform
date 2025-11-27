@@ -1,4 +1,4 @@
-# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
 
 #####################################################
 #### Stage Packages Locally - ("Linux/Windows") ####
@@ -14,13 +14,14 @@
     state: present
     sslverify: no
   when:
-  - ansible_os_family == 'RedHat'
+    - ansible_os_family == 'RedHat'
+
 
 # Stage NetBackup Software Packages -> Linux
 - name: "NBU-STAGE-PACKAGES -> Download NetBackup {{ nbu_role }} software locally"
   ansible.builtin.yum:
     name: 
-      - "{{ item.key }}"
+      - "{{ item.name }}"
     state: latest
     disablerepo: "*"
     enablerepo: netbackup
@@ -28,10 +29,11 @@
     download_only: true
   register: download_result
   with_items:
-    - "{{ nbu_pkgs_ordered_list[nbu_role][nbu_version] | dict2items }}"
+    - "{{ nbu_pkgs_ordered_list[nbu_version] }}"
   when:
+    - ( item.platforms is defined and nbu_current_os_arch in item.platforms ) or ( item.platforms is not defined )
+    - ((item.role is defined and nbu_role in item.role) or (item.role is not defined))
     - not (download_result.rc|d(0)) # Make sure that the loop exits if any RPM installation fails.
     - ansible_os_family == 'RedHat'
-
 
 # EOF

@@ -1,4 +1,4 @@
-# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
 
 # Execute the role which detect the partial install status
 - name: "NBU-NBCHECK -> Execute the partial install status role"
@@ -9,10 +9,10 @@
   block:
     - name: "NBU-NBCHECK -> Execution of symlink operation role"
       ansible.builtin.include_role:
-        name: 'netbackup/{{ ansible_system|lower }}/symlink-operations'
+        name: 'netbackup/{{ nbap_ansible_system }}/symlink-operations'
 
     - name: "NBCHECK -> Include tasks for NBChecks"
-      ansible.builtin.include_tasks: "{{ ansible_system|lower }}.yml"
+      ansible.builtin.include_tasks: "{{ nbap_ansible_system }}.yml"
 
     - name: "NBCHECK -> Executing NBChecks"
       ansible.builtin.include_tasks: "nbcheck.yml"

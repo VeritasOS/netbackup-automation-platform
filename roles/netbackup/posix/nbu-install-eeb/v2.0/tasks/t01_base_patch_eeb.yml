@@ -1,0 +1,204 @@
+# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
+
+###############################################################
+#### nbu-install-eeb -> tasks -> base_patch_eeb.yml ####
+###############################################################
+
+
+- name: "NBU-EEB-INSTALL -> Set fact EEB Task"
+  ansible.builtin.set_fact:
+     eeb_task_type: "{{ 'uninstall' if 'uninstall' in item else 'install' }}"
+
+# Check whether EEB is already installed
+- name: "NBU-EEB-INSTALL -> Check whether NetBackup EEB is already {{ eeb_task_type }}ed - {{ eeb_name }}"
+  ansible.builtin.shell: ( grep {{ nbu_eeb_file_id }}_EEB{{ nbu_eeb_file_ver }} /usr/openv/pack/pack.summary )
+  ignore_errors: true
+  changed_when: false
+  no_log: True
+  register: eeb_check_register
+  failed_when: false
+
+# Download the NetBackup EEB
+- name: "NBU-EEB-INSTALL -> Download NetBackup EEB {{ eeb_name }} package to {{ os_path_openv_tmp }}"
+  block:
+    - name: "NBU-EEB-INSTALL -> Download NetBackup EEB {{ eeb_name }} package to {{ os_path_openv_tmp }}"
+      ansible.builtin.get_url:
+        url: "{{ nbu_artifactory_repo_base_url }}{{ artifactory_repo }}{{ nbu_path_repo_eeb_pkg }}{{ eeb_name }}"
+        dest: "{{ os_path_openv_tmp }}/{{ eeb_name }}"
+        mode: '0755'
+        force: true
+        validate_certs: no
+
+    # Check NetBackup EEB installer version
+    - name: "NBU-EEB-INSTALL -> Check NetBackup EEB installer version - {{ eeb_name }}"
+      ansible.builtin.shell: ( {{ os_path_openv_tmp }}/{{ eeb_name }} -inst_ver | awk -F ':' '{print $2}')
+      no_log: false
+      register: eeb_install_version_register
+
+    # Using -eeb_ver option we are getting the eeb netbackup version.
+    # but -eeb_ver option was added at EEBinstaller version 5.23. you can determine EEBinstaller version with
+    # the -inst_ver option.
+    # Otherwise, the -readme should include the version.
+    # Check installer NetBackup EEB version is greater than 5.23
+    - name: "NBU-EEB-INSTALL -> Check whether NetBackup EEB is greater than 5.23 - VRTSnbeeb_{{ nbu_eeb_file_id }}-{{ nbu_eeb_file_ver }}-{{ nbu_version }}"
+      block:
+        - name: "NBU-EEB-INSTALL -> Get the eeb's netbackup version from -eeb_ver option"
+          ansible.builtin.shell: "{{ eeb_netbackup_version_cmd | replace('EEB_PATH', os_path_openv_tmp ) | replace ('EEB_NAME', eeb_name) }}"
+          ignore_errors: false
+          no_log: false
+          register: eeb_netbackup_version_register
+      when: eeb_install_version_register.stdout | float >= 5.23
+
+    # Check whether NetBackup EEB version is less than 5.23
+    - name: "NBU-EEB-INSTALL -> Check whether NetBackup EEB is less than 5.23 - VRTSnbeeb_{{ nbu_eeb_file_id }}-{{ nbu_eeb_file_ver }}-{{ nbu_version }}"
+      block:
+        - name: "NBU-EEB-INSTALL -> Get the eeb's netbackup version from readme file"
+          ansible.builtin.shell: ({{ os_path_openv_tmp }}/{{ eeb_name }} -r | awk '/Veritas Bug ID:/{flag=1; next} /NetBackup Client/{flag=0} flag' | awk -F '_' '{print $2}' | tr -d "\n" | awk -F ' ' '{print $1".0.0.0.0"}' | awk -F '.' '{printf "%s.%s.%s.%s\n", $1,$2,$3,$4}' )
+          no_log: false
+          ignore_errors: true
+          register: eeb_netbackup_version_register
+      when: eeb_install_version_register.stdout | float < 5.23
+
+    - name: "NBU-EEB-INSTALL -> Setting eeb_netbackup_version"
+      ansible.builtin.set_fact:
+        eeb_netbackup_version: "{{ eeb_netbackup_version_register.stdout | default(nbu_version) }}"
+
+    - name: "NBU-EEB-INSTALL -> {{ eeb_task_type|capitalize }} NetBackup EEB - {{ eeb_name }}"
+      block:
+        - name: "NBU-EEB-INSTALL -> {{ eeb_task_type|capitalize }} NetBackup EEB - {{ eeb_name }}"
+          ansible.builtin.shell: "{{os_path_openv_tmp}}/{{ item }} -no_questions"
+          failed_when: false
+          changed_when: false
+          no_log: True
+          register: eeb_install_status_register
+
+        # Failed when the EEB installation fails.
+        - name: Ansible::Log.info
+          fail:
+            msg:  "The provided EEB {{ eeb_name }} failed to {{ eeb_task_type }} successfully, therefore exit immediately."
+          when:
+            - eeb_install_status_register.rc != 0
+      when:  eeb_netbackup_version is version_compare(nbu_version,'==')
+  
+      # Failed when the installer netbackup EEB version is lower or higher than NBU version.
+    - name: Ansible::Log.info
+      fail:
+        msg:  "The provided EEB {{ eeb_name }} belongs to NetBackup {{ nbu_role|upper }} {{ eeb_netbackup_version }}, therefore exit immediately."
+      when:
+        - eeb_netbackup_version is version_compare(nbu_version,'<') or eeb_netbackup_version is version_compare(nbu_version,'>')
+  when:
+   - ( eeb_task_type == "install" )
+   - ( eeb_check_register.rc == 1 ) or ( eeb_check_register.rc == 2 )
+
+- name: Ansible::Log.info
+  debug:
+    msg:  "The provided EEB ({{ eeb_name }}) is already installed."
+  when: ( eeb_check_register.rc == 0 ) and ( eeb_task_type == "install" )
+
+# This block will get execute only if -uninstall flag is provided with EEB
+- name: "NBU-EEB-INSTALL -> Retrieve NetBackup EEB {{ eeb_name }} path from remote host"
+  block:
+    - name: "NBU-EEB-INSTALL -> Set-fact EEB details"
+      ansible.builtin.set_fact:
+        path_eeb: "{{ eeb_check_register.stdout.split('_')[0] }}"
+        path_netbackup: "{{ eeb_check_register.stdout.split('_')[1]}}_{{eeb_check_register.stdout.split('_')[2] }}"
+        path_eeb_installer:  "{{ eeb_check_register.stdout.split('_')[3] }}_{{ eeb_check_register.stdout.split('_')[4] }}_{{ eeb_check_register.stdout.split('_')[5] }}"
+        eeb_platform_string: "{{ eeb_name.split('_', 3)[3] | default('') }}"
+
+    - name: "NBU-EEB-INSTALL -> Set-fact local EEB path"
+      ansible.builtin.set_fact:
+        eeb_installation_path: "{{ os_path_nbu_install_default }}/pack/{{ path_eeb }}/{{ path_netbackup }}/{{ path_eeb_installer }}_{{ eeb_platform_string }}"
+
+    - name: "NBU-EEB-INSTALL -> {{ eeb_task_type|capitalize }} NetBackup EEB - {{ eeb_name }}"
+      ansible.builtin.shell: "{{ eeb_installation_path }}/{{ item }} -no_questions"
+      failed_when: false
+      changed_when: false
+      no_log: True
+      register: eeb_uninstall_status_check_register
+
+    - name: Ansible::Log.info
+      assert:
+        that: ( eeb_uninstall_status_check_register.rc == 0 )
+        fail_msg: "The provided EEB {{ eeb_name }} failed to uninstall successfully, therefore exit immediately."
+        success_msg: "The provided EEB {{ eeb_name }} uninstalled successfully."
+  when:
+   - ( eeb_task_type == "uninstall" )
+   - ( eeb_check_register.rc == 0 )
+
+- name: "NBU-EEB-INSTALL -> Remove NetBackup EEB file from {{ os_path_openv_tmp }} - {{ eeb_name }}"
+  ansible.builtin.file:
+    path: "{{os_path_openv_tmp}}/{{ eeb_name }}"
+    state: absent
+    mode: '0755'
+
+# Check whether EEB marker file exists
+- name: "NBU-EEB-INSTALL -> Installation of NetBackup RPM Marker based on vendor"
+  block:
+    # Check whether EEB marker file exists
+    - name: "NBU-EEB-INSTALL -> Check whether NetBackup EEB RPM marker is already {{ eeb_task_type }}ed - {{ nbu_eeb_package_marker_name }}"
+      ansible.builtin.shell: "{{ pkg_status_check_cmd | replace('ITEM_PACKAGE_NAME', nbu_eeb_package_marker_name ) }}"
+      ignore_errors: true
+      changed_when: false
+      failed_when: false
+      no_log: false
+      register: eeb_marker_check_register
+
+    # EEB RPM Marker file is not already installed.
+    - name: "NBU-EEB-INSTALL -> Install NetBackup RPM Marker File - {{ eeb_name }}"
+      block:
+        - name: "NBU-EEB-INSTALL -> {{ eeb_task_type|capitalize }} NetBackup EEB RPM Marker File - {{ eeb_name }}"
+          ansible.builtin.yum:
+            name: "{{ nbu_eeb_package_marker_name }}"
+            state: "{{ 'absent' if 'uninstall' in item else 'latest' }}"
+            disablerepo: "*"
+            enablerepo: netbackup
+            validate_certs: no
+          when:
+          - ansible_os_family == 'RedHat'
+
+        - name: "NBU-EEB-INSTALL -> {{ eeb_task_type|capitalize }} NetBackup EEB RPM Marker File - {{ eeb_name }}"
+          zypper:
+            name: "{{ nbu_eeb_package_marker_name }}"
+            state: "{{ 'absent' if 'uninstall' in item else 'latest' }}"
+            disable_gpg_check: no
+          when:
+          - ansible_os_family == 'Suse'
+
+        - name: "NBU-EEB-INSTALL -> {{ eeb_task_type|capitalize }} NetBackup EEB PKG Marker File - {{ eeb_name }}"
+          block: # ansible_os_family == 'Solaris'
+            - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Download NetBackup {{ nbu_eeb_package_marker_name }}{{ package_extension_wo_gz }} package"
+              ansible.builtin.get_url:
+                url: "{{ nbu_artifactory_repo_base_url }}{{ artifactory_repo }}{{ nbu_path_repo_base_pkg }}/{{ nbu_eeb_package_marker_name }}{{ package_extension_wo_gz }}"
+                dest: "{{ os_path_openv_tmp }}/netbackup_sunos_packages/{{ nbu_eeb_package_marker_name }}{{ package_extension_wo_gz }}"
+                mode: '0644'
+                force: true
+                validate_certs: no
+              when:
+                - "'uninstall' not in (item | default('') | string)"
+
+            - name: "NBU-EEB-INSTALL -> {{ eeb_task_type|capitalize }} NetBackup EEB PKG Marker File - {{ eeb_name }}"
+              ansible.builtin.shell: "{{ eeb_pkg_installcmd | replace('ITEM_EEB_MARKER_PACKAGE', nbu_eeb_package_marker_name ) }}"
+              args:
+                chdir: "{{ os_path_openv_tmp }}/netbackup_sunos_packages"
+              when:
+                - "'uninstall' not in (item | default('') | string)"
+
+            - name: "NBU-EEB-INSTALL -> {{ eeb_task_type|capitalize }} NetBackup EEB PKG Marker File - {{ eeb_name }}"
+              ansible.builtin.shell: "{{ uninstall_package_cmd }} {{ nbu_eeb_solaris_pkg_abbr }}"
+              args:
+                chdir: "{{ os_path_openv_tmp }}/netbackup_sunos_packages"
+              when:
+                - "'uninstall' in (item | default('') | string)"
+          when:
+          - ansible_os_family == 'Solaris'
+      when:
+        - ( eeb_marker_check_register.rc != 0 ) or ( eeb_task_type == "uninstall" )
+
+    - name: Ansible::Log.info
+      debug:
+        msg:  "The provided NetBackup EEB RPM Marker ({{ nbu_eeb_package_marker_name }}) is already installed."
+      when:
+       - ( eeb_marker_check_register.rc == 0 )
+       - ( eeb_task_type == "install" )
+  when: include_eeb_rpm_marker
+#EOF

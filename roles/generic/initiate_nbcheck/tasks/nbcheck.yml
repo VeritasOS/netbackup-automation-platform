@@ -1,4 +1,4 @@
-# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
 
 - name: "NBCHECK ->  NBCheck error block"
   block:
@@ -6,7 +6,7 @@
       ansible.builtin.shell: ( {{ nb_check_path }} --keepgoing --failures-only --test={{ item.testName }} --role_from_installer={{ nbcheck_role_list[nbu_role] }} {{ db_service_user_arg }} {{ install_it_analytics }} {{ nbweb_service_group }} {{ nbweb_service_user }} {{ postgres_user_param }} {{ pg_bouncer_port_param }})
       failed_when: false
       register: nbcheck_result_register
-      no_log: True
+      no_log: true
 
     - name: "NBCHECK -> Below {{ 'Critical' if item.critical else 'Non-Critical' }} NBChecks {{ 'passed' if (nbcheck_result_register.stdout | length == 0) else 'failed' }} for  Target host"
       assert:

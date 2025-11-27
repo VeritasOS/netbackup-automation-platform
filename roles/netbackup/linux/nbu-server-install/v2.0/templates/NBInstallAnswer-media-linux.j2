@@ -1,8 +1,0 @@
-CLIENT_NAME = {{ nbu_client_name_ans | default('XLOCALHOSTX') }}
-MACHINE_ROLE = MEDIA
-SERVER = {{ nbu_primary_server_ans }}
-AUTHORIZATION_TOKEN = SKIP
-CA_CERTIFICATE_FINGERPRINT = SKIP
-{% if nbu_version <= "10.0.0.1" %}
-LICENSE = {{ nbu_license_key }}
-{% endif %}

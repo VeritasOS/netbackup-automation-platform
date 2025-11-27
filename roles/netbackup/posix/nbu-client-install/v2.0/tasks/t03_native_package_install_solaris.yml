@@ -1,0 +1,74 @@
+# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
+
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Create temporary directory for NetBackup packages"
+  ansible.builtin.file:
+    path: "{{ os_path_openv_tmp }}/netbackup_sunos_packages/"
+    state: directory
+    mode: '0755'
+
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Check if NetBackup {{ item.name }} package is already installed"
+  ansible.builtin.shell: "{{ pkg_status_check_cmd | replace('ITEM_PACKAGE_NAME', item.name ) }}"
+  register: pkginfo_result
+  failed_when: false
+  changed_when: false
+
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Get installed NetBackup {{ item.name }} package version"
+  ansible.builtin.shell: "{{ version_check_cmd | replace('ITEM_PACKAGE_NAME', item.name) }}"
+  register: pkginfo_version_result
+  failed_when: false
+  changed_when: false
+
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Start NetBackup Client installation"
+  block:
+
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Download .pkg_defaults admin file"
+      ansible.builtin.get_url:
+        url: "{{ nbu_artifactory_repo_base_url }}{{ artifactory_repo }}{{ nbu_path_repo_base_pkg }}/.pkg_defaults"
+        dest: "{{ os_path_openv_tmp }}/netbackup_sunos_packages/.pkg_defaults"
+        mode: '0644'
+        validate_certs: no
+
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Download NetBackup {{ item.name }}{{ package_extension }} package"
+      ansible.builtin.get_url:
+        url: "{{ nbu_artifactory_repo_base_url }}{{ artifactory_repo }}{{ nbu_path_repo_base_pkg }}/{{ item.name }}{{ package_extension }}"
+        dest: "{{ os_path_openv_tmp }}/netbackup_sunos_packages/{{ item.name }}{{ package_extension }}"
+        mode: '0644'
+        force: true
+        validate_certs: no
+
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Extract {{ item.name }}{{ package_extension }} package"
+      ansible.builtin.shell: ( gunzip -f "{{ item.name }}{{ package_extension }}" )
+      args:
+        chdir: "{{ os_path_openv_tmp }}/netbackup_sunos_packages"
+      register: extract_result
+      failed_when: extract_result.rc != 0
+
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Install NetBackup {{ item.name }}{{ package_extension_wo_gz }} package"
+      ansible.builtin.shell: ( pkgadd -a {{ os_path_openv_tmp }}/netbackup_sunos_packages/.pkg_defaults -d {{ os_path_openv_tmp }}/netbackup_sunos_packages/{{ item.name }}{{ package_extension_wo_gz }} {{ item.name }} )
+      register: install_status_register
+      failed_when: install_status_register.rc not in [0, 2]  # 2 = warning, 0 = success
+
+  when:
+      # Not installed, or installed version is less than item.version
+    - pkginfo_result.rc != 0 or (pkginfo_version_result.stdout is version_compare(item.version, '<'))
+
+  always:
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Remove partially installed package on installation failure"
+      ansible.builtin.shell: " {{ uninstall_package_cmd }} {{ item.name }} "
+      register: cleanup_pkgrm_result
+      failed_when: false
+      changed_when: cleanup_pkgrm_result.rc == 0
+      when:
+        - install_status_register.rc not in [0, 2]
+
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Clean up {{ item.name }} package"
+      ansible.builtin.file:
+        path: "{{ item_to_delete }}"
+        state: absent
+      loop:
+        - "{{ os_path_openv_tmp }}/netbackup_sunos_packages/{{ item.name }}{{ package_extension }}"
+        - "{{ os_path_openv_tmp }}/netbackup_sunos_packages/{{ item.name }}{{ package_extension_wo_gz }}"
+      loop_control:
+        loop_var: item_to_delete
+
+# EOF

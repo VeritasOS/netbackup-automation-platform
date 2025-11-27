@@ -1,4 +1,4 @@
-# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
 
 #############################################################
 #### nbu-client-install -> tasks -> t02_base_install.yml ####
@@ -32,8 +32,8 @@
 # Download the NetBackup Client Software - Windows
 - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Download NetBackup Client Software (Windows)"
   win_get_url:
-    url: "{{ nbu_artifactory_repo_base_url }}{{ artifactory_repo }}{{ nbu_path_repo_client_base_pkg }}{{ nbu_pkgs_ordered_list[nbu_version] }}.zip"
-    dest: "{{ nbu_tmp_dir }}\\{{ nbu_pkgs_ordered_list[nbu_version] }}.zip"
+    url: "{{ nbu_artifactory_repo_base_url }}{{ artifactory_repo }}{{ nbu_path_repo_client_base_pkg }}{{ nbu_pkgs_ordered_list[nbu_role][nbu_version] }}.zip"
+    dest: "{{ nbu_tmp_dir }}\\{{ nbu_pkgs_ordered_list[nbu_role][nbu_version] }}.zip"
     force: false
     validate_certs: "{{ nbu_repo_validate_certs }}"
   when: not install_pkgs_from_local_cache
@@ -41,21 +41,21 @@
 # Delete extracted direcotry before extracting latest downloaded software
 - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Delete NetBackup Client Software Temporary Directory (Windows)"
   win_file:
-    path: "{{ nbu_tmp_dir }}\\{{ nbu_pkgs_ordered_list[nbu_version] }}"
+    path: "{{ nbu_tmp_dir }}\\{{ nbu_pkgs_ordered_list[nbu_role][nbu_version] }}"
     state: absent
 
 # NetBackup - Extract NetBackup Client Software ("Windows")
 - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }}  -> Extract NetBackup Client Software to Temporary Directory (Windows)"
   win_unzip:
-    src: "{{ nbu_tmp_dir }}\\{{ nbu_pkgs_ordered_list[nbu_version] }}.zip"
+    src: "{{ nbu_tmp_dir }}\\{{ nbu_pkgs_ordered_list[nbu_role][nbu_version] }}.zip"
     dest: "{{ nbu_tmp_dir }}"
-    creates: "{{ nbu_tmp_dir }}\\{{ nbu_pkgs_ordered_list[nbu_version] }}"
+    creates: "{{ nbu_tmp_dir }}\\{{ nbu_pkgs_ordered_list[nbu_role][nbu_version] }}"
 
 # NetBackup - Upload NetBackup answer file - Client ("Windows")
 - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }}  -> Upload the NetBackup installation response file (Windows)"
   template:
     src: "silent_response.j2"
-    dest: "{{ nbu_tmp_dir }}\\{{ nbu_pkgs_ordered_list[nbu_version] }}\\x64\\silent_response.resp"
+    dest: "{{ nbu_tmp_dir }}\\{{ nbu_pkgs_ordered_list[nbu_role][nbu_version] }}\\x64\\silent_response.resp"
 
 - name: NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Attempting to stop NetBackup services
   win_command: "nbstop.exe -k"
@@ -75,7 +75,7 @@
     - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> {{ nbu_playbook_type }} NetBackup Client Software (Windows)"
       win_command: "setup.exe /CLIENT -s /REALLYLOCAL /RESPFILE:'silent_response.resp'"
       args:
-        chdir: "{{ nbu_tmp_dir }}\\{{ nbu_pkgs_ordered_list[nbu_version] }}\\x64"
+        chdir: "{{ nbu_tmp_dir }}\\{{ nbu_pkgs_ordered_list[nbu_role][nbu_version] }}\\x64"
       register: install_client_check_register
       failed_when: false
 
@@ -86,10 +86,10 @@
 
 - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> {{ nbu_playbook_type }} NetBackup Client Software (Windows)"
   block:
-    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> {{ nbu_playbook_type }} NetBackup Client Software (Windows)"
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> {{ nbu_playbook_type | capitalize }} NetBackup Client Software (Windows)"
       win_command: "setup.exe /CLIENT -s {{ setup_vcredist_params_default }} /REALLYLOCAL /RESPFILE:'silent_response.resp'"
       args:
-        chdir: "{{ nbu_tmp_dir }}\\{{ nbu_pkgs_ordered_list[nbu_version] }}\\x64"
+        chdir: "{{ nbu_tmp_dir }}\\{{ nbu_pkgs_ordered_list[nbu_role][nbu_version] }}\\x64"
       register: install_client_check_register
       failed_when: false
 
@@ -130,8 +130,8 @@
     path: "{{ item }}"
     state: absent
   with_items: 
-  - "{{ nbu_tmp_dir }}\\{{ nbu_pkgs_ordered_list[nbu_version] }}"
-  - "{{ nbu_tmp_dir }}\\{{ nbu_pkgs_ordered_list[nbu_version] }}.zip"
+  - "{{ nbu_tmp_dir }}\\{{ nbu_pkgs_ordered_list[nbu_role][nbu_version] }}"
+  - "{{ nbu_tmp_dir }}\\{{ nbu_pkgs_ordered_list[nbu_role][nbu_version] }}.zip"
 
 # Task to make sure that the EEB Markers of older version is removed post successful upgrade.
 - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} ->  Installation of NetBackup windows RPM Marker"

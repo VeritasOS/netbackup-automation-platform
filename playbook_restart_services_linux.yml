@@ -1,4 +1,4 @@
-# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
 
 # NetBackup SERVER - RESTART
 - name: NETBACKUP -> RESTART SERVER ("Linux")
@@ -26,11 +26,12 @@
       - nbu_role == ""
 
   roles:
-    - role: 'netbackup/linux'                           # Load netbackup default vars
+    - role: 'netbackup'                         # Load netbackup common defaults
+    - role: 'netbackup/posix'                   # Load netbackup default vars
     - role: 'generic/is_nbu_version_supported'
     - role: 'generic/nbu_compatibility'
-    - role: 'netbackup/linux/nbu-stop-services'
-    - role: 'netbackup/linux/nbu-start-services'
+    - role: 'netbackup/posix/nbu-stop-services'
+    - role: 'netbackup/posix/nbu-start-services'
   vars:
     # Role control
     nbu_playbook_type: "restart"

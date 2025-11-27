@@ -1,5 +1,5 @@
 #!/usr/openv/pdde/pdopensource/bin/python3
-# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
 
 import sys
 #ver = f"{sys.version_info.major}.{sys.version_info.minor}"
