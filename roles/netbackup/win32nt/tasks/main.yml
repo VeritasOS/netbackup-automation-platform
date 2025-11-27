@@ -1,0 +1,40 @@
+# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
+
+- name: "NBU-INITIALIZE-{{ nbu_playbook_type|upper }} -> Load configurable variables"
+  ansible.builtin.set_fact:
+    registry_path_get_client_guid: "{{ 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Cohesity NetBackup Client' if nbu_version is version('11.1', '>=') else 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Veritas NetBackup Client' }}"
+  when:
+    - nbu_playbook_type == "remove"
+
+- name: "NBU-INITIALIZE-{{ nbu_playbook_type|upper }} -> Read installed location from registry for upgrade"
+  block:
+    - name: "NBU-INITIALIZE-UPGRADE -> Get installation path from existing registry variable"
+      win_reg_stat:
+        path: "{{ nbu_registry_path }}\\CurrentVersion"
+        name: "INSTALLDIR"
+      register: nbu_install_path_result
+      failed_when: false
+
+    - name: "NBU-INITIALIZE-UPGRADE -> Warning: Custom installation path not allowed during upgrade"
+      debug:
+        msg: "WARNING: As upgrade is being performed, custom path isn't allowed. Hence continuing with installed path ( {{nbu_install_path_result.value}} )."
+      when:
+        - nbu_install_path_result.exists
+        - nbu_install_path_result.value is defined
+        - nbu_install_path_result.value != ""
+        - os_path_nbu_install is defined
+        - (nbu_install_path_result.value ) != (os_path_nbu_install )
+
+    - name: "NBU-INITIALIZE-UPGRADE -> Set installation path from registry"
+      ansible.builtin.set_fact:
+        os_path_nbu_install: "{{ nbu_install_path_result.value | regex_replace('\\\\$', '') }}"
+        nbu_path_nbcertcmd: "{{ nbu_install_path_result.value | regex_replace('\\\\$', '') }}\\NetBackup\\bin\\nbcertcmd.exe"
+      when: 
+        - nbu_install_path_result.exists
+        - nbu_install_path_result.value is defined
+        - nbu_install_path_result.value != ""
+  when: 
+    - nbu_playbook_type is defined
+    - nbu_playbook_type == "upgrade"
+
+#EOF

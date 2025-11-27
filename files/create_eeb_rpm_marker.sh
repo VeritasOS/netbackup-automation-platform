@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
 
 help()
 {
@@ -38,7 +38,7 @@ fi
 
 BUILD=1
 TARGET="-bb"
-VENDOR="Veritas Technologies LLC"
+VENDOR="Cohesity, Inc"
 PROVIDES="Provides: ${NAME} includes fixes for defect id: ${ETRACK}"
 
 # Generate Spec file

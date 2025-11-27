@@ -1,4 +1,4 @@
-# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
 
 # Verify if the proposed NetBackup software version is compatible to installed primary.
 - name: "NBU-COMPATIBILITY -> URL formation with key and port"
@@ -25,7 +25,7 @@
   block:
     - name: "NBU-COMPATIBILITY -> Set primary server current version"
       ansible.builtin.set_fact:
-        nbu_primary_current_version: "{{ api_serverinfo_response_register.json.nbuVersion.split('_')[1] }}"
+        nbu_primary_current_version: "{{ api_serverinfo_response_register.json.nbuVersion.split('_')[1] | regex_replace('^([0-9.]+).*', '\\1') }}"
 
     # Formatting NetBackup Version into x.x.x.x format
     - name: "NBU-COMPATIBILITY -> Formatting NetBackup Version into x.x.x.x format"

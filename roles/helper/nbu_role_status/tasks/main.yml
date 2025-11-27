@@ -1,4 +1,5 @@
-## $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
+
 - name: "NBU-VERSION-CHECK -> Gather facts for version status"
   ansible.builtin.include_role:
     name: 'helper/nbu_version_installed'
@@ -9,7 +10,7 @@
     name: 'helper/detect_partial_install'
 
 - name: "NBU-ROLE-STATUS -> Load required tasks for NetBackup Role Check"
-  ansible.builtin.include_tasks: "{{ ansible_system|lower }}.yml"
+  ansible.builtin.include_tasks:  "{{ nbap_ansible_system }}.yml"
   when:
    - nbu_detected_role == "NOT_FOUND"
    - ( not nbap_partial_install_detected )

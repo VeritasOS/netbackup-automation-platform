@@ -1,0 +1,63 @@
+# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
+
+##############################################################################
+####  Generic tasks to verify OS specification                            ####
+####  - OS version compatibility against provided production version      ####
+####  - Check existence of OS native dependent packages and install if    ####
+####    found missing                                                     ####
+##############################################################################
+
+# Special handling of native dependent packages for Linux
+- name: "NBU-OS-COMPATIBILITY -> Check for system dependent packages on {{ ansible_os_family }}"
+  block:
+    - name: "NBU-OS-COMPATIBILITY -> Load the native package facts for {{ ansible_os_family }}"
+      ansible.builtin.package_facts:
+        manager: auto
+      no_log: true
+
+    - name: "NBU-OS-COMPATIBILITY -> Initialize native dependent missing_packages variable"
+      set_fact:
+        missing_packages: []
+
+    - name: "NBU-OS-COMPATIBILITY -> Set-fact common native dependent missing packages"
+      set_fact:
+        missing_packages: "{{ missing_packages + (os_system_packages[ansible_os_family|lower]['common'] | difference(ansible_facts.packages.keys())) }}"
+      when:
+        - os_system_packages[ansible_os_family|lower]['common'] is defined
+        - (os_system_packages[ansible_os_family|lower]['common'] | difference(ansible_facts.packages.keys())) | length > 0
+
+    - name: "NBU-OS-COMPATIBILITY -> Set-fact {{ nbu_role | capitalize }} native dependent missing packages"
+      set_fact:
+        missing_packages: "{{ missing_packages + (os_system_packages[ansible_os_family|lower][nbu_role] | difference(ansible_facts.packages.keys())) }}"
+      when:
+        - os_system_packages[ansible_os_family|lower][nbu_role] is defined
+        - (os_system_packages[ansible_os_family|lower][nbu_role] | difference(ansible_facts.packages.keys())) | length > 0
+
+    - name: "NBU-OS-COMPATIBILITY -> Set-fact {{ ansible_os_family }}:{{ ansible_distribution_major_version }} native dependent missing packages"
+      set_fact:
+        missing_packages: "{{ missing_packages + (os_system_packages[ansible_os_family|lower][ansible_distribution_major_version] | difference(ansible_facts.packages.keys())) }}"
+      when:
+        - os_system_packages[ansible_os_family|lower][ansible_distribution_major_version] is defined
+        - (os_system_packages[ansible_os_family|lower][ansible_distribution_major_version] | difference(ansible_facts.packages.keys())) | length > 0
+
+    - name: "NBU-OS-COMPATIBILITY -> Install native dependent packages if missing"
+      ansible.builtin.package:
+        name: "{{ item }}"
+        state: present
+        disable_gpg_check: no
+      with_items: "{{ missing_packages }}"
+      when:
+        - missing_packages | length > 0
+
+    - name: "NBU-OS-COMPATIBILITY -> Reload the native package facts"
+      ansible.builtin.package_facts:
+        manager: auto
+      no_log: true
+
+    - name: "NBU-OS-COMPATIBILITY -> Verify the existence of native dependent packages"
+      fail:
+        msg: "One or more required system packages are not installed: {{ absent_packages }}"
+      when: absent_packages | length > 0
+      vars:
+        absent_packages: "{{ missing_packages | difference(ansible_facts.packages.keys()) }}"
+# EOF

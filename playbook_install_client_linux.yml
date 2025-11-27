@@ -1,4 +1,4 @@
-# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
 
 # NetBackup Server - Install - CLIENT
 - name: NETBACKUP -> CLIENT INSTALL ("Linux")
@@ -22,15 +22,16 @@
       no_log: true
 
   roles:
-    - role: 'netbackup/linux'                               # Load netbackup default vars
-    - role: 'generic/os_compatibility'
+    - role: 'netbackup'                                    # Load netbackup common defaults
+    - role: 'netbackup/posix'                              # Load netbackup default vars
     - role: 'generic/is_nbu_version_supported'
+    - role: 'generic/os_compatibility'
     - role: 'helper/detect_partial_install'
     - role: 'generic/nbu_compatibility'
-    - role: 'netbackup/linux/nbu-client-install/v2.0'
+    - role: 'netbackup/posix/nbu-client-install/v2.0'
     - role: 'netbackup/common/nbu-get-certificate/v2.0'
     - role: 'generic/nbu_verification'                      # Verifies certificate specific checks and report 
-    - role: 'netbackup/linux/nbu-install-eeb/v2.0'
+    - role: 'netbackup/posix/nbu-install-eeb/v2.0'
     
   vars:
       nbu_role: "client"

@@ -1,8 +1,8 @@
-# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
  
 # These vars are mostly customer-centric and would get updated.
 # Desired NetBackup Client Version to use in the format [x.x.x.x]
-# Supported versions: ['11.0.0.1', '11.0.0.0', '10.5.0.1', '10.5.0.0', '10.4.0.1', '10.4.0.0', '10.3.0.1', '10.3.0.0', '10.2.0.1', '10.2.0.0', '10.1.1.0', '10.1.0.0', '10.0.0.1', '10.0.0.0']
+# Supported versions: ['11.1.0.0','11.0.0.1', '11.0.0.0', '10.5.0.1', '10.5.0.0' ]
 nbu_version: x.x.x.x
 
 Comment: >
@@ -30,6 +30,10 @@ Comment: >
 
 # NB Configuration variables
 
+# Applicable only to new installs. 
+# Default: Output of `uname -n`. In case, FQDN is to be set, uncomment the var.
+# nbu_client_name_ans: "{{ ansible_fqdn }}"
+
 # This is requried only in case of Media and Client
 nbu_primary_server_ans: PRIMARY01
 ignore_primary_connectivity_failures: false               # If using a masked primary for initial install, set the value to true to ignore connectivity validation and continue execution. 
@@ -38,8 +42,8 @@ skip_primary_version_compatibility_check: false           # Skip Primary server 
 nbu_webservices_group: nbwebgrp
 nbu_webservices_user: nbwebsvc
 # NetBackup - Services Account
-nbu_services_group: ''
-nbu_services_user: ''
+nbu_services_group: ''                        # This is the group name for NetBackup services user
+nbu_services_user: ''                        # This is the NetBackup services user name
 nbu_database_user: "{{ nbu_services_user }}"
 postgresql_pooler_odbc_port: ''
 
@@ -56,6 +60,14 @@ nbu_directory_list_to_be_removed:                         # Custom list of direc
 # FTO (Feature Toggle Options)                            # Valid options given can be true|false|yes|no|y|n|1|0
 include_eeb_rpm_marker: false                             # If set to true, playbook wil create/delete extra RPM marker
 nb_include_java_jre_install: false                        # For include java jre packages
+include_directio_install: 'MATCH'                         # DirectIO package installation behavior:
+                                                           #   INCLUDE - Include the NetBackup DirectIO
+                                                           #   EXCLUDE - Exclude the NetBackup DirectIO
+                                                           #   MATCH   - Match the existing configuration on the host
+include_vrtspddeu_client_install: 'MATCH'                  # VRTSpddeu package installation behavior for client role:
+                                                           #   INCLUDE - Include the VRTSpddeu package
+                                                           #   EXCLUDE - Exclude the VRTSpddeu package  
+                                                           #   MATCH   - Match the existing configuration on the host
 nbu_cert_management: true                                # For include cert mangement playbook
 do_perform_nbcheck_preinstall: true                       # If set to true nbcheck gets called before NBU install/upgrade, else skip
 should_force_process_termination: false                   # After 3 attempts of graceful shutdown, forcefully terminate the running processes
@@ -67,7 +79,9 @@ do_install_ita_dc: false                                  # If set to true, will
 skip_missing_catalog_backup_check: false
 
 # Set this to true if packages are cached locally independently or by using staging playbook to avoid downloading the pakcages at install-time.
+# NOTE: When using cache-only mode on IBM Z Series (s390x), ensure your cache contains s390x architecture packages
 install_pkgs_from_local_cache: false
+
 
 #Primary Security Settings
 security_properties_params:
@@ -111,29 +125,38 @@ nbu_eca_certdetails:
     nbu_eca_crl_path: ''                                  # The file system directory path where CRLs are available
 
 # OS - Packages
-os_rhel_system_packages:                                  # Additional system packages can be added here
-  "common":                                               #common for all os-versions and all nbu-roles
-    - libnsl
-    - ncurses-libs
-  "primary":                                              #primary specific. Similarly client and media specific list can be added
-    - bc
-    - gzip
-  "9":                                                    # RHEL 9 system packages
-    - libxcrypt-compat
-
-os_suse_system_packages:                                  # SUSE system packages       
-  "primary":
-    - insserv-compat 
-    - libXrender1
-    - libXtst6
+os_system_packages:                                       # Additional system packages can be added here
+  redhat:
+    "common":                                             #common for all os-versions and all nbu-roles
+      - libnsl
+      - ncurses-libs
+    "primary":                                            #primary specific. Similarly client and media specific list can be added
+      - bc
+      - gzip
+    "9":                                                  # RHEL 9 system packages
+      - libxcrypt-compat
+  suse:
+    "primary":
+      - insserv-compat
+      - libXrender1
+      - libXtst6
+  sunos:
+    common:
+      - developer/developerstudio-126/library/c++-libs
+      - developer/developerstudio-126/library/c-libs
+      - developer/developerstudio-126/library/f90-libs
+      - developer/developerstudio-126/library/math-libs
+      - developer/developerstudio-126/library/perflib
+      - developer/developerstudio-126/library/studio-gccrt
 
 # OS - Symbolic links
-os_rhel_system_packages_symlink:                          # Additional symbolic links can be added here
-  "9":                                                    # RHEL 9 symbolic links
-    - { src: /usr/lib64/libncurses.so.6.2, dest: /usr/lib64/libncurses.so.5 }
-    - { src: /usr/lib64/libtinfo.so.6.2, dest: /usr/lib64/libtinfo.so.5 }
-  "8":                                                    # RHEL 8 symbolic links
-    - { src: /usr/lib64/libncurses.so.6.1, dest: /usr/lib64/libncurses.so.5 }
-    - { src: /usr/lib64/libtinfo.so.6.1, dest: /usr/lib64/libtinfo.so.5 }
+os_system_packages_symlink:                          # Additional symbolic links can be added here
+  redhat:
+    "9":                                                    # RHEL 9 symbolic links
+      - { src: /usr/lib64/libncurses.so.6.2, dest: /usr/lib64/libncurses.so.5 }
+      - { src: /usr/lib64/libtinfo.so.6.2, dest: /usr/lib64/libtinfo.so.5 }
+    "8":                                                    # RHEL 8 symbolic links
+      - { src: /usr/lib64/libncurses.so.6.1, dest: /usr/lib64/libncurses.so.5 }
+      - { src: /usr/lib64/libtinfo.so.6.1, dest: /usr/lib64/libtinfo.so.5 }
 
 # EOF

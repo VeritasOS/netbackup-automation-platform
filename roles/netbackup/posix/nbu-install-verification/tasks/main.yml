@@ -1,0 +1,90 @@
+# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
+
+#####################################################################
+#### nbu-install-verification -> tasks -> main.yml ####
+#####################################################################
+
+# Determine the NetBackup server installed software version 
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Determine the NetBackup {{ nbu_role|capitalize }} installed software version"
+  block:
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Verify whether NetBackup {{ nbu_role }} software is currently installed"
+      ansible.builtin.shell: "{{ pkg_status_check_cmd | replace('ITEM_PACKAGE_NAME', nbu_rpm_vrtsnbcfg) }}"
+      changed_when: false
+      register: nbu_rpm_check_register
+      failed_when: false
+
+    # Verify what version of the NetBackup client software is currently installed.
+    # Returned version is used to determine whether the NetBackup client sofware requires upgrading.
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Verify what version of the NetBackup {{ nbu_role }} software is currently installed"
+      ansible.builtin.shell:  "{{ version_check_cmd | replace('ITEM_PACKAGE_NAME', nbu_rpm_vrtsnbcfg) }}"
+      changed_when: false
+      register: nbu_rpm_version_register
+      when:
+        - ( nbu_rpm_check_register.rc == 0 )
+  when:
+    - nbu_playbook_type == "upgrade"
+    - install_phase == "PRE"
+
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Detect if NetBackup {{ nbu_role | capitalize }} ({{ nbu_rpm_version_register.stdout | default(nbu_version) }}) is currently installed"
+  ansible.builtin.set_fact:
+    nbu_rpm_version: "{{ nbu_rpm_version_register.stdout | default(nbu_version) }}"
+
+# Include tasks to verify the NetBackup installation/upgrade status
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Include tasks for NetBackup {{ nbu_playbook_type }} status verification"
+  ansible.builtin.include_tasks: t01_{{ nbu_playbook_type }}_status.yml
+  when:      
+      - item.shared is not defined
+      - (item.platforms is not defined or nbu_current_os_arch in item.platforms)
+      - (item.role is not defined or nbu_role in item.role)
+      - (item.optional is not defined or (item.name == 'VRTSnbjre' and nbu_role == 'primary'))
+  with_items:
+    - "{{ nbu_pkgs_ordered_list[nbu_version] }}"
+
+# Set facts about the NetBackup Client
+# Does not run if NetBackup Client software is not installed
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Set facts about the NetBackup {{ nbu_role }} {{ nbu_playbook_type }}"
+  ansible.builtin.set_fact:
+    nbu_hostname: "{{ inventory_hostname_short }}"
+    nbu_version_current: "{{ nbu_rpm_version }}"
+    nbu_version_proposed: "{{ nbu_version }}"
+  when:
+    - ( nbu_rpm_check_register.rc == 0 ) and ( nbu_install_status == "upgrade" )
+
+# Does not run if NetBackup Client software is not installed
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }}  -> Set facts about the NetBackup {{ nbu_role }} {{ nbu_playbook_type }} "
+  ansible.builtin.set_fact:
+    nbu_hostname: "{{ inventory_hostname_short }}"
+    nbu_version_proposed: "{{ nbu_version }}"
+  when:
+    - ( nbu_install_status == "install" )
+
+# Display facts about the NetBackup Client
+# Does not run if NetBackup Client software is not installed
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Display facts about the NetBackup {{ nbu_role }} {{ nbu_playbook_type }}"
+  ansible.builtin.debug:
+    msg:
+      - "NetBackup {{ nbu_role|capitalize }} - Hostname:                         {{ nbu_hostname }}"
+      - "NetBackup {{ nbu_role|capitalize }} - Action:                           {{ nbu_install_status }}"
+      - "NetBackup {{ nbu_role|capitalize }} - Version ('Current'):              {{ nbu_version_current }}"
+      - "NetBackup {{ nbu_role|capitalize }} - Version ('New'):                  {{ nbu_version_proposed }}"
+  when:
+    - ( nbu_install_status == "upgrade" )
+
+# Display facts about the NetBackup Client
+# Runs only when NetBackup Client software is not installed
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Display facts about the NetBackup {{ nbu_role }} {{ nbu_playbook_type }}"
+  ansible.builtin.debug:
+    msg:
+      - "NetBackup {{ nbu_role|capitalize }} - Hostname:                         {{ nbu_hostname }}"
+      - "NetBackup {{ nbu_role|capitalize }} - Action:                           {{ nbu_install_status }}"
+      - "NetBackup {{ nbu_role|capitalize }} - Version ('New'):                  {{ nbu_version_proposed }}"
+  when:
+    - ( nbu_install_status == "install" )
+
+- name: Ansible::Log.info
+  ansible.builtin.debug:
+    msg: "Installed NetBackup {{ nbu_role }} version ({{ nbu_rpm_version }}) is up-to-date"
+  when: ( nbu_install_status == "none" )
+
+
+# EOF

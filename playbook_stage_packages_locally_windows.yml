@@ -1,4 +1,4 @@
-# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
 
 # NetBackup Stage Packages Locally
 - name: NETBACKUP -> Stage Packages Locally
@@ -16,6 +16,7 @@
       tags: ["always"]
       no_log: True
   roles:
+    - role: 'netbackup'                           # Load netbackup common defaults
     - role: 'netbackup/win32nt'                   # Load netbackup default vars
     - role: 'generic/is_nbu_version_supported'
     - role: 'netbackup/common/stage-package-locally'

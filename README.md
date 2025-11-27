@@ -9,8 +9,8 @@ The NetBackup Automation Platform provides a robust set of Ansible roles and pla
 This platform offers comprehensive automation capabilities for NetBackup Primary, Media, and Client components:
 
 * **NetBackup Installation & Upgrades**:
-    * Fresh installation of NetBackup Client on Windows, SuSE, RHEL, Rocky Linux, and Oracle Linux.
-    * Fresh installation of NetBackup Media & Primary servers on SuSE, RHEL, and Oracle Linux.
+    * Fresh installation and upgrade of NetBackup Client on Windows, SuSE, RHEL, Solaris, AIX, Linux P-series, Linux Z-series, Rocky Linux, and Oracle Linux.
+    * Fresh installation of NetBackup Media & Primary servers on SuSE and RHEL.
     * Upgrade NetBackup environments (from and to NB version 10.x onwards).
 * **Certificate Management**:
     * Independent certificate deployment, useful for initial setups or adding new primary servers.
@@ -19,30 +19,26 @@ This platform offers comprehensive automation capabilities for NetBackup Primary
 * **EEB (Emergency Engineering Binary) Management**:
     * Deployment and management of EEBs with automatic marker creation for easy detection.
     * Supports installing multiple EEBs, upgrading EEBs, adjusting subsequent overlapping EEBs, and removing EEBs.
+* **EEB Marker Creation Scripts**:
+    * Automation includes scripts for creating EEB markers, simplifying detection of installed EEBs. Marker creation is supported for all platforms except AIX.
 * **Package Staging**:
     * Option to cache NetBackup packages locally on target hosts for offline installations.
 * **Global Security Settings**:
     * Apply global security settings to enhance secure communications.
 * **Service Control**:
     * Playbooks to start, stop, and restart NetBackup services.
+* **DirectIO Support**:
+    * On RHEL, DirectIO is supported for Primary, Media, and Client. On Windows, DirectIO is supported for Client only.
+
 
 ## 🎯 Supported NetBackup Versions
 
 These playbooks support the following NetBackup Primary, Media, and Client versions:
-
+* `11.1.0.0`
 * `11.0.0.1`
 * `11.0.0.0`
 * `10.5.0.1`
 * `10.5.0.0`
-* `10.4.0.1`
-* `10.4.0.0`
-* `10.3.0.1`
-* `10.3.0.0`
-* `10.2.0.1`
-* `10.1.1.0`
-* `10.1.0.0`
-* `10.0.0.1`
-* `10.0.0.0`
 
 ## 🛠️ Playbooks
 
@@ -59,7 +55,7 @@ The following table outlines the available playbooks and their functionalities, 
 
 ### NetBackup Client Playbooks
 
-#### Linux Clients (RHEL, SuSE, Rocky Linux, Oracle Linux)
+#### Clients (Windows, SuSE, RHEL, Solaris, AIX, Linux P-series, Linux Z-series, Rocky Linux, and Oracle Linux)
 
 | # | Playbook Name | Description & High-Level Workflow |
 |---|---|---|
@@ -150,16 +146,16 @@ These roles are integral to the playbooks and are called based on the required w
 |---|---|---|
 | 01 | `netbackup/common/nbu-get-certificate` | Checks the Primary Server's Certificate mode (NBCA/ECA) and performs certificate deployment for Client/Media installations accordingly. |
 | 02 | `netbackup/common/stage-package-locally` | Staging playbook to download NetBackup packages into a local cache for use during install-time. |
-| 03 | `netbackup/linux` <br> `netbackup/win32nt` | Contains static playbook specifications required for different workflows. |
-| 04 | `netbackup/linux/nbu-client-install` <br> `netbackup/linux/nbu-server-install` <br> `netbackup/win32nt/nbu-client-install` | Installs/upgrades NetBackup Primary/Media/Client based on conditions like new install (no existing NetBackup or proposed version installed) or upgrade (older version installed). |
-| 05 | `netbackup/linux/nbu-install-eeb`<br>`netbackup/win32nt/nbu-install-eeb` | Installs the list of EEBs provided in the initial configuration and creates a marker if `include_eeb_rpm_marker` FTO is `true`. |
-| 06 | `netbackup/linux/nbu-remove` <br> `netbackup/win32nt/nbu-remove` | Removes NetBackup Primary/Media/Client only if the proposed version is found installed. |
-| 07 | `netbackup/linux/nbu-stop-services` | Handles stopping NetBackup services if the proposed version is found installed. |
-| 08 | `netbackup/linux/symlink-operations` | Deals with validation and creation of symbolic links on Linux. |
-| 09 | `netbackup/linux/nbu-install-verification` | Performs validations to determine installation status (install/none/upgrade) based on existing and proposed NetBackup versions. |
+| 03 | `netbackup/posix` <br> `netbackup/win32nt` | Contains static playbook specifications required for different workflows. |
+| 04 | `netbackup/posix/nbu-client-install` <br> `netbackup/posix/nbu-server-install` <br> `netbackup/win32nt/nbu-client-install` | Installs/upgrades NetBackup Primary/Media/Client based on conditions like new install (no existing NetBackup or proposed version installed) or upgrade (older version installed). |
+| 05 | `netbackup/posix/nbu-install-eeb`<br>`netbackup/win32nt/nbu-install-eeb` | Installs the list of EEBs provided in the initial configuration and creates a marker if `include_eeb_rpm_marker` FTO is `true`. |
+| 06 | `netbackup/posix/nbu-remove` <br> `netbackup/win32nt/nbu-remove` | Removes NetBackup Primary/Media/Client only if the proposed version is found installed. |
+| 07 | `netbackup/posix/nbu-stop-services` | Handles stopping NetBackup services if the proposed version is found installed. |
+| 08 | `netbackup/posix/symlink-operations` | Deals with validation and creation of symbolic links on Linux. |
+| 09 | `netbackup/posix/nbu-install-verification` | Performs validations to determine installation status (install/none/upgrade) based on existing and proposed NetBackup versions. |
 | 10 | `netbackup/common/rest-api-integration` | Includes global security settings for configuring secure communications. |
-| 11 | `netbackup/linux/nbu-start-services` <br> `netbackup/linux/nbu-stop-services` | Handles starting and stopping NetBackup services. |
-| 12 | `netbackup/linux/pre-install-os-task` | Handles pre-installation OS tasks for Primary, including validating and creating specified local users/groups if missing.
+| 11 | `netbackup/posix/nbu-start-services` <br> `netbackup/posix/nbu-stop-services` | Handles starting and stopping NetBackup services. |
+| 12 | `netbackup/posix/pre-install-os-task` | Handles pre-installation OS tasks for Primary, including validating and creating specified local users/groups if missing.
 
 </details>
 
@@ -187,15 +183,14 @@ These variables offer flexible configuration for various scenarios.
 
 | # | Input Variable | Description | Variable Type |
 |---|---|---|---|
-| 01 | `nbu_primary_certdetails` <br> (Mutually inclusive with `nbu_cert_management` FTO) | If the primary server uses only NBCA, the target host is configured using NBCA. Requires `hostname`, `nbu_server_fingerPrint`, and `nbu_server_authorization_token` in JSON format. | `JSON` |
+|  01 | `nbu_primary_certdetails` <br> (Mutually inclusive with `nbu_cert_management` FTO) | If the primary server uses only NBCA, the target host is configured using NBCA. Requires `hostname`, `nbu_server_fingerPrint`, and `nbu_server_authorization_token` in JSON format. | `JSON` |
 | 02 | `nbu_eca_certdetails[Linux]` <br> (Mutually inclusive with `nbu_cert_management` FTO) | If the primary server uses ECA or mixed mode, the target host is configured with ECA. Requires `nbu_eca_cert_path`, `nbu_eca_private_key_path`, `nbu_eca_trust_store_path`. Optional `nbu_eca_key_passphrasefile` and `eca_crl` details. | `JSON` |
-| 02 | `nbu_eca_certdetails[Windows]` <br> (Mutually inclusive with `nbu_cert_management` FTO) | Similar to Linux ECA configuration, supporting both file-based certificates and Windows Certificate Store. Requires `cert_store_type` (`windows_cert_store` or `windows_file_based`) and relevant paths/locations. | `JSON` |
-| 03 | `nbu_eeb_ordered` | Specifies an ordered list of EEBs to be installed. Supports upgrading, handling overlapping EEBs, uninstalling, and providing special arguments. | `JSON` |
-| 04 | `os_path_nbu_install` | Custom installation path for NetBackup. Default: `/usr/openv` for Linux, `C:\\Program Files\\Veritas` for Windows. Recommended path ends with `openv` (Linux) or `Veritas` (Windows). | `string` |
-| 05 | `nbu_directory_list_to_be_removed` | List of directories to be removed upon NetBackup uninstallation. | `list` |
-| 06 | `os_rhel_system_packages` | Add custom OS dependent packages for RHEL systems. | `JSON` |
-| 07 | `os_rhel_system_packages_symlink` | Add custom OS symlinks for RHEL systems. | `JSON` |
-| 08 | `nbu_license_key` | NetBackup license key for Media install/upgrade (for `10.0.0.1` and `10.0.0.0`). Default: `""`. | `list` |
+| 03 | `nbu_eca_certdetails[Windows]` <br> (Mutually inclusive with `nbu_cert_management` FTO) | Similar to Linux ECA configuration, supporting both file-based certificates and Windows Certificate Store. Requires `cert_store_type` (`windows_cert_store` or `windows_file_based`) and relevant paths/locations. | `JSON` |
+| 04 | `nbu_eeb_ordered` | Specifies an ordered list of EEBs to be installed. Supports upgrading, handling overlapping EEBs, uninstalling, and providing special arguments. | `JSON` |
+| 05 | `os_path_nbu_install` | Custom installation path for NetBackup. Default: `/usr/openv` for Linux, `C:\\Program Files\\Veritas` if nbu_version < 11.1 else `C:\\Program Files\\Cohesity NetBackup` for Windows. Recommended path ends with `openv` int Linux and `Veritas` or `Cohesity NetBackup` on Windows. | `string` |
+| 06 | `nbu_directory_list_to_be_removed` | List of directories to be removed upon NetBackup uninstallation. | `list` |
+| 07 | `os_rhel_system_packages` | Add custom OS dependent packages for RHEL systems. | `JSON` |
+| 08 | `os_rhel_system_packages_symlink` | Add custom OS symlinks for RHEL systems. | `JSON` |
 | 09 | `nbu_license_file_name_list` | NetBackup license file for Primary install/upgrade (for `>= 10.2.0.1`). | `list` |
 | 10 | `nbu_webservices_group` | NetBackup webservices group. Default: `nbwebgrp`. | `string` |
 | 11 | `nbu_webservices_user` | NetBackup webservices user. Default: `nbwebsvc`. | `string` |
@@ -207,6 +202,7 @@ These variables offer flexible configuration for various scenarios.
 | 17 | `setPassphraseConstraintsRequest` | Variables for setting passphrase constraints (e.g., `minPassphraseLength`). | `string` |
 | 18 | `drpkgpassphrase` | Variable required for disaster recovery passphrase. | `string` |
 | 19 | `nbu_db_data_path` | Variable required to specify the PostgreSQL database user path. | `string` |
+| 20 | `nbu_client_name_ans` | This variable is required for setting the FQDN(Fully Qualified Domain Name). | `string` |
 
 ### Feature Toggle Options (FTO)
 
@@ -224,7 +220,8 @@ These boolean variables enable or disable specific features.
 | 08 | `should_force_process_termination` | If `true`, forcefully terminates running processes after 3 graceful shutdown attempts. Default: `false`. | `bool` |
 | 09 | `do_install_ita_dc` | If `true`, installs the ITA Data Collector optional package. Default: `true`. | `bool` |
 | 10 | `skip_missing_catalog_backup_check` | If `true`, skips the check for a successful catalog backup in the last 24 hours. Default: `false`. | `bool` |
-
+| 11 | `include_directio_install` | Controls whether the DirectIO (NetBackup DirectIO) package is installed for NetBackup Primary, Media, and Client servers. Options: `INCLUDE` (always install), `EXCLUDE` (never install), `MATCH` (follow the host's current configuration). Default: `MATCH`. | `string` |
+|   | Note: DirectIO is only applicable from NetBackup version 11.1.0.0. |  |  |
 ---
 ## 🚀 Getting Started with NetBackup Ansible Playbooks
 
@@ -270,7 +267,7 @@ Playbook execution requires certain mandatory variables.
         ```
     * **Example (Windows with `--extra-vars`)**:
         ```bash
-        [user@host ~]$ ansible-playbook playbook_install_client_windows.yml -l win -vv --extra-vars="nbu_version=10.3.0.0 os_path_nbu_install=C:\Program Files\Veritas"
+        [user@host ~]$ ansible-playbook playbook_install_client_windows.yml -l win -vv --extra-vars="nbu_version=10.3.0.0"
         ```
 
 #### From within the Ansible Automation Platform (e.g., AWX)
@@ -292,23 +289,22 @@ Playbook execution requires certain mandatory variables.
 
 ### Disclaimer
 
-The information in this publication is subject to change without notice. Veritas Corporation provides this manual "as is" and disclaims all warranties, including merchantability and fitness for a particular purpose. Veritas Corporation is not liable for errors or consequential damages related to the use of this manual.
+The information in this publication is subject to change without notice. Cohesity, Inc. provides this manual "as is" and disclaims all warranties, including merchantability and fitness for a particular purpose. Cohesity, Inc. is not liable for errors or consequential damages related to the use of this manual. 
 The software is provided under a license agreement and must be used in accordance with its terms.
 
 ### Legal Notice
 
-Last updated: 2024-03-27
-Copyright © 2025 Veritas Technologies LLC. All rights reserved.
-Veritas, the Veritas Logo, Veritas Alta, and NetBackup are trademarks or registered trademarks of Veritas Technologies LLC or its affiliates. Other names may be trademarks of their respective owners.
-This product may contain third-party software under open source or free software licenses. The License Agreement does not alter your rights or obligations under these licenses. Refer to the Third-party Legal Notices document (accompanying the product or available at: `https://www.veritas.com/about/legal/license-agreements`).
-The product and documentation are distributed under licenses restricting use, copying, distribution, and decompilation/reverse engineering. No part of this document may be reproduced without prior written authorization from Veritas Technologies LLC.
-THE DOCUMENTATION IS PROVIDED "AS IS" AND ALL EXPRESS OR IMPLIED CONDITIONS, REPRESENTATIONS AND WARRANTIES, INCLUDING ANY IMPLIED WARRANTY OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NON-INFRINGEMENT, ARE DISCLAIMED, EXCEPT TO THE EXTENT THAT SUCH DISCLAIMERS ARE HELD TO BE LEGALLY INVALID. Veritas Technologies LLC SHALL NOT BE LIABLE FOR INCIDENTAL OR CONSEQUENTIAL DAMAGES IN CONNECTION WITH THE FURNISHING, PERFORMANCE, OR USE OF THIS DOCUMENTATION. THE INFORMATION CONTAINED IN THIS DOCUMENTATION IS SUBJECT TO CHANGE WITHOUT NOTICE.
-The Licensed Software and Documentation are deemed to be commercial computer software as defined in FAR 12.212 and subject to restricted rights as defined in FAR Section 52.227-19 "Commercial Computer Software - Restricted Rights" and DFARS 227.7202, et seq. "Commercial Computer Software and Commercial Computer Software Documentation," as applicable, and any successor regulations, whether delivered by Veritas as on premises or hosted services. Any use, modification, reproduction release, performance, display or disclosure of the Licensed Software and Documentation by the U.S. Government shall be solely in accordance with the terms of this Agreement.
+Last updated: 2025-10-25
+Copyright © 2025 Cohesity, Inc. All rights reserved.
+Cohesity, the Cohesity Logo, and other Cohesity Marks are trademarks of Cohesity, Inc. or its affiliates in the US and/or internationally. Other names may be trademarks of their respective owners.
+This product may contain third-party software under open source or free software licenses. The license agreement does not alter your rights or obligations under these licenses. The product and documentation are distributed under licenses restricting use, copying, distribution, and decompilation/reverse engineering. No part of this document may be reproduced without prior written authorization from Cohesity, Inc.
+THE DOCUMENTATION IS PROVIDED "AS IS" AND ALL EXPRESS OR IMPLIED CONDITIONS, REPRESENTATIONS AND WARRANTIES, INCLUDING ANY IMPLIED WARRANTY OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NON-INFRINGEMENT, ARE DISCLAIMED, EXCEPT TO THE EXTENT THAT SUCH DISCLAIMERS ARE HELD TO BE LEGALLY INVALID. COHESITY, INC. SHALL NOT BE LIABLE FOR INCIDENTAL OR CONSEQUENTIAL DAMAGES IN CONNECTION WITH THE FURNISHING, PERFORMANCE, OR USE OF THIS DOCUMENTATION. THE INFORMATION CONTAINED IN THIS DOCUMENTATION IS SUBJECT TO CHANGE WITHOUT NOTICE.
+The licensed Software and Documentation are deemed to be commercial computer software as defined in FAR 12.212 and subject to restricted rights as defined in FAR Section 52.227-19 "Commercial Computer Software - Restricted Rights" and DFARS 227.7202, et seq. "Commercial Computer Software and Commercial Computer Software Documentation," as applicable, and any successor regulations, whether delivered by Cohesity as on premises or hosted services. Any use, modification, reproduction release, performance, display or disclosure of the Licensed Software and Documentation by the U.S. Government shall be solely in accordance with the terms of this Agreement.
 
-Veritas Technologies LLC
+Cohesity, Inc.
 2625 Augustine Drive
 Santa Clara, CA 95054
 
 ### Third-Party Legal Notices
 
-Veritas offerings may include third-party materials that are subject to a separate license. Those materials are specified in a Third-party Notices document which may either be posted below on this site and/or included in the ReadMe file or Documentation for the applicable offering.
+Cohesity offerings may include third-party materials that are subject to a separate license. A list of those materials is accessible in the product user interface, in a Cohesity-hosted support portal made available to Cohesity Support customers, or included in the ReadMe file or Documentation for the applicable offering.

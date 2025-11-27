@@ -1,4 +1,4 @@
-# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
 
 # Gather file system disk space usage
 - name: "NBU-STORAGE-COMPATIBILITY -> Get disk space information for {{ ansible_env.SystemDrive.split(':')[0] }} drive"

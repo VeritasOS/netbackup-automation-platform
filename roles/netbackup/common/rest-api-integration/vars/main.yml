@@ -1,4 +1,4 @@
-# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
 
 # This var file is considered to store secrets and we highly recommend that it is encrypted using ansible-vault
 # This essentially means that you would have to pass-on vault passowrd upon executing the respective playbook

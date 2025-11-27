@@ -1,4 +1,4 @@
-# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
 
 # NetBackup Primary - REMOVE
 - name: NETBACKUP -> PRIMARY REMOVE ("Linux")
@@ -13,17 +13,23 @@
           - "!all"
           - "!min"
           - "distribution"
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} Fail if nbu_primary_server_ans is defined"
+      ansible.builtin.fail:
+        msg: "The 'nbu_primary_server_ans' should not be defined for {{ nbu_role|lower }} {{ nbu_playbook_type|lower }} playbook."
+      when: nbu_primary_server_ans is defined
+
     - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Load configurable variables"
       ansible.builtin.include_vars: "vars/linux.yml"
       tags: ["always"]
       no_log: True
 
   roles:
-    - role: 'netbackup/linux'                           # Load netbackup default vars
-    - role: 'generic/os_compatibility'
+    - role: 'netbackup'                        # Load netbackup common defaults
+    - role: 'netbackup/posix'                  # Load netbackup default vars
     - role: 'generic/is_nbu_version_supported'
+    - role: 'generic/os_compatibility'
     - role: 'generic/nbu_compatibility'
-    - role: 'netbackup/linux/nbu-remove/v2.0'
+    - role: 'netbackup/posix/nbu-remove/v2.0'
   vars:
     # Role control
     nbu_role: "primary"

@@ -1,0 +1,6 @@
+# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
+
+- name: "NBU-INITIALIZE-{{ nbu_playbook_type|upper }} -> Initialize platform specific CLIs"
+  ansible.builtin.include_tasks: "initialize_clis.yml"
+
+#EOF

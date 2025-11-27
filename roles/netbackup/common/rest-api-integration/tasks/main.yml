@@ -1,4 +1,4 @@
-# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
 
 ###########################################################
 #### Load access token for the given user - ("Linux")   ####
@@ -9,12 +9,14 @@
   ansible.builtin.include_role:
     name: 'helper/detect_partial_install'
 
-- name: "NBU-LOAD-ACCESS-TOKEN -> Failed to authentication"
-  ansible.builtin.fail:
-    msg: "Required credentials 'nbu_rbac_user' and ('nbu_rbac_user_password' or 'nbu_user_apikey') are missing. Please provide the necessary information."
-  when: 
-    - (nbu_rbac_user is not defined or nbu_rbac_user | length == 0)
-    - (nbu_rbac_user_password is not defined or nbu_rbac_user_password | length == 0) or (nbu_user_apikey is not defined or nbu_user_apikey | length == 0)
+# Validation for rbac user, rbac password and rbac api_key is defined.
+- name: "NBU-LOAD-ACCESS-TOKEN -> Validate API credentials"
+  ansible.builtin.assert:
+    that:
+      - nbu_rbac_user is defined and nbu_rbac_user | length > 0
+      - (nbu_rbac_user_password is defined and nbu_rbac_user_password | length > 0) or (nbu_user_apikey is defined and nbu_user_apikey | length > 0)
+    fail_msg: "Required credentials 'nbu_rbac_user' and ('nbu_rbac_user_password' or 'nbu_user_apikey') are missing. Please provide the necessary information."
+    quiet: false
 
 # Validate how we need to load the token (JWT/Token)
 - name: "NBU-LOAD-ACCESS-TOKEN -> Get access token"

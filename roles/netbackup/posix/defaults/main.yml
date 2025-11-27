@@ -1,0 +1,394 @@
+# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
+
+# NetBackup - Packages
+nbu_client_rpm_pddea: VRTSpddea
+nbu_rpm_vrtsnbcfg: VRTSnbcfg
+nbu_client_rpm_pbx: VRTSpbx
+nbu_failed_rpms: ""
+
+# EEB - Filename
+nbu_eeb_prefix: VRTSnbeeb
+
+# OS - Paths
+os_path_openv_tmp: /usr/openv/tmp
+os_path_nbu_install_default: /usr/openv
+os_path_nbu_install_etc: /etc/opt/netbackup
+os_path_nbu_yum_cache: /var/cache/yum/x86_64/7Server/netbackup
+os_path_nbu_log_vxlogcfg: /usr/openv/netbackup/bin/vxlogcfg
+nbu_certificates_file_path: /usr/openv/var/tmp      # NBU Installer path where cert mangement dir will be created
+os_path_etc: /etc
+os_path_nbu_yum_cache_base: /var
+os_path_root_file_system: /
+
+# EEB Patch
+nbu_pack_summary_path: /usr/openv/pack/pack.summary
+nbu_eeb_file_base: "{{ item | basename }}"                      # Extract filename from EEB path
+nbu_eeb_filename: "{{ item.value.package | basename }}"
+nbu_eeb_file_id: "{{ nbu_eeb_file_base.split('_')[1] }}"
+nbu_eeb_file_ver: "{{ nbu_eeb_file_base.split('_')[2] }}"
+eeb_name: "{{ nbu_eeb_file_base.split(' ')[0] }}"
+nbu_eeb_package_marker_name: "VRTSnbeeb_{{ nbu_eeb_file_id }}-{{ nbu_eeb_file_ver }}-{{ nbu_version }}.{{ ansible_architecture }}"
+nbu_eeb_solaris_pkg_abbr: "EB{{ nbu_eeb_file_id }}"
+
+# Local static variable initialization
+nbu_primary_server_ans_found: false
+nbu_detected_role: "NOT_FOUND"
+nbu_install_counter: 0
+nbu_upgrade_counter: 0
+netbackup_failed_license_list_counter: 0 
+artifactory_repo: ""
+
+# Certificate management resources
+nbu_certificates_file_dir: certinfo                             # newly created directory for keeping cert management files
+nbu_CACertificate_File: NBU_Fingerprint                         # name of CACertificate file
+nbu_authorization_token_file: NBU_Token                         # name of Authorization token file
+
+# NB web service vars
+nbu_api_port: '1556'
+
+# NB Configuration variables
+ignore_primary_connectivity_failures: false               # If using a masked primary for initial install, set the value to true to ignore connectivity validation and continue execution. 
+skip_primary_version_compatibility_check: false           # Skip Primary server version compatibility check
+install_pkgs_from_local_cache: false
+do_install_ita_dc: true
+nbap_partial_install_detected: false                      # Used to detect the partial/mixed installation case
+include_directio_install: 'MATCH'                         # DirectIO package installation behavior:
+                                                          # INCLUDE - Include the NetBackup DirectIO
+                                                          # EXCLUDE - Exclude the NetBackup DirectIO
+                                                          # MATCH   - Match the existing configuration on the host
+include_vrtspddeu_client_install: 'MATCH'                 # VRTSpddeu package installation behavior for client role:
+                                                          # INCLUDE - Include the VRTSpddeu package
+                                                          # EXCLUDE - Exclude the VRTSpddeu package  
+                                                          # MATCH   - Match the existing configuration on the host                                                          
+nb_include_directio_install: false                          # Used to include/exclude DirectIO installation
+nb_include_vrtspddeu_client_install: false                  # Used to include/exclude VRTSpddeu client installation
+
+# OS - Files
+os_file_hosts: "{{ os_path_etc }}/hosts"
+os_file_sysctl: "{{ os_path_etc }}/sysctl.conf"
+os_file_security_limits: "{{ os_path_etc }}/security/limits.conf"
+os_file_bpconf: bp.conf
+os_file_vmconf: vm.conf
+os_file_authconf: auth.conf
+nbu_cust_reg_file_name: veritas_customer_registration_key.json
+nbu_cust_reg_path:  "{{os_path_openv_tmp}}/{{nbu_cust_reg_file_name}}"
+nbu_current_os_arch: "{{ ansible_os_family }}:{{ ansible_architecture }}"
+
+os_file_nbu_nbcertcmd: "{{ os_path_nbu_install_default }}/netbackup/bin/nbcertcmd"
+os_file_nbu_bpimagelist: "{{ os_path_nbu_install_default }}/netbackup/bin/admincmd/bpimagelist"
+os_file_nbu_nbhostidentity: "{{ os_path_nbu_install_default }}/netbackup/bin/admincmd/nbhostidentity"
+os_file_nbu_nbemmcmd: "{{ os_path_nbu_install_default }}/netbackup/bin/admincmd/nbemmcmd"
+os_file_nbu_bpdbjobs: "{{ os_path_nbu_install_default }}/netbackup/bin/admincmd/bpdbjobs"
+os_file_nbu_nbauditreport: "{{ os_path_nbu_install_default }}/netbackup/bin/admincmd/nbauditreport"
+os_file_nbu_nbkmsutil: "{{ os_path_nbu_install_default }}/netbackup/bin/admincmd/nbkmsutil"
+os_file_nbu_bpgetconfig: "{{ os_path_nbu_install_default }}/netbackup/bin/admincmd/bpgetconfig"
+os_file_nbu_bpkill: "{{ os_path_nbu_install_default }}/netbackup/bin/bp.kill_all"
+os_file_nbu_bpstart: "{{ os_path_nbu_install_default }}/netbackup/bin/bp.start_all"
+os_file_nbu_bpps: "{{ os_path_nbu_install_default }}/netbackup/bin/bpps"
+os_file_nbu_goodies_netbackup: "{{ os_path_nbu_install_default }}/netbackup/bin/goodies/netbackup"
+os_file_nbu_nbdb_backup: "{{ os_path_nbu_install_default }}/db/bin/nbdb_backup"
+os_file_nbu_bpconf: "{{ os_path_nbu_install_default }}/netbackup/{{ os_file_bpconf }}"
+os_file_nbu_vmconf: "{{ os_path_nbu_install_default }}/volmgr/{{ os_file_vmconf }}"
+os_file_nbu_authconf: "{{ os_path_nbu_install_default }}/java/{{ os_file_authconf }}"
+os_file_nbu_wmc: "{{ os_path_nbu_install_default }}/wmc"
+os_file_nbu_mqbroker: "{{ os_path_nbu_install_default }}/mqbroker"
+os_file_nbu_bpclntcmd: "{{ os_path_nbu_install_default }}/netbackup/bin/bpclntcmd" 
+vrts_pbx_usage_cmd: "{{ os_file_nbu_bpps }} -x | grep VRTSpbx | grep pbx_exchange | wc -l"
+
+# OS - Directories
+os_dir_nbu_db: "{{ os_path_nbu_install_default }}/netbackup/db"
+os_dir_nbu_backup: "{{ os_path_openv_tmp }}/upgrade_backup"
+os_dir_nbu_drfiles: "{{ os_path_openv_tmp }}/drfiles"
+
+nbu_db_data_path: "{{ os_path_nbu_install }}/db/data"
+
+# NBU - Config ("Limits")
+nbu_config_nbwebsvc_limit: "nbwebsvc  soft       nproc      8000"
+
+# OS - Packages
+os_system_packages:                                       # Additional system packages can be added here
+  redhat:
+    "common":                                             #common for all os-versions and all nbu-roles
+      - libnsl
+      - ncurses-libs
+    "primary":                                            #primary specific. Similarly client and media specific list can be added
+      - bc
+      - gzip
+    "9":                                                  # RHEL 9 system packages
+      - libxcrypt-compat
+  suse:
+    "primary":
+      - insserv-compat
+      - libXrender1
+      - libXtst6
+
+# OS - Symbolic links
+os_system_packages_symlink:                          # Additional symbolic links can be added here
+  redhat:
+    "9":                                                    # RHEL 9 symbolic links
+      - { src: /usr/lib64/libncurses.so.6.2, dest: /usr/lib64/libncurses.so.5 }
+      - { src: /usr/lib64/libtinfo.so.6.2, dest: /usr/lib64/libtinfo.so.5 }
+    "8":                                                    # RHEL 8 symbolic links
+      - { src: /usr/lib64/libncurses.so.6.1, dest: /usr/lib64/libncurses.so.5 }
+      - { src: /usr/lib64/libtinfo.so.6.1, dest: /usr/lib64/libtinfo.so.5 }
+
+# Disk Space variables
+os_path_install_space_validation:
+  client:
+    - { path: "{{os_path_nbu_install}}", space_required_MB: 4500 }
+  media:
+    - { path: "{{os_path_nbu_install}}", space_required_MB: 8000 }
+  primary:
+    - { path: "{{os_path_nbu_install}}", space_required_MB: 14000 }
+    
+os_path_upgrade_space_validation:
+  client:
+    - { path: "{{os_path_nbu_install}}", space_required_MB: 2800 }
+  media:
+    - { path: "{{os_path_nbu_install}}", space_required_MB: 5000 }
+  primary:
+    - { path: "{{os_path_nbu_install}}", space_required_MB: 10000 }
+
+os_path_cache_space_validation:
+  client:
+    - { path: "{{os_path_nbu_yum_cache_base}}", space_required_MB: 1000 }
+  media:
+    - { path: "{{os_path_nbu_yum_cache_base}}", space_required_MB: 4000 }
+  primary:
+    - { path: "{{os_path_nbu_yum_cache_base}}", space_required_MB: 5000 }
+
+#Inputs required for nbcheck
+nb_check_path: "{{ os_path_openv_tmp  }}/usr/openv/netbackup/bin/goodies/nbcheck"
+nbcheck_role_list: {"primary": ROLE_MASTER, "media": ROLE_MEDIA, "client": ROLE_CLIENT}
+nbcheck_test_name:
+   client:
+      - { testName: "nbclient_{{ nbu_version | replace('.', '') }}_install_critical", critical: true }
+      - { testName: "nbclient_{{ nbu_version | replace('.', '') }}_install_noncritical", critical: false }
+   media:
+      - { testName: "nbserver_{{ nbu_version | replace('.', '') }}_install_critical", critical: true }
+      - { testName: "nbserver_{{ nbu_version | replace('.', '') }}_install_noncritical", critical: false }
+   primary:
+      - { testName: "nbserver_{{ nbu_version | replace('.', '') }}_install_critical", critical: true }
+      - { testName: "nbserver_{{ nbu_version | replace('.', '') }}_install_noncritical", critical: false }
+
+# Ordered list of NetBackup Packages per supported version
+# Important Note: Upgrade is only supported from 10.5.0.0 and above versions for NetBackup client, media and primary.
+nbu_pkgs_ordered_list:
+  11.1.0.0: 
+      - { name: "VRTSnbpck", version: "11.1.0.0" }
+      - { name: "VRTSpbx", version: "1.19.93.0", shared: true }
+      - { name: "VRTSnbclt", version: "11.1.0.0" }
+      - { name: "VRTSnbclibs", version: "11.1.0.0" }
+      - { name: "VRTSnbjre", version: "11.1.0.0", platforms: ["RedHat:x86_64", "RedHat:s390x", "Suse:x86_64", "Suse:s390x", "AIX:chrp"], optional: "{{nb_include_java_jre_install}}" }
+      - { name: "VRTSnbjava", version: "11.1.0.0", platforms: ["RedHat:x86_64", "RedHat:s390x", "Suse:x86_64", "Suse:s390x", "AIX:chrp"], optional: "{{nb_include_java_jre_install}}" }
+      - { name: "VRTSnbdirectio", version: "1.1.0.0", platforms: ["RedHat:x86_64"], optional: "{{nb_include_directio_install}}" }
+      - { name: "VRTSpddes", version: "21.1.0.0", role: ["media", "primary"]}
+      - { name: "VRTSpddeu", version: "21.1.0.0", platforms: ["RedHat:x86_64", "Suse:x86_64"], optional: "{{nb_include_vrtspddeu_client_install}}"}
+      - { name: "VRTSpddea", version: "21.1.0.0", role: ["client"], platforms: ["RedHat:x86_64", "Suse:x86_64", "Solaris:i386", "Solaris:sun4v", "AIX:chrp"] }
+      - { name: "VRTSnbcfg", version: "11.1.0.0" }
+      - { name: "VRTSpostgresql", version: "16.10.1.0", role: ["primary"] } 
+      - { name: "VRTSnetbp", version: "11.1.0.0", role: ["media", "primary"] }
+      - { name: "VRTSnbprimary", version: "11.1.0.0", role: ["primary"] }
+      - { name: "VRTSnbmqbrkr", version: "11.1.0.0", role: ["primary"] }
+      - { name: "VRTSnbweb", version: "11.1.0.0", role: ["primary"] }
+      - { name: "VRTSnbslibs", version: "11.1.0.0", role: ["media", "primary"] }
+  11.0.0.1: 
+      - { name: "VRTSnbpck", version: "11.0.0.1" }
+      - { name: "VRTSpbx", version: "1.19.65.0", shared: true }
+      - { name: "VRTSnbclt", version: "11.0.0.1" }
+      - { name: "VRTSnbclibs", version: "11.0.0.1" }
+      - { name: "VRTSnbjre", version: "11.0.0.1", platforms: ["RedHat:x86_64", "RedHat:s390x", "Suse:x86_64", "Suse:s390x", "AIX:chrp"], optional: "{{nb_include_java_jre_install}}" }
+      - { name: "VRTSnbjava", version: "11.0.0.1", platforms: ["RedHat:x86_64", "RedHat:s390x", "Suse:x86_64", "Suse:s390x", "AIX:chrp"], optional: "{{nb_include_java_jre_install}}" }
+      - { name: "VRTSpddes", version: "21.0.0.1", role: ["media", "primary"] }
+      - { name: "VRTSpddeu", version: "21.0.0.1", platforms: ["RedHat:x86_64", "Suse:x86_64"], optional: "{{ nb_include_vrtspddeu_client_install }}"}
+      - { name: "VRTSpddea", version: "21.0.0.1", role: ["client"], platforms: ["RedHat:x86_64", "Suse:x86_64", "Solaris:i386", "Solaris:sun4v", "AIX:chrp"] }
+      - { name: "VRTSnbcfg", version: "11.0.0.1" }
+      - { name: "VRTSpostgresql", version: "16.8.1.1", role: ["primary"] } 
+      - { name: "VRTSnetbp", version: "11.0.0.1", role: ["media", "primary"] }
+      - { name: "VRTSnbprimary", version: "11.0.0.1", role: ["primary"] }
+      - { name: "VRTSnbmqbrkr", version: "11.0.0.1", role: ["primary"] }
+      - { name: "VRTSnbweb", version: "11.0.0.1", role: ["primary"]}
+      - { name: "VRTSnbslibs", version: "11.0.0.1", role: ["media", "primary"] }
+  11.0.0.0: 
+      - { name: "VRTSnbpck", version: "11.0.0.0" }
+      - { name: "VRTSpbx", version: "1.19.65.0", shared: true }
+      - { name: "VRTSnbclt", version: "11.0.0.0" }
+      - { name: "VRTSnbclibs", version: "11.0.0.0" }
+      - { name: "VRTSnbjre", version: "11.0.0.0", platforms: ["RedHat:x86_64", "RedHat:s390x", "Suse:x86_64", "Suse:s390x", "AIX:chrp"], optional: "{{ nb_include_java_jre_install }}" }
+      - { name: "VRTSnbjava", version: "11.0.0.0", platforms: ["RedHat:x86_64", "RedHat:s390x", "Suse:x86_64", "Suse:s390x", "AIX:chrp"], optional: "{{ nb_include_java_jre_install }}" }
+      - { name: "VRTSpddes", version: "21.0.0.0", role: ["media", "primary"] }
+      - { name: "VRTSpddeu", version: "21.0.0.0", platforms: ["RedHat:x86_64", "Suse:x86_64"], optional: "{{ nb_include_vrtspddeu_client_install }}"}
+      - { name: "VRTSpddea", version: "21.0.0.0", role: ["client"], platforms: ["RedHat:x86_64", "Suse:x86_64", "Solaris:i386", "Solaris:sun4v", "AIX:chrp"] }
+      - { name: "VRTSnbcfg", version: "11.0.0.0" }
+      - { name: "VRTSpostgresql", version: "16.8.1.1", role: ["primary"] }
+      - { name: "VRTSnetbp", version: "11.0.0.0", role: ["media", "primary"] }
+      - { name: "VRTSnbprimary", version: "11.0.0.0", role: ["primary"] }
+      - { name: "VRTSnbmqbrkr", version: "11.0.0.0", role: ["primary"] }
+      - { name: "VRTSnbweb", version: "11.0.0.0", role: ["primary"] }
+      - { name: "VRTSnbslibs", version: "11.0.0.0", role: ["media", "primary"] }
+
+  10.5.0.1: # (Assuming you'd have this, but focusing on 10.5.0.1 for the task)
+      - { name: "VRTSnbpck", version: "10.5.0.1" }
+      - { name: "VRTSpbx", version: "1.19.37.0", shared: true }
+      - { name: "VRTSnbclt", version: "10.5.0.1" }
+      - { name: "VRTSnbclibs", version: "10.5.0.1" }
+      - { name: "VRTSnbjre", version: "10.5.0.1", platforms: ["RedHat:x86_64", "RedHat:s390x", "Suse:x86_64", "Suse:s390x", "AIX:chrp"], optional: "{{ nb_include_java_jre_install }}" }
+      - { name: "VRTSnbjava", version: "10.5.0.1", platforms: ["RedHat:x86_64", "RedHat:s390x", "Suse:x86_64", "Suse:s390x", "AIX:chrp"], optional: "{{ nb_include_java_jre_install }}" }
+      - { name: "VRTSpddes", version: "20.5.0.1", role: ["media", "primary"] }
+      - { name: "VRTSpddeu", version: "20.5.0.1", platforms: ["RedHat:x86_64", "Suse:x86_64"], optional: "{{ nb_include_vrtspddeu_client_install }}"}
+      - { name: "VRTSpddea", version: "20.5.0.1", role: ["client"], platforms: ["RedHat:x86_64", "Suse:x86_64", "Solaris:i386", "Solaris:sun4v", "AIX:chrp"] }
+      - { name: "VRTSnbcfg", version: "10.5.0.1" }
+      - { name: "VRTSpostgresql", version: "16.6.2.0", role: ["primary"] }
+      - { name: "VRTSnetbp", version: "10.5.0.1", role: ["media", "primary"] }
+      - { name: "VRTSnbprimary", version: "10.5.0.1", role: ["primary"] }
+      - { name: "VRTSnbmqbrkr", version: "10.5.0.1", role: ["primary"] }
+      - { name: "VRTSnbweb", version: "10.5.0.1", role: ["primary"] }
+      - { name: "VRTSnbslibs", version: "10.5.0.1", role: ["media", "primary"] }
+
+  10.5.0.0: # (Assuming you'd have this, but focusing on 10.5.0.0 for the task)
+      - { name: "VRTSnbpck", version: "10.5.0.0" }
+      - { name: "VRTSpbx", version: "1.19.37.0", shared: true }
+      - { name: "VRTSnbclt", version: "10.5.0.0" }
+      - { name: "VRTSnbclibs", version: "10.5.0.0" }
+      - { name: "VRTSnbjre", version: "10.5.0.0", platforms: ["RedHat:x86_64", "RedHat:s390x", "Suse:x86_64", "Suse:s390x", "AIX:chrp"], optional: "{{ nb_include_java_jre_install }}" }
+      - { name: "VRTSnbjava", version: "10.5.0.0", platforms: ["RedHat:x86_64", "RedHat:s390x", "Suse:x86_64", "Suse:s390x", "AIX:chrp"], optional: "{{ nb_include_java_jre_install }}" }
+      - { name: "VRTSpddes", version: "20.5.0.0", role: ["media","primary"] }
+      - { name: "VRTSpddeu", version: "20.5.0.0", platforms: ["RedHat:x86_64", "Suse:x86_64"], optional: "{{ nb_include_vrtspddeu_client_install }}" }
+      - { name: "VRTSpddea", version: "20.5.0.0", role: ["client"], platforms: ["RedHat:x86_64", "Suse:x86_64", "Solaris:i386", "Solaris:sun4v", "AIX:chrp"] }
+      - { name: "VRTSnbcfg", version: "10.5.0.0" }
+      - { name: "VRTSpostgresql", version: "16.4.1.0", role: ["primary"] }
+      - { name: "VRTSnetbp", version: "10.5.0.0", role: ["media", "primary"] }
+      - { name: "VRTSnbprimary", version: "10.5.0.0", role: ["primary"] }
+      - { name: "VRTSnbmqbrkr", version: "10.5.0.0", role: ["primary"] }
+      - { name: "VRTSnbweb", version: "10.5.0.0", role: ["primary"] }
+      - { name: "VRTSnbslibs", version: "10.5.0.0", role: ["media", "primary"] }
+
+  10.4.0.1: # (Assuming you'd have this, but focusing on 10.5.0.0 for the task)
+      - { name: "VRTSnbpck", version: "10.4.0.1" }
+      - { name: "VRTSpbx", version: "1.19.5.0", shared: true }
+      - { name: "VRTSnbclt", version: "10.4.0.1" }
+      - { name: "VRTSnbclibs", version: "10.4.0.1" }
+      - { name: "VRTSnbjre", version: "10.4.0.1", platforms: ["RedHat:x86_64", "RedHat:s390x", "Suse:x86_64", "Suse:s390x", "AIX:chrp"], optional: "{{nb_include_java_jre_install}}" }
+      - { name: "VRTSnbjava", version: "10.4.0.1", platforms: ["RedHat:x86_64", "RedHat:s390x", "Suse:x86_64", "Suse:s390x", "AIX:chrp"], optional: "{{nb_include_java_jre_install}}" }
+      - { name: "VRTSpddes", version: "20.4.0.1", role: ["media","primary"]}
+      - { name: "VRTSpddeu", version: "20.4.0.1", platforms: ["RedHat:x86_64"], optional: "{{ nb_include_vrtspddeu_client_install }}" }
+      - { name: "VRTSpddei", version: "4.0", role: ["media", "primary"], platforms: ["RedHat:x86_64"]}
+      - { name: "VRTSpddea", version: "20.4.0.1", role: ["client"], platforms: ["RedHat:x86_64", "Suse:x86_64", "Solaris:i386", "Solaris:sun4v", "AIX:chrp"] }
+      - { name: "VRTSnbcfg", version: "10.4.0.1" }
+      - { name: "VRTSpostgresql", version: "14.12.1.0", role: ["primary"], platforms: ["RedHat:x86_64", "Suse:x86_64"] }
+      - { name: "VRTSnetbp", version: "10.4.0.1", role: ["media", "primary"], platforms: ["RedHat:x86_64", "Suse:x86_64"] }
+      - { name: "VRTSnbprimary", version: "10.4.0.1", role: ["primary"], platforms: ["RedHat:x86_64", "Suse:x86_64"] }
+      - { name: "VRTSnbmqbrkr", version: "10.4.0.1", role: ["primary"], platforms: ["RedHat:x86_64", "Suse:x86_64"] }
+      - { name: "VRTSnbweb", version: "10.4.0.1", role: ["primary"], platforms: ["RedHat:x86_64", "Suse:x86_64"] }
+      - { name: "VRTSnbslibs", version: "10.4.0.1", role: ["media", "primary"], platforms: ["RedHat:x86_64", "Suse:x86_64"] }
+
+  10.4.0.0: # (Assuming you'd have this, but focusing on 10.5.0.0 for the task)
+      - { name: "VRTSnbpck", version: "10.4.0.0" }
+      - { name: "VRTSpbx", version: "1.19.4.0", shared: true }
+      - { name: "VRTSnbclt", version: "10.4.0.0" }
+      - { name: "VRTSnbclibs", version: "10.4.0.0" }
+      - { name: "VRTSnbjre", version: "10.4.0.0", platforms: ["RedHat:x86_64", "RedHat:s390x", "Suse:x86_64", "Suse:s390x", "AIX:chrp"], optional: "{{nb_include_java_jre_install}}" }
+      - { name: "VRTSnbjava", version: "10.4.0.0", platforms: ["RedHat:x86_64", "RedHat:s390x", "Suse:x86_64", "Suse:s390x", "AIX:chrp"], optional: "{{nb_include_java_jre_install}}" }
+      - { name: "VRTSpddes", version: "20.4.0.0", role: ["media","primary"] }
+      - { name: "VRTSpddeu", version: "20.4.0.0", platforms: ["RedHat:x86_64", "Suse:x86_64"], optional: "{{ nb_include_vrtspddeu_client_install }}" }
+      - { name: "VRTSpddei", version: "4.0", role: ["media", "primary"], platforms: ["RedHat:x86_64"] }
+      - { name: "VRTSpddea", version: "20.4.0.0", role: ["client"], platforms: ["RedHat:x86_64", "Suse:x86_64", "Solaris:i386", "Solaris:sun4v", "AIX:chrp"] }
+      - { name: "VRTSnbcfg", version: "10.4.0.0" }
+      - { name: "VRTSpostgresql", version: "14.11.1.0", role: ["primary"] }
+      - { name: "VRTSnetbp", version: "10.4.0.0", role: ["media", "primary"] }
+      - { name: "VRTSnbprimary", version: "10.4.0.0", role: ["primary"] }
+      - { name: "VRTSnbmqbrkr", version: "10.4.0.0", role: ["primary"] }
+      - { name: "VRTSnbweb", version: "10.4.0.0", role: ["primary"] }
+      - { name: "VRTSnbslibs", version: "10.4.0.0", role: ["media", "primary"] }
+
+  10.3.0.1: # (Assuming you'd have this, but focusing on 10.5.0.0 for the task)
+      - { name: "VRTSnbpck", version: "10.4.0.0" }
+      - { name: "VRTSpbx", version: "1.18.8.0", shared: true }
+      - { name: "VRTSnbclt", version: "10.4.0.0" }
+      - { name: "VRTSnbclibs", version: "10.4.0.0" }
+      - { name: "VRTSnbjre", version: "10.4.0.0", platforms: ["RedHat:x86_64", "RedHat:s390x", "Suse:x86_64", "Suse:s390x", "AIX:chrp"], optional: "{{nb_include_java_jre_install}}" }
+      - { name: "VRTSnbjava", version: "10.4.0.0", platforms: ["RedHat:x86_64", "RedHat:s390x", "Suse:x86_64", "Suse:s390x", "AIX:chrp"], optional: "{{nb_include_java_jre_install}}" }
+      - { name: "VRTSpddes", version: "19.0.0.1", role: ["media","primary"]}
+      - { name: "VRTSpddeu", version: "19.0.0.1", platforms: ["RedHat:x86_64"], optional: "{{ nb_include_vrtspddeu_client_install }}" }
+      - { name: "VRTSpddei", version: "4.0", role: ["media", "primary"], platforms: ["RedHat:x86_64"]}
+      - { name: "VRTSpddea", version: "19.0.0.1", role: ["client"], platforms: ["RedHat:x86_64", "Suse:x86_64", "Solaris:i386", "Solaris:sun4v", "AIX:chrp"] }
+      - { name: "VRTSnbcfg", version: "10.4.0.0" }
+      - { name: "VRTSpostgresql", version: "14.10.1.0", role: ["primary"] }      
+      - { name: "VRTSnetbp", version: "10.4.0.0", role: ["media", "primary"] }
+      - { name: "VRTSnbprimary", version: "10.4.0.0", role: ["primary"] }
+      - { name: "VRTSnbmqbrkr", version: "10.4.0.0", role: ["primary"] }
+      - { name: "VRTSnbweb", version: "10.4.0.0", role: ["primary"] }
+      - { name: "VRTSnbslibs", version: "10.4.0.0", role: ["media", "primary"] }
+
+  10.3.0.0: # (Assuming you'd have this, but focusing on 10.5.0.0 for the task)
+      - { name: "VRTSnbpck", version: "10.3.0.0" }
+      - { name: "VRTSpbx", version: "1.18.8.0", shared: true }
+      - { name: "VRTSnbclt", version: "10.3.0.0" }
+      - { name: "VRTSnbclibs", version: "10.3.0.0" }
+      - { name: "VRTSnbjre", version: "10.3.0.0", platforms: ["RedHat:x86_64", "RedHat:s390x", "Suse:x86_64", "Suse:s390x", "AIX:chrp"], optional: "{{nb_include_java_jre_install}}" }
+      - { name: "VRTSnbjava", version: "10.3.0.0", platforms: ["RedHat:x86_64", "RedHat:s390x", "Suse:x86_64", "Suse:s390x", "AIX:chrp"], optional: "{{nb_include_java_jre_install}}" }
+      - { name: "VRTSpddes", version: "19.0.0.0", role: ["media","primary"] }
+      - { name: "VRTSpddeu", version: "19.0.0.0", platforms: ["RedHat:x86_64"], optional: "{{ nb_include_vrtspddeu_client_install }}" }
+      - { name: "VRTSpddei", version: "4.0", role: ["media", "primary"], platforms: ["RedHat:x86_64"]}
+      - { name: "VRTSpddea", version: "19.0.0.0", role: ["client"], platforms: ["RedHat:x86_64", "Suse:x86_64", "Solaris:i386", "Solaris:sun4v", "AIX:chrp"] }
+      - { name: "VRTSnbcfg", version: "10.3.0.0" }
+      - { name: "VRTSpostgresql", version: "14.9.1.0", role: ["primary"]}
+      - { name: "VRTSnetbp", version: "10.3.0.0", role: ["media", "primary"] }
+      - { name: "VRTSnbprimary", version: "10.3.0.0", role: ["primary"] }
+      - { name: "VRTSnbmqbrkr", version: "10.3.0.0", role: ["primary"] }
+      - { name: "VRTSnbweb", version: "10.3.0.0", role: ["primary"] }
+      - { name: "VRTSnbslibs", version: "10.3.0.0", role: ["media", "primary"] }
+
+  10.2.0.1: # (Assuming you'd have this, but focusing on 10.5.0.0 for the task)
+      - { name: "VRTSnbpck", version: "10.2.0.1" }
+      - { name: "VRTSpbx", version: "1.17.62.5", shared: true }
+      - { name: "VRTSnbclt", version: "10.2.0.1" }
+      - { name: "VRTSnbclibs", version: "10.2.0.1" }
+      - { name: "VRTSnbjre", version: "10.2.0.1", platforms: ["RedHat:x86_64", "RedHat:s390x", "Suse:x86_64", "Suse:s390x", "AIX:chrp"], optional: "{{nb_include_java_jre_install}}" }
+      - { name: "VRTSnbjava", version: "10.2.0.1", platforms: ["RedHat:x86_64", "RedHat:s390x", "Suse:x86_64", "Suse:s390x", "AIX:chrp"], optional: "{{nb_include_java_jre_install}}" }
+      - { name: "VRTSpddes", version: "18.0.1.0", role: ["media","primary"]}
+      - { name: "VRTSpddei", version: "4.0", role: ["media", "primary"], platforms: ["RedHat:x86_64"]}
+      - { name: "VRTSpddea", version: "18.0.1.0", role: ["client"], platforms: ["RedHat:x86_64", "Suse:x86_64", "Solaris:i386", "Solaris:sun4v", "AIX:chrp"] }
+      - { name: "VRTSnbcfg", version: "10.2.0.1" }
+      - { name: "VRTSpostgresql", version: "14.8.4.0", role: ["primary"] }
+      - { name: "VRTSnetbp", version: "10.2.0.1", role: ["media", "primary"] }
+      - { name: "VRTSnbprimary", version: "10.2.0.1", role: ["primary"]}
+      - { name: "VRTSnbmqbrkr", version: "10.2.0.1", role: ["primary"] }
+      - { name: "VRTSnbweb", version: "10.2.0.1", role: ["primary"] }
+      - { name: "VRTSnbslibs", version: "10.2.0.1", role: ["media", "primary"] }
+
+  10.2.0.0: # (Assuming you'd have this, but focusing on 10.5.0.0 for the task)
+      - { name: "VRTSnbpck", version: "10.2.0.0" }
+      - { name: "VRTSpbx", version: "1.17.62.3", shared: true }
+      - { name: "VRTSnbclt", version: "10.2.0.0" }
+      - { name: "VRTSnbclibs", version: "10.2.0.0" }
+      - { name: "VRTSnbjre", version: "10.2.0.0", platforms: ["RedHat:x86_64", "RedHat:s390x", "Suse:x86_64", "Suse:s390x", "AIX:chrp"], optional: "{{nb_include_java_jre_install}}" }
+      - { name: "VRTSnbjava", version: "10.2.0.0", platforms: ["RedHat:x86_64", "RedHat:s390x", "Suse:x86_64", "Suse:s390x", "AIX:chrp"], optional: "{{nb_include_java_jre_install}}" }
+      - { name: "VRTSpddes", version: "18.0.0.0", role: ["media","primary"]}
+      - { name: "VRTSpddei", version: "4.0", role: ["media", "primary"], platforms: ["RedHat:x86_64"] }
+      - { name: "VRTSpddea", version: "18.0.0.0", role: ["client"], platforms: ["RedHat:x86_64", "Suse:x86_64", "Solaris:i386", "Solaris:sun4v", "AIX:chrp"] }
+      - { name: "VRTSnbcfg", version: "10.2.0.0" }
+      - { name: "VRTSpostgresql", version: "14.7.4.0", role: ["primary"] }
+      - { name: "VRTSnetbp", version: "10.2.0.0", role: ["media", "primary"] }
+      - { name: "VRTSnbprimary", version: "10.2.0.0", role: ["primary"] }
+      - { name: "VRTSnbmqbrkr", version: "10.2.0.0", role: ["primary"] }
+      - { name: "VRTSnbweb", version: "10.2.0.0", role: ["primary"] }
+      - { name: "VRTSnbslibs", version: "10.2.0.0", role: ["media", "primary"] }
+
+  10.1.1.0:
+      - { name: "VRTSnbpck", version: "10.1.1.0" }
+      - { name: "VRTSpbx", version: "1.17.46.1", shared: true }
+      - { name: "VRTSnbclt", version: "10.1.1.0" }
+      - { name: "VRTSnbclibs", version: "10.1.1.0" }
+      - { name: "VRTSnbjre", version: "10.1.1.0", platforms: ["RedHat:x86_64", "RedHat:s390x", "Suse:x86_64", "Suse:s390x", "AIX:chrp"], optional: "{{nb_include_java_jre_install}}" }
+      - { name: "VRTSnbjava", version: "10.1.1.0", platforms: ["RedHat:x86_64", "RedHat:s390x", "Suse:x86_64", "Suse:s390x", "AIX:chrp"], optional: "{{nb_include_java_jre_install}}" }
+      - { name: "VRTSpddes", version: "17.1.0.0", role: ["media","primary"] }
+      - { name: "VRTSpddei", version: "4.0", role: ["media", "primary"], platforms: ["RedHat:x86_64"]}
+      - { name: "VRTSpddea", version: "17.1.0.0", role: ["client"], platforms: ["RedHat:x86_64", "Suse:x86_64", "Solaris:i386", "Solaris:sun4v", "AIX:chrp"] }
+      - { name: "VRTSnbcfg", version: "10.1.1.0" }
+      - { name: "VRTSnetbp", version: "10.1.1.0", role: ["media", "primary"] }
+      - { name: "VRTSnbmqbrkr", version: "10.1.1.0", role: ["primary"] }
+      - { name: "VRTSnbweb", version: "10.1.1.0", role: ["primary"] }
+      - { name: "VRTSnbslibs", version: "10.1.1.0", role: ["media", "primary"] }
+
+# EOF

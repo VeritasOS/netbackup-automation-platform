@@ -1,25 +1,16 @@
-# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
 
 # Verify if the proposed NetBackup software version is supported.
 # Set fact - Netbackup Released versions
 # Verify if the proposed NetBackup software version is supported.
-- name: "NBU-VERSION-SUPPORTED -> Set fact for NBU supported release versions"
-  ansible.builtin.set_fact:
-    nbu_versions_supported: "{{ nbu_pkgs_ordered_list['client'].keys() | list }}"
-  when:
-   - ( ansible_system == 'Linux' )
-
-- name: "NBU-VERSION-SUPPORTED -> Set fact for NBU supported release versions"
-  ansible.builtin.set_fact:
-    nbu_versions_supported: "{{ nbu_pkgs_ordered_list.keys() | list }}"
-  when:
-   - ansible_os_family == 'Windows'
-
-# Set fact - Netbackup install/ upgrade supported versions
-# Note:- [:-6] is used to get the list of only supported versions among all the NetBackup software released vesrsions.
 - name: "NBU-VERSION-SUPPORTED -> Set fact for NBU supported versions"
   ansible.builtin.set_fact:
-    nbu_versions_supported: "{{ nbu_versions_supported[:-6] }}"
+    nbu_versions_supported: >-
+      {%- if nbap_ansible_system == 'posix' -%}
+        {{ (nbu_pkgs_ordered_list.keys() | list)[0:5] }}
+      {%- elif nbap_ansible_system == 'win32nt' -%}
+        {{ (nbu_pkgs_ordered_list['client'].keys() | list)[0:5] }}
+      {%- endif -%}
 
 # Verify if the proposed NetBackup software version is supported for install/upgrade
 - name: "NBU-VERSION-SUPPORTED -> Verify the OS proposed version is compatible for either Install or Upgrade"

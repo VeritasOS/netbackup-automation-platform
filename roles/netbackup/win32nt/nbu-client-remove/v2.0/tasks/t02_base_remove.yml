@@ -1,4 +1,4 @@
-# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved. $
+# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved. $
 
 #############################################################
 #### nbu-client-remove -> tasks -> t02_base_remove.yml ####
@@ -118,7 +118,7 @@
 
 - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Get the installed NetBackup client GUID"
   win_reg_stat:
-    path: HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Veritas NetBackup Client
+    path: "{{ registry_path_get_client_guid }}"
     name: UninstallString
   register: uninstall_path_register
 

@@ -1,10 +1,10 @@
-# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
 
 # API Configuration
 nbu_api_hostname: "{{ nbu_primary_server_ans }}"
 nbu_api_port: '1556'
 nbu_api_base_url: "{{ 'https://' + nbu_api_hostname + ':' + nbu_api_port + '/netbackup/' }}"
-nbu_api_content_type: application/vnd.netbackup+json;version=7.0
+nbu_api_content_type: application/json
 userLoggedIn: false
 
 #Primary Security Settings

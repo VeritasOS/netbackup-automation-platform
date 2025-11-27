@@ -1,0 +1,66 @@
+# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
+
+#####################################################################
+#### nbu-install-status -> tasks -> t01_install_status.yml ####
+#####################################################################
+
+# These tasks will verify the workflow is being executed on a current NetBackup version
+# and will determine whether the NetBackup software requires installation.
+# If the NetBackup software doesnt require installation, the install status will exit and no further tasks will be performed.
+
+# Verify whether the NetBackup software installed
+# The installation will not proceed if the NetBackup software is not already installed. 
+- name: "NBU-{{ nbu_role|upper }}-INSTALL -> Verify whether NetBackup {{ nbu_role }} software ({{ item.name }}) is currently installed"
+  ansible.builtin.shell: "{{ pkg_status_check_cmd | replace('ITEM_PACKAGE_NAME', item.name ) }}"
+  failed_when: false
+  changed_when: false
+  register: nbu_rpm_check_register
+
+# Verify new install NetBackup
+- name: "NBU-{{ nbu_role|upper }}-INSTALL -> Verify whether to install NetBackup {{ nbu_role }} ({{ item.name }}) - Set fact to 'install'"
+  ansible.builtin.set_fact:
+    nbu_install_counter: "{{ nbu_install_counter | default(0) | int + 1 }}"
+  when:
+    - ( nbu_rpm_check_register.rc == 1 )
+
+# TODO: Version check for each item.name and proceed if matches to nbu_version.
+# Verify what version of the NetBackup software is currently installed.
+# Returned version is used to determine whether the NetBackup sofware requires upgrading.
+- name: "NBU-{{ nbu_role|upper }}-INSTALL -> Verify what version of the NetBackup {{ nbu_role }} software ({{ item.name }}) is currently installed"
+  ansible.builtin.shell: "{{ version_check_cmd | replace('ITEM_PACKAGE_NAME', item.name ) }}"
+  ignore_errors: true
+  changed_when: false
+  register: nbu_rpm_version_register
+  when:
+    - ( nbu_rpm_check_register.rc == 0 )
+
+- name: "NBU-{{ nbu_role|upper }}-INSTALL -> Setting the eventual install status"
+  ansible.builtin.set_fact:
+    nbu_install_status: install
+    nbu_failed_rpms: "{{ nbu_failed_rpms }}{{ item.name }},"
+  when:  ( nbu_install_counter |int > 0 )
+
+- name: "NBU-{{ nbu_role|upper }}-INSTALL -> Setting the eventual install status"
+  ansible.builtin.set_fact:
+    nbu_install_status: none
+  when:
+    - ( nbu_install_counter |int == 0 )
+    - install_phase == "PRE"
+
+- name: "NBU-{{ nbu_role|upper }}-INSTALL -> Get the [{{ item.name }}] rpm version from proposed version list"
+  ansible.builtin.set_fact:
+      rpm_proposed_version: "{{ rpm_data.version }}"
+  with_items: "{{ nbu_pkgs_ordered_list[nbu_version] }}"
+  loop_control:
+    loop_var: rpm_data
+  when: rpm_data.name == item.name
+
+- name: Ansible::Log.info
+  fail:
+    msg: "This machine has an incompatible version:{{ nbu_rpm_version_register.stdout }} of the package:{{ item.name }} installed, therefore exit immediately."
+  when:
+    - ( nbu_rpm_check_register.rc == 0 )
+    - install_phase == "PRE"
+    - ( nbu_rpm_version_register.stdout is version_compare(rpm_proposed_version,'>') or nbu_rpm_version_register.stdout is version_compare(rpm_proposed_version,'<') )
+
+# EOF

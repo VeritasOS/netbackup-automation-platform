@@ -1,4 +1,4 @@
-# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
 
 # NetBackup SERVER - SHUTDOWN SERVICES
 - name: NETBACKUP -> SHUTDOWN SERVICES ("Linux")
@@ -25,10 +25,11 @@
       - nbu_role == ""
 
   roles:
-    - role: 'netbackup/linux'                           # Load netbackup default vars
+    - role: 'netbackup'                        # Load netbackup common defaults
+    - role: 'netbackup/posix'                  # Load netbackup default vars
     - role: 'generic/is_nbu_version_supported'
     - role: 'generic/nbu_compatibility'
-    - role: 'netbackup/linux/nbu-stop-services'
+    - role: 'netbackup/posix/nbu-stop-services'
   vars:
     nbu_playbook_type: "shutdown"
     nbu_playbook_name: "nbu_stop_services"

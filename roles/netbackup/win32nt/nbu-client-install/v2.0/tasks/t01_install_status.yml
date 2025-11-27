@@ -61,7 +61,7 @@
     
 - name: Ansible::Log.info
   fail:
-    msg:  "This machine has a different version {{ nbu_client_current_version }} of NetBackup Client installed, therefore exit immediately."
+    msg: "This machine has an incompatible version:{{ nbu_client_current_version }} installed, therefore exit immediately."
   when:
     - ( nbu_version_register.value is defined )
     - ( nbu_client_current_version is version_compare(nbu_version,'>') or nbu_client_current_version is version_compare(nbu_version,'<') )
