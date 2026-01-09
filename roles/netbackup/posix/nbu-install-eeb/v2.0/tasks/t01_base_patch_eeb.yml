@@ -200,5 +200,7 @@
       when:
        - ( eeb_marker_check_register.rc == 0 )
        - ( eeb_task_type == "install" )
-  when: include_eeb_rpm_marker
+  when:
+  - ansible_os_family != 'Debian'
+  - include_eeb_rpm_marker
 #EOF

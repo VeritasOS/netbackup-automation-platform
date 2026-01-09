@@ -2,7 +2,7 @@
  
 # These vars are mostly customer-centric and would get updated.
 # Desired NetBackup Client Version to use in the format [x.x.x.x]
-# Supported versions: ['11.1.0.0','11.0.0.1', '11.0.0.0', '10.5.0.1', '10.5.0.0' ]
+# Supported versions: ['11.1.0.2', '11.1.0.0', '11.0.0.1', '11.0.0.0', '10.5.0.1', '10.5.0.0' ]
 nbu_version: x.x.x.x
 
 Comment: >
@@ -58,7 +58,7 @@ nbu_directory_list_to_be_removed:                         # Custom list of direc
 - "{{ os_path_nbu_install_default }}"
 
 # FTO (Feature Toggle Options)                            # Valid options given can be true|false|yes|no|y|n|1|0
-include_eeb_rpm_marker: false                             # If set to true, playbook wil create/delete extra RPM marker
+include_eeb_rpm_marker: false                             # If set to true, playbook will create/delete extra RPM marker. This option is not applicable for Debian
 nb_include_java_jre_install: false                        # For include java jre packages
 include_directio_install: 'MATCH'                         # DirectIO package installation behavior:
                                                            #   INCLUDE - Include the NetBackup DirectIO

@@ -55,7 +55,7 @@
     - ( nbu_upgrade_counter |int == 0 )
     - install_phase == "PRE"
 
-- name: Ansible::Log.info
+- name: "NBU-{{ nbu_role|upper }}-UPGRADE -> Verify whether NetBackup {{ nbu_role }} is currently installed"
   fail:
     msg:  "This machine doesn't have NetBackup {{ nbu_role | capitalize }} installed, hence cannot be upgraded, therefore exit immediately."
   when:

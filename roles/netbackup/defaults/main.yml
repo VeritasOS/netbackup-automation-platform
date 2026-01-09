@@ -1,30 +1,42 @@
 # $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
 
 nbap_ansible_system : "{{ 'win32nt' if 'Win32NT' in ansible_system else 'posix' }}"
+nbu_max_supported_versions: 6
 
 # Ansible - OS family list
 nbu_compatibility_matrix:
+  - appversion: 11.1.0.2
+    os_min_support:
+      RedHat: 8.10
+      Suse: 15
+      AIX: 7.2
+      Solaris: 11.0
+      Windows: 10.0
+      Debian: 12
   - appversion: 11.1.0.0
     os_min_support:
-      RedHat: 8.6
+      RedHat: 8.10
       Suse: 15
-      AIX: 7.1
+      AIX: 7.2
       Solaris: 11.0
-      Windows: 6.2
+      Windows: 10.0
+      Debian: 12
   - appversion: 11.0.0.1
     os_min_support:
-      RedHat: 8.6
+      RedHat: 8.10
       Suse: 15
-      AIX: 7.1
+      AIX: 7.2
       Solaris: 11.0
-      Windows: 6.2
+      Windows: 10.0
+      Debian: 12
   - appversion: 11.0.0.0
     os_min_support:
-      RedHat: 8.6
+      RedHat: 8.10
       Suse: 15
-      AIX: 7.1
+      AIX: 7.2
       Solaris: 11.0
-      Windows: 6.2   
+      Windows: 10.0  
+      Debian: 12 
   - appversion: 10.5.0.1
     os_min_support:
       RedHat: 8.6
@@ -32,6 +44,7 @@ nbu_compatibility_matrix:
       AIX: 7.1
       Solaris: 11.0
       Windows: 6.2
+      Debian: 10
   - appversion: 10.5.0.0
     os_min_support:
       RedHat: 8.6
@@ -39,4 +52,5 @@ nbu_compatibility_matrix:
       AIX: 7.1
       Solaris: 11.0
       Windows: 6.2
+      Debian: 10
       

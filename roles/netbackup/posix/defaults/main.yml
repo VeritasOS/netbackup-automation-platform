@@ -102,6 +102,8 @@ os_dir_nbu_drfiles: "{{ os_path_openv_tmp }}/drfiles"
 
 nbu_db_data_path: "{{ os_path_nbu_install }}/db/data"
 
+netbackup_debian_package: "{{ 'NetBackup_' + (nbu_version | regex_replace('(\\.0)+$', '') | regex_replace('^(\\d+)$', '\\1.0')) + '_CLIENTS2' }}"
+
 # NBU - Config ("Limits")
 nbu_config_nbwebsvc_limit: "nbwebsvc  soft       nproc      8000"
 
@@ -174,6 +176,24 @@ nbcheck_test_name:
 # Ordered list of NetBackup Packages per supported version
 # Important Note: Upgrade is only supported from 10.5.0.0 and above versions for NetBackup client, media and primary.
 nbu_pkgs_ordered_list:
+  11.1.0.2: 
+      - { name: "VRTSnbpck", version: "11.1.0.2" }
+      - { name: "VRTSpbx", version: "1.19.93.0", shared: true }
+      - { name: "VRTSnbclt", version: "11.1.0.2" }
+      - { name: "VRTSnbclibs", version: "11.1.0.2" }
+      - { name: "VRTSnbjre", version: "11.1.0.2", platforms: ["RedHat:x86_64", "RedHat:s390x", "Suse:x86_64", "Suse:s390x", "AIX:chrp"], optional: "{{nb_include_java_jre_install}}" }
+      - { name: "VRTSnbjava", version: "11.1.0.2", platforms: ["RedHat:x86_64", "RedHat:s390x", "Suse:x86_64", "Suse:s390x", "AIX:chrp"], optional: "{{nb_include_java_jre_install}}" }
+      - { name: "VRTSnbdirectio", version: "1.1.0.0", platforms: ["RedHat:x86_64"], optional: "{{nb_include_directio_install}}" }
+      - { name: "VRTSpddes", version: "21.1.0.1", role: ["media", "primary"]}
+      - { name: "VRTSpddeu", version: "21.1.0.1", platforms: ["RedHat:x86_64", "Suse:x86_64"], optional: "{{nb_include_vrtspddeu_client_install}}"}
+      - { name: "VRTSpddea", version: "21.1.0.1", role: ["client"], platforms: ["RedHat:x86_64", "Suse:x86_64", "Solaris:i386", "Solaris:sun4v", "AIX:chrp"] }
+      - { name: "VRTSnbcfg", version: "11.1.0.2" }
+      - { name: "VRTSpostgresql", version: "16.10.1.0", role: ["primary"] } 
+      - { name: "VRTSnetbp", version: "11.1.0.2", role: ["media", "primary"] }
+      - { name: "VRTSnbprimary", version: "11.1.0.2", role: ["primary"] }
+      - { name: "VRTSnbmqbrkr", version: "11.1.0.2", role: ["primary"] }
+      - { name: "VRTSnbweb", version: "11.1.0.2", role: ["primary"] }
+      - { name: "VRTSnbslibs", version: "11.1.0.2", role: ["media", "primary"] }
   11.1.0.0: 
       - { name: "VRTSnbpck", version: "11.1.0.0" }
       - { name: "VRTSpbx", version: "1.19.93.0", shared: true }

@@ -7,6 +7,7 @@
   with_items:
    - "{{ os_path_openv_tmp  }}/VRTSnbpck{{ package_extension }}"
    - "{{ os_path_openv_tmp  }}/usr"
+   - "{{ os_path_openv_tmp  }}/nbcheck"
 
 - name: "NBCHECK -> Verify base directory {{ os_path_nbu_install_default }} existence"
   stat:
@@ -25,26 +26,26 @@
     path: "{{ os_path_openv_tmp }}"
     state: directory
 
-- name: "NBCHECK -> Download VRTSnbpck package to {{ os_path_openv_tmp  }}"
+- name: "NBCHECK -> Download {{ nbcheck_package_name }} package to {{ os_path_openv_tmp  }}"
   get_url:
-    url: "{{ nbu_artifactory_repo_base_url }}{{ artifactory_repo }}{{ nbu_path_repo_base_pkg }}/VRTSnbpck{{ package_extension }}"
-    dest: "{{ os_path_openv_tmp  }}/VRTSnbpck{{ package_extension }}"
- 
-- name: "NBCHECK -> Check VRTSnbpck package existence in {{ os_path_openv_tmp  }}"
+    url: "{{ nbu_artifactory_repo_base_url }}{{ artifactory_repo }}{{ nbu_path_repo_base_pkg }}/{{ nbcheck_package_name }}{{ package_extension }}"
+    dest: "{{ os_path_openv_tmp  }}/{{nbcheck_package_name}}{{ package_extension }}"
+
+- name: "NBCHECK -> Check {{ nbcheck_package_name }} package existence in {{ os_path_openv_tmp  }}"
   stat:
-    path: "{{ os_path_openv_tmp  }}/VRTSnbpck{{ package_extension }}"
+    path: "{{ os_path_openv_tmp  }}/{{nbcheck_package_name}}{{ package_extension }}"
   no_log: true
   register: file_status_register
 
-- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Extract VRTSnbpck{{ package_extension }} package"
-  ansible.builtin.shell: ( gunzip -f "VRTSnbpck{{package_extension}}" )
+- name: "NBCHECK -> Extract {{nbcheck_package_name}}{{ package_extension }} package"
+  ansible.builtin.shell: ( gunzip -f "{{nbcheck_package_name}}{{package_extension}}" )
   args:
     chdir: "{{ os_path_openv_tmp }}"
   when:
     - ansible_system == 'AIX' or ansible_system == 'SunOS'
     - file_status_register.stat.exists
 
-- name: "NBCHECK -> Extracting nbcheck file from VRTSnbpck"
+- name: "NBCHECK -> Extracting nbcheck file from {{ nbcheck_package_name }}"
   ansible.builtin.shell: "{{ nbcheck_package_extraction_cmd }}"
   args:
     chdir: "{{ os_path_openv_tmp }}"
@@ -79,7 +80,7 @@
 - name: "NBCHECK -> Passing nbcheck CLI argument when websvc user is different from default web user"
   set_fact:
     nbweb_service_user: "{{ '-Dwebsvc_user='+nbu_webservices_user if nbu_role =='primary' else '' }}"
-    
+
 - name: "NBCHECK -> Passing nbcheck CLI argument when database user is different from default user"
   set_fact:
     postgres_user_param: "{{ '-Dpostgres_user='+nbu_database_user if nbu_role =='primary' else '' }}"

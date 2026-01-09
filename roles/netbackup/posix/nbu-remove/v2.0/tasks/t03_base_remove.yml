@@ -215,6 +215,27 @@
       ansible.builtin.shell: "{{ delete_nbu_links_cmd | replace('ITEM_LINK_NAME', item ) }}"
       with_items: "{{ nbu_directory_list_to_be_removed }}"
 
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Remove NetBackup xinetd configurations (bpcd, vnetd, vopied)"
+      ansible.builtin.file:
+        path: "/etc/xinetd.d/{{ item }}"
+        state: absent
+      loop:
+        - bpcd
+        - vnetd
+        - vopied
+      failed_when: false
+
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Remove NetBackup init script from /etc/init.d/"
+      ansible.builtin.file:
+        path: '{{ item }}'
+        state: absent
+      failed_when: false
+      with_items:
+        - /etc/rc0.d/K01netbackup
+        - /etc/rc1.d/K01netbackup
+        - /etc/rc2.d/S95netbackup
+        - /etc/init.d/netbackup
+
     - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Delete NetBackup files"
       ansible.builtin.shell: "{{ delete_nbu_files_cmd | replace('ITEM_FILE_NAME', item ) }}"
       with_items: "{{ nbu_directory_list_to_be_removed }}"

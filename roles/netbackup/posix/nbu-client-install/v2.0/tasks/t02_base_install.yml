@@ -230,6 +230,11 @@
     - item.should_install
     - not (result.rc|d(0)) # Make sure that the loop exits if any package installation fails.
 
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> {{ nbu_playbook_type | capitalize }} the NetBackup client software ('Client - Debian')"
+  ansible.builtin.include_tasks: "t03_native_package_install_debian.yml"
+  when:
+    - ansible_os_family == 'Debian'
+    
 - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Set fact for install-phase"
   set_fact: 
     install_phase: "POST"
@@ -282,7 +287,7 @@
     success_msg: "PASS: All NetBackup RPM's for proposed version are installed successfully."
     fail_msg: "ERROR: [{{ nbu_failed_rpms }}] Selected RPM's failed to install successfully."
     quiet: true
-
+ 
 # Remove the temporary file from /tmp folder after all the rpms are installed successfully.
 - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Remove the nbap_partial_install_detected file from {{ os_path_openv_tmp }} "
   ansible.builtin.file:
@@ -330,5 +335,6 @@
 - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Remove NetBackup EEB RPM Markers"
   ansible.builtin.shell: ( rpm -qa | grep '^VRTSnbeeb\|^VRTSnb-vts2' | while read line; do rpm -e $line; done)
   changed_when: false
+  failed_when: false
 
 # EOF
