@@ -13,6 +13,7 @@
     delete_nbu_files_cmd: "undefined"
     delete_nbu_directories_cmd: "undefined"
     eeb_netbackup_version_cmd: "EEB_PATH/EEB_NAME -eeb_ver | awk -F'NetBackup_' '/NetBackup_/ {print $2}' | awk -F. '{printf \"%d.%d.%d.%d\\n\", $1, ($2?$2:0), ($3?$3:0), ($4?$4:0)}'"
+    nbcheck_package_name: "VRTSnbpck"
 
 - name: "NBU-INITIALIZE-{{ nbu_playbook_type|upper }} -> Initializing {{ ansible_system }} platform specifics settings"
   ansible.builtin.set_fact:
@@ -27,6 +28,16 @@
     delete_nbu_files_cmd: "find 'ITEM_FILE_NAME' -type f -print0 | xargs -0 rm -f"
     delete_nbu_directories_cmd: "find 'ITEM_DIR_NAME' -type d -print0 | xargs -0 rm -rf"
   when: ansible_system == 'Linux'
+
+- name: "NBU-INITIALIZE-{{ nbu_playbook_type|upper }} -> Initializing {{ ansible_system }} platform specifics settings"
+  ansible.builtin.set_fact:
+    package_extension: ".tar.gz"
+    version_check_cmd: "grep -oE '[0-9]+\\.[0-9]+(\\.[0-9]+)*(\\.[0-9]+)*' {{ os_path_nbu_install }}/netbackup/bin/version | tail -1 | awk -F. '{printf \"%d.%d.%d.%d\\n\", $1, ($2?$2:0), ($3?$3:0), ($4?$4:0)}'"
+    pkg_status_check_cmd: "ls {{ os_path_nbu_install }}/netbackup/bin/version"
+    nbcheck_package_name: "{{ netbackup_debian_package }}"
+    nbcheck_package_extraction_cmd: "tar -xzf {{ os_path_openv_tmp }}/{{ netbackup_debian_package }}.tar.gz $(tar -tzf {{ os_path_openv_tmp }}/{{ netbackup_debian_package }}.tar.gz | grep 'NBClients/anb/Clients/usr/openv/netbackup/client/Linux/Debian.*/nbcheck$' | head -1) --strip-components=9"
+    nb_check_path: "{{ os_path_openv_tmp }}/nbcheck"
+  when: ansible_os_family == 'Debian'
 
 - name: "NBU-INITIALIZE-{{ nbu_playbook_type|upper }} -> Initializing {{ ansible_system }} platform specifics settings"
   ansible.builtin.set_fact:
@@ -58,6 +69,15 @@
     delete_nbu_directories_cmd: "rm -rf 'ITEM_DIR_NAME' 2>/dev/null || true"
     eeb_pkg_installcmd: "echo all | pkgadd -a {{ os_path_openv_tmp }}/netbackup_sunos_packages/.pkg_defaults -d ITEM_EEB_MARKER_PACKAGE.pkg"
   when: ansible_system == 'SunOS'
+
+- name: "NBU-INITIALIZE-{{ nbu_playbook_type|upper }} -> Initializing {{ ansible_system }} platform specifics settings"
+  ansible.builtin.set_fact:
+    installed_packages_list_query_cmd: "[ -f /usr/openv/netbackup/bin/version ]"
+    version_check_cmd: "awk '{print $2}' {{ os_path_nbu_install }}/netbackup/bin/version | grep -oE '^[0-9]+(\\.[0-9]+)*'"
+    delete_nbu_links_cmd: "find 'ITEM_LINK_NAME' -type l -exec rm -f {} + 2>/dev/null || true"
+    delete_nbu_files_cmd: "find 'ITEM_FILE_NAME' -type f -exec rm -f {} + 2>/dev/null || true"
+    delete_nbu_directories_cmd: "rm -rf 'ITEM_DIR_NAME' 2>/dev/null || true"
+  when: ansible_os_family == 'Debian'
 
 - name: "NBU-INITIALIZE-{{ nbu_playbook_type|upper }} -> Initialize DirectIO installation decision"
   block:

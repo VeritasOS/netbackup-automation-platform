@@ -2,7 +2,7 @@
 
 # These vars are mostly customer-centric and would get updated.
 # Desired NetBackup Client Version to use in the format [x.x.x.x]
-# Supported versions: ['11.1.0.0', '11.0.0.1', '11.0.0.0','10.5.0.1', '10.5.0.0' ]
+# Supported versions: ['11.1.0.2', '11.1.0.0', '11.0.0.1', '11.0.0.0','10.5.0.1', '10.5.0.0' ]
 nbu_version: x.x.x.x
 
 Comment: >

@@ -3,7 +3,7 @@
 - name: "NBU-ROLE-CHECK -> Fail if target host machine has different role installed other than the playbook role"
   block:
     - name: "NBU-ROLE-CHECK -> Fail if target host machine has different role installed other than the playbook role"
-      fail:
+      ansible.builtin.fail:
         msg: "This machine has NetBackup {{ nbu_detected_role }} installed . Executing this Playbook on {{ nbu_detected_role }} would cause a significant outage."
       when:
         - nbu_role is defined

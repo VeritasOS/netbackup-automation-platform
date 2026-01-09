@@ -12,12 +12,20 @@
           - "!all"
           - "!min"
           - "distribution"
+          
+    # Python 3.9+ is required for compatibility with Ansible modules and features used in this playbook.
+    # Older Python versions may lack required functionality or security updates.
+    - name: Check Python interpreter version
+      ansible.builtin.fail:
+        msg: "Platform {{ ansible_system|lower }} on host {{ ansible_fqdn }} is using the discovered Python interpreter at {{ ansible_python.executable }}, version {{ ansible_python_version }}, which is below the required minimum of 3.9"
+      when: ansible_python_version is version('3.9', '<')
+
     - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} Fail if nbu_primary_server_ans is defined"
       ansible.builtin.fail:
         msg: "The 'nbu_primary_server_ans' should not be defined for {{ nbu_role|lower }} {{ nbu_playbook_type|lower }} playbook."
       when:
       - nbu_primary_server_ans is defined
-
+      
     - name: "NBU-GLOBAL-SETTINGS -> Load configurable variables"
       ansible.builtin.include_vars: "vars/linux.yml"
       tags: ["always"]
@@ -33,6 +41,6 @@
     - { role: 'netbackup/common/rest-api-integration',  action: "logout" }
   vars:
     nbu_playbook_type: "global-settings"
-    nbu_role: "primary"                  # Supported values ['primary','media','client']
+    nbu_role: "primary"                  # Supported values ['primary','media','client'] 
 
 # EOF

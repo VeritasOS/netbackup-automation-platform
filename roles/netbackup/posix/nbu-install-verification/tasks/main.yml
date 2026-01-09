@@ -4,7 +4,7 @@
 #### nbu-install-verification -> tasks -> main.yml ####
 #####################################################################
 
-# Determine the NetBackup server installed software version 
+# Determine the NetBackup server installed software version
 - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Determine the NetBackup {{ nbu_role|capitalize }} installed software version"
   block:
     - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Verify whether NetBackup {{ nbu_role }} software is currently installed"
@@ -16,7 +16,7 @@
     # Verify what version of the NetBackup client software is currently installed.
     # Returned version is used to determine whether the NetBackup client sofware requires upgrading.
     - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Verify what version of the NetBackup {{ nbu_role }} software is currently installed"
-      ansible.builtin.shell:  "{{ version_check_cmd | replace('ITEM_PACKAGE_NAME', nbu_rpm_vrtsnbcfg) }}"
+      ansible.builtin.shell: "{{ version_check_cmd | replace('ITEM_PACKAGE_NAME', nbu_rpm_vrtsnbcfg) }}"
       changed_when: false
       register: nbu_rpm_version_register
       when:
@@ -28,17 +28,22 @@
 - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Detect if NetBackup {{ nbu_role | capitalize }} ({{ nbu_rpm_version_register.stdout | default(nbu_version) }}) is currently installed"
   ansible.builtin.set_fact:
     nbu_rpm_version: "{{ nbu_rpm_version_register.stdout | default(nbu_version) }}"
-
+   
 # Include tasks to verify the NetBackup installation/upgrade status
 - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Include tasks for NetBackup {{ nbu_playbook_type }} status verification"
   ansible.builtin.include_tasks: t01_{{ nbu_playbook_type }}_status.yml
   when:      
+      - ansible_os_family != "Debian"
       - item.shared is not defined
       - (item.platforms is not defined or nbu_current_os_arch in item.platforms)
       - (item.role is not defined or nbu_role in item.role)
       - (item.optional is not defined or (item.name == 'VRTSnbjre' and nbu_role == 'primary'))
   with_items:
     - "{{ nbu_pkgs_ordered_list[nbu_version] }}"
+
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Include tasks for NetBackup {{ nbu_playbook_type }} status verification"
+  ansible.builtin.include_tasks: t01_debian_status.yml
+  when: ansible_os_family == "Debian"
 
 # Set facts about the NetBackup Client
 # Does not run if NetBackup Client software is not installed
@@ -85,6 +90,5 @@
   ansible.builtin.debug:
     msg: "Installed NetBackup {{ nbu_role }} version ({{ nbu_rpm_version }}) is up-to-date"
   when: ( nbu_install_status == "none" )
-
 
 # EOF

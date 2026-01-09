@@ -1,0 +1,117 @@
+# $Copyright: Copyright (c) 2025 Veritas Technologies LLC. All rights reserved $
+
+#############################################################################
+#### nbu-debian-install-upgrade-status -> tasks -> t01_debian_status.yml ####
+#############################################################################
+
+# These tasks will verify the workflow is being executed on a current NetBackup version
+# and will determine whether the NetBackup software requires installation.
+
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Verify whether NetBackup {{ nbu_role }} software is currently installed"
+  ansible.builtin.shell: "{{ pkg_status_check_cmd }}"
+  changed_when: false
+  register: nbu_rpm_check_register
+  failed_when: false 
+
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Verify NetBackup version for Debian-based systems"
+  ansible.builtin.shell: "{{ version_check_cmd }}"
+  changed_when: false
+  failed_when: false
+  register: nbu_version_deb_register
+  when:
+    - ( nbu_rpm_check_register.rc == 0 )
+      
+- block:
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Set NetBackup Version from version.txt"
+      ansible.builtin.set_fact:
+        nbu_current_installed_version: "{{ nbu_version_deb_register.stdout }}" 
+
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Formatting NetBackup Version into x.x.x.x format"
+      ansible.builtin.set_fact:
+        nbu_current_installed_version: "{{ nbu_current_installed_version + '.' + '0' * (1 - (nbu_current_installed_version | regex_replace('.', '') | length) ) }}"
+      when: nbu_current_installed_version | regex_findall('\.') | length < 3
+      loop: "{{ range(3) | list }}"
+  when:
+    - ( nbu_rpm_check_register.rc == 0 )
+    - ( nbu_version_deb_register.rc == 0 )
+    - ( nbu_version_deb_register.stdout != "" )   
+
+# Verify new install NetBackup
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Verify whether to install NetBackup {{ nbu_role }} - Set fact to 'install'"
+  ansible.builtin.set_fact:
+    nbu_install_counter: "{{ nbu_install_counter | default(0) | int + 1 }}"
+  when:
+    - nbu_playbook_type == "install"
+    - ( nbu_rpm_check_register.rc != 0 )
+
+# Verify if the installed NetBackup version is out-of-date and requires upgrading
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Verify whether installed NetBackup {{ nbu_role }} version ({{ nbu_current_installed_version }}) is out-of-date - Set fact to 'upgrade'"
+  ansible.builtin.set_fact:
+    nbu_upgrade_counter: "{{ nbu_upgrade_counter | default(0) | int + 1 }}"
+  when:
+    - nbu_playbook_type == "upgrade"
+    - nbu_current_installed_version is defined
+    - nbu_current_installed_version is version_compare(nbu_version, '<') 
+  
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Setting the eventual install status"
+  ansible.builtin.set_fact:
+    nbu_install_status: none
+  when:
+    - nbu_playbook_type == "install"
+    - ( nbu_install_counter |int == 0 )
+    - install_phase == "PRE"
+
+# Verify if the installed NetBackup version matches the proposed version
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Verify whether installed NetBackup {{ nbu_role }} version matches proposed version"
+  ansible.builtin.set_fact:
+    nbu_install_status: none
+  when:
+    - nbu_playbook_type == "upgrade"
+    - nbu_current_installed_version is defined
+    - nbu_current_installed_version == nbu_version
+
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Setting the eventual install status"
+  ansible.builtin.set_fact:
+    nbu_install_status: install
+    nbu_failed_rpms: "NetBackup Clients"  
+  when:  
+    - nbu_install_counter is defined
+    - ( nbu_install_counter |int == 1 )
+
+# Set the upgrade status if the version is out-of-date
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Setting the eventual upgrade status"
+  ansible.builtin.set_fact:
+    nbu_install_status: upgrade
+    nbu_failed_rpms: "NetBackup Clients"
+  when:
+    - nbu_upgrade_counter is defined
+    - nbu_upgrade_counter | int > 0
+    - install_phase == "PRE"     
+ 
+# Fail if an incompatible version is installed
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Fail if an incompatible version is installed"
+  ansible.builtin.fail:
+    msg: "This machine has an incompatible version: {{ nbu_current_installed_version }} of NetBackup installed. Exiting immediately."
+  when:
+    - nbu_playbook_type == "install"
+    - nbu_current_installed_version is defined
+    - ( nbu_current_installed_version is version_compare(nbu_version, '<')) or ( nbu_current_installed_version is version_compare(nbu_version, '>') )
+    - install_phase == "PRE"
+
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Verify whether NetBackup {{ nbu_role }} is currently installed"
+  fail:
+    msg:  "This machine doesn't have NetBackup {{ nbu_role | capitalize }} installed, hence cannot be upgraded, therefore exit immediately."
+  when:
+    - nbu_playbook_type == "upgrade"
+    - ( nbu_rpm_check_register.rc == 1 )
+    - install_phase == "PRE"
+
+# Verify if the installed NetBackup version is higher than the proposed version. 
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Verify if the installed NetBackup {{ nbu_role }} version is compatible for upgrade with ({{ rpm_proposed_version }}) "
+  fail:
+    msg: "Installed NetBackup version:{{ nbu_current_installed_version }} is higher than proposed version, therefore exit immediately."
+  when: 
+    - nbu_playbook_type == "upgrade"
+    - nbu_current_installed_version is version_compare(nbu_version, '>')
+
+# EOF

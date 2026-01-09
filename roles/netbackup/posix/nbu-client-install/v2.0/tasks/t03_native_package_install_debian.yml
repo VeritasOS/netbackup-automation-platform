@@ -1,0 +1,86 @@
+# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
+
+- name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Debian installation steps"
+  block: #always
+    # Create directory for /usr/openv/tmp if it does not exist
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Create base directory for NetBackup temporary files"
+      ansible.builtin.file:
+        path: "{{ os_path_openv_tmp }}/netbackup_debian_packages"
+        state: directory
+        mode: '0755'
+
+    # Tasks for Debian systems
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Download NetBackup Debian package"
+      ansible.builtin.get_url:
+        url: "{{ nbu_artifactory_repo_base_url }}{{ artifactory_repo }}{{ nbu_path_repo_base_pkg }}/{{ netbackup_debian_package }}{{package_extension}}"
+        dest: "{{ os_path_openv_tmp }}"
+        mode: '0644'
+      
+    # Extract NetBackup Debian package
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Extract NetBackup Debian package"
+      ansible.builtin.unarchive:
+        src: "{{ os_path_openv_tmp }}/{{ netbackup_debian_package }}{{package_extension}}"
+        dest: "{{ os_path_openv_tmp }}/netbackup_debian_packages/"
+        remote_src: yes
+
+    # Upload NetBackup Inputs file ("Client - Linux")
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Upload NetBackup Install/Upgrade Inputs file ('Client - Debian')"
+      ansible.builtin.template:
+        src: "NBInstallUserInput-client-debian.j2"
+        dest: "{{ os_path_openv_tmp }}/netbackup_debian_packages/NBInstallUserInput-client-debian.conf"
+        mode: '0755'
+
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Verify install script exists and is executable"
+      ansible.builtin.stat:
+        path: "{{ os_path_openv_tmp }}/netbackup_debian_packages/install"
+      register: install_script_check
+
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Fail if install script is missing or not executable"
+      ansible.builtin.fail:
+        msg: |
+          {{ os_path_openv_tmp }}/netbackup_debian_packages/install: No such file or directory. Please check if the package was uploaded correctly and verify the naming convention in the README file.
+      when: not install_script_check.stat.exists
+
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Run NetBackup install script using NBInstallAnswer.conf and stdin inputs"
+      ansible.builtin.shell: "./install < {{ os_path_openv_tmp }}/netbackup_debian_packages/NBInstallUserInput-client-debian.conf"
+      args: 
+        chdir: "{{ os_path_openv_tmp }}/netbackup_debian_packages"
+      register: netbackup_install_result_register  
+      no_log: true
+      failed_when: false
+
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Find most recent install trace file"
+      ansible.builtin.find:
+        paths: "{{ os_path_openv_tmp }}"
+        patterns: "install_trace.*"
+        age_stamp: mtime
+      register: trace_files_register
+
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Get latest trace file"
+      ansible.builtin.set_fact:
+        latest_trace_file: "{{ (trace_files_register.files | sort(attribute='mtime') | last).path | basename }}"
+      when: trace_files_register.files | length > 0
+
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Handle successful installation"
+      ansible.builtin.debug:
+        msg: "All NetBackup RPM's for proposed version are installed successfully."
+      when: netbackup_install_result_register.rc == 0
+
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Handle installation failures"
+      ansible.builtin.fail:
+        msg: |
+          NetBackup installation failed with exit code {{ netbackup_install_result_register.rc }}. Check the install trace file at {{ os_path_openv_tmp }}/{{ latest_trace_file | default('unresolved') }} for detailed error information.
+      when: netbackup_install_result_register.rc != 0
+
+  always:
+    # After Netbackup Debian Install/Upgrade, remove all user input directories and files from target host
+    - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Clean up Debian package from target host"
+      ansible.builtin.file:
+        path: "{{ item_to_delete }}"
+        state: absent 
+      loop:
+        - "{{ os_path_openv_tmp }}/{{netbackup_debian_package }}{{package_extension}}"
+        - "{{ os_path_openv_tmp }}/netbackup_debian_packages/"
+      loop_control:
+        loop_var: item_to_delete
+

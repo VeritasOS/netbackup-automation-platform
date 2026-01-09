@@ -7,9 +7,9 @@
   ansible.builtin.set_fact:
     nbu_versions_supported: >-
       {%- if nbap_ansible_system == 'posix' -%}
-        {{ (nbu_pkgs_ordered_list.keys() | list)[0:5] }}
+        {{ (nbu_pkgs_ordered_list.keys() | list)[0:nbu_max_supported_versions] }}
       {%- elif nbap_ansible_system == 'win32nt' -%}
-        {{ (nbu_pkgs_ordered_list['client'].keys() | list)[0:5] }}
+        {{ (nbu_pkgs_ordered_list['client'].keys() | list)[0:nbu_max_supported_versions] }}
       {%- endif -%}
 
 # Verify if the proposed NetBackup software version is supported for install/upgrade

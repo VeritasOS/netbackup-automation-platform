@@ -9,7 +9,7 @@ The NetBackup Automation Platform provides a robust set of Ansible roles and pla
 This platform offers comprehensive automation capabilities for NetBackup Primary, Media, and Client components:
 
 * **NetBackup Installation & Upgrades**:
-    * Fresh installation and upgrade of NetBackup Client on Windows, SuSE, RHEL, Solaris, AIX, Linux P-series, Linux Z-series, Rocky Linux, and Oracle Linux.
+    * Fresh installation and upgrade of NetBackup Client on Windows, SuSE, RHEL, Solaris, AIX, Linux P-series, Linux Z-series, Rocky Linux, Oracle Linux, Debian and Ubuntu.
     * Fresh installation of NetBackup Media & Primary servers on SuSE and RHEL.
     * Upgrade NetBackup environments (from and to NB version 10.x onwards).
 * **Certificate Management**:
@@ -20,7 +20,7 @@ This platform offers comprehensive automation capabilities for NetBackup Primary
     * Deployment and management of EEBs with automatic marker creation for easy detection.
     * Supports installing multiple EEBs, upgrading EEBs, adjusting subsequent overlapping EEBs, and removing EEBs.
 * **EEB Marker Creation Scripts**:
-    * Automation includes scripts for creating EEB markers, simplifying detection of installed EEBs. Marker creation is supported for all platforms except AIX.
+    * Automation includes scripts for creating EEB markers, simplifying detection of installed EEBs. Marker creation is supported for all platforms except AIX, Debian and Ubuntu.
 * **Package Staging**:
     * Option to cache NetBackup packages locally on target hosts for offline installations.
 * **Global Security Settings**:
@@ -29,11 +29,12 @@ This platform offers comprehensive automation capabilities for NetBackup Primary
     * Playbooks to start, stop, and restart NetBackup services.
 * **DirectIO Support**:
     * On RHEL, DirectIO is supported for Primary, Media, and Client. On Windows, DirectIO is supported for Client only.
-
+    
 
 ## 🎯 Supported NetBackup Versions
 
 These playbooks support the following NetBackup Primary, Media, and Client versions:
+* `11.1.0.2`
 * `11.1.0.0`
 * `11.0.0.1`
 * `11.0.0.0`
@@ -55,7 +56,7 @@ The following table outlines the available playbooks and their functionalities, 
 
 ### NetBackup Client Playbooks
 
-#### Clients (Windows, SuSE, RHEL, Solaris, AIX, Linux P-series, Linux Z-series, Rocky Linux, and Oracle Linux)
+#### Clients (Windows, SuSE, RHEL, Solaris, AIX, Linux P-series, Linux Z-series, Rocky Linux, Oracle Linux, Debian and Ubuntu)
 
 | # | Playbook Name | Description & High-Level Workflow |
 |---|---|---|
@@ -230,14 +231,22 @@ These boolean variables enable or disable specific features.
 Before running the playbooks, ensure the following:
 
 1.  **Ansible Core**: Supports `ansible-core 2.15` onwards.
-2.  **Ansible Automation Platform**: Must be configured and ready for use.
-3.  **Non-interactive Connection**: Establish a non-interactive connection to all managed nodes/target hosts.
-4.  **Artifact Repository Manager**: Configure an artifact repository manager (e.g., a yum repository) and upload all NetBackup RPMs with their respective repodata. This can be a web server accessible via URL, or a local/mounted file-system path.
+2.  **Python Interpreter**: Supports `python version 3.9` onwards.
+3.  **Ansible Automation Platform**: Must be configured and ready for use.
+4.  **Non-interactive Connection**: Establish a non-interactive connection to all managed nodes/target hosts.
+5.  **Artifact Repository Manager**: Configure an artifact repository manager (e.g., a yum repository) and upload all NetBackup RPMs with their respective repodata. This can be a web server accessible via URL, or a local/mounted file-system path.
     * **Client RPMs**: `<NB_Package_DIR>/NetBackup_<NB_VERSION>_CLIENTS2/NBClients/anb/Clients/usr/openv/netbackup/client/Linux/RedHat3.10.0`
+    * **Debian Client Packages**: `We use the complete DVD image for the debian platform and the uploaded image should follow a particular naming convention.`
+            * Image Name: `NetBackup_<NB_VERSION>_CLIENTS2.tar.gz`
+            * Source: `<NB_Package_DIR>/NetBackup_<NB_VERSION>_CLIENTS2. This DVD image contains packages for other platforms. To optimize the space, we could remove:`
+            * `<NB_Package_DIR>/NetBackup_<NB_VERSION>_CLIENTS2/NBClients/anb/Clients/usr/openv/netbackup/client/Linux-ppc64le`
+            * `<NB_Package_DIR>/NetBackup_<NB_VERSION>_CLIENTS2/NBClients/anb/Clients/usr/openv/netbackup/client/Linux-s390x`
+            * `<NB_Package_DIR>/NetBackup_<NB_VERSION>_CLIENTS2/NBClients/anb/Clients/usr/openv/netbackup/client/Linux/RedHat4.18.0`
+            * `<NB_Package_DIR>/NetBackup_<NB_VERSION>_CLIENTS2/NBClients/anb/Clients/usr/openv/netbackup/client/Linux/SuSE5.3.18`
     * **Primary/Media RPMs**: `<NB_Package_DIR>/NetBackup_<NB_VERSION>_LinuxR_x86_64/linuxR_x86/anb`
     * **Client Windows DVD Packages**: `<NB_Package_DIR>/NetBackup_<NB_VERSION>_Win\`
     * **ITA Data Collector (for Primary server)**: `<NB_Package_DIR>/NetBackup_<NB_VERSION>_LinuxR_x86_64/linuxR_x86/catalog/anb/ita_dc.tar.gz`
-5.  **Ansible Inventory**: Ensure the Ansible inventory is pre-populated with your target hosts.
+6.  **Ansible Inventory**: Ensure the Ansible inventory is pre-populated with your target hosts.
 
 
 ### Usage

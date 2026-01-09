@@ -11,6 +11,14 @@
           - "!all"
           - "!min"
           - "distribution"
+
+    # Python 3.9+ is required for compatibility with Ansible modules and features used in this playbook.
+    # Older Python versions may lack required functionality or security updates.      
+    - name: Check Python interpreter version
+      ansible.builtin.fail:
+        msg: "Platform {{ ansible_system|lower }} on host {{ ansible_fqdn }} is using the discovered Python interpreter at {{ ansible_python.executable }}, version {{ ansible_python_version }}, which is below the required minimum of 3.9"
+      when: ansible_python_version is version('3.9', '<')
+
     - name: "NBU-CERTIFICATE-DEPLOYMENT -> Load configurable variables"
       ansible.builtin.include_vars: "vars/win32nt.yml"
       tags: ["always"]
