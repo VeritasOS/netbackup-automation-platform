@@ -1,0 +1,37 @@
+# $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
+
+##############################################################
+#### NetBackup Service User Validation (Common)           ####
+#### Platform-agnostic validation - truth table source    ####
+#### Handles install, upgrade, and service_user playbooks ####
+#### Windows: only LocalSystem or LocalService accepted   ####
+#### POSIX:   any non-empty value accepted (custom OK)    ####
+##############################################################
+
+# Summary failure (same conditions as detailed checks below); runs first so operators see one consolidated message.
+- name: "NBU-SERVICE-USER -> Evaluate mandatory service user variables when FTO service user is on (summary)"
+  ansible.builtin.assert:
+    that:
+      - (nbu_services_user | trim) | length > 0
+      - not (nbap_ansible_system == 'posix' and ((nbu_services_group | trim) | length == 0))
+      - not (
+          nbap_ansible_system == 'win32nt'
+          and ((nbu_services_user | trim) | length > 0)
+          and ((nbu_services_user | trim) | lower not in ['localsystem', 'localservice'])
+        )
+    fail_msg:
+      - "As the service user configuration toggle is turned on, few variables are incompatible:"
+      - "nbu_services_user: The value cannot be empty. For Windows, valid values are LocalService or LocalSystem."
+      - "nbu_services_group: Cannot be empty on POSIX platforms (not required for Windows)."
+
+- name: "NBU-SERVICE-USER -> PASS: nbu_services_user validated"
+  ansible.builtin.debug:
+    msg: "nbu_services_user={{ nbu_services_user }} validated successfully."
+
+# ----------------------------------------------------------------------
+# Upgrade: dispatch to OS-specific registry discovery and adopt-or-compare
+# ----------------------------------------------------------------------
+- name: "NBU-SERVICE-USER -> Upgrade: include OS-specific discovery"
+  ansible.builtin.include_tasks: "{{ nbap_ansible_system }}.yml"
+
+# EOF

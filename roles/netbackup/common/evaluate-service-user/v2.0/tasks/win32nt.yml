@@ -1,0 +1,59 @@
+# $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
+
+##############################################################
+#### NetBackup Service User Validation (Windows - Upgrade) ####
+#### Reads existing SERVICE_USER from registry via         ####
+#### nbgetconfig and runs adopt-or-compare logic.          ####
+#### All other validation lives in                         ####
+#### t01_validate_service_user.yml.                        ####
+##############################################################
+
+- name: "NBU-SERVICE-USER -> Verify nbgetconfig is present"
+  ansible.builtin.win_stat:
+    path: "{{ nbu_bin_path }}\\nbgetconfig.exe"
+  register: nbgetconfig_file_register
+  changed_when: false
+  failed_when: false
+
+- name: "NBU-SERVICE-USER -> Service User validation"
+  block:
+    # nbgetconfig prints "SERVICE_USER = …". cmd FOR /F takes RHS after '=' and keeps the full BPCONF value (e.g. NT AUTHORITY\LocalService).
+    - name: "NBU-SERVICE-USER -> Discover SERVICE_USER value (stdout is full BPCONF value)"
+      ansible.windows.win_command: 'cmd.exe /c for /F "tokens=2 delims==" %A in (''nbgetconfig.exe SERVICE_USER'') do @echo %A'
+      args:
+        chdir: "{{ nbu_bin_path }}"
+      register: existing_service_user_register
+      failed_when: false
+      changed_when: false
+
+    # Preserve raw register; expose trimmed BPCONF value (for operator messages) and normalized key (for comparisons).
+    # Normalization maps "System" (from NT AUTHORITY\SYSTEM) to "localsystem" so it lines up with inventory LocalSystem.
+    - name: "NBU-SERVICE-USER -> Trim and normalize discovered service user"
+      ansible.builtin.set_fact:
+        nbu_bpconf_service_user: "{{ nbu_discovered_svc_user }}"
+        nbap_existing_service_user: >-
+          {{ 'localsystem' if (nbu_discovered_svc_user | lower).endswith('system')
+             else 'localservice' if (nbu_discovered_svc_user | lower).endswith('localservice')
+             else (nbu_discovered_svc_user | lower) }}
+      vars:
+        nbu_discovered_svc_user: "{{ existing_service_user_register.stdout | default('') | regex_replace('\r|\n', '') | trim }}"
+
+    - name: "NBU-SERVICE-USER -> Operation to perform when service user discovered on system"
+      block:
+        - name: "NBU-SERVICE-USER -> Evaluate if discovered SERVICE_USER matches inventory ({{ nbu_services_user }})"
+          ansible.builtin.assert:
+            that:
+              - >-
+                (nbu_playbook_type not in ['install', 'upgrade'])
+                or ((nbap_existing_service_user | trim) == (nbu_services_user | trim | lower))
+            fail_msg:
+              - "Mismatch detected: The service user configured in BPCONF ('{{ nbap_existing_service_user }}') differs from the one defined in your inventory ('{{ nbu_services_user }}')."
+              - "Modifying the service user is not supported during installation or upgrade."
+              - "Please use the playbook_configure_service_user_windows.yml for this operation."
+      when:
+        - (nbu_bpconf_service_user | length) > 0
+
+  when:
+    - nbgetconfig_file_register.stat.exists
+
+# EOF

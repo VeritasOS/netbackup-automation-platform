@@ -1,0 +1,8 @@
+# $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
+
+# Run vxpbx_exchanged control-script `stop` after bp.kill_all only when a caller
+# passes nbu_run_vxpbx_exchanged_stop_script: true on include_role (e.g. service-user change).
+
+nbu_run_vxpbx_exchanged_stop_script: false
+
+# EOF

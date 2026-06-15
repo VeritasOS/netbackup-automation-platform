@@ -1,0 +1,168 @@
+# $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
+
+#############################################################
+#### nbu-win-install -> tasks -> t02_base_install.yml ####
+#############################################################
+
+# Verify whether the NetBackup client/server has the NetBackup server software installed
+# The install will not be performed if the client/server is a NetBackup server
+- name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Verify whether NetBackup {{ nbu_role | capitalize }}  software is currently installed"
+  ansible.builtin.include_role:
+    name: 'generic/nbu_compatibility'
+
+# Get the NetBackup primary server hostname from the bp.conf file
+- name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Get NetBackup Server List from Registry"
+  win_reg_stat:
+    path: "{{ nbu_registry_path }}\\CurrentVersion\\Config"
+    name: Server
+  register: nbu_server_list
+  when: nbu_playbook_type == "upgrade"
+
+- name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Set Primary Server hostname"
+  set_fact:
+    nbu_primary_server_ans: "{{ nbu_server_list.value  | first }}"
+  when: nbu_playbook_type == "upgrade"
+
+# OS - Create a temporary directory for NetBackup Software
+- name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Create temporary directory for NetBackup {{ nbu_role | capitalize }}"
+  win_file:
+    path: "{{ nbu_tmp_dir}}"
+    state: directory
+
+# Download the NetBackup Client/Media Software - Windows
+- name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Download NetBackup {{ nbu_role | capitalize }} Software (Windows)"
+  win_get_url:
+    url: "{{ nbu_artifactory_repo_base_url }}{{ artifactory_repo }}{{ nbu_path_repo_client_base_pkg }}{{ nbu_pkgs_ordered_list[nbu_version] }}.zip"
+    dest: "{{ nbu_tmp_dir }}\\{{ nbu_pkgs_ordered_list[nbu_version] }}.zip"
+    force: false
+    validate_certs: "{{ nbu_repo_validate_certs }}"
+  when: not install_pkgs_from_local_cache
+
+# Delete extracted direcotry before extracting latest downloaded software
+- name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Delete NetBackup {{ nbu_role | capitalize }} Software Temporary Directory (Windows)"
+  win_file:
+    path: "{{ nbu_tmp_dir }}\\{{ nbu_pkgs_ordered_list[nbu_version] }}"
+    state: absent
+
+# NetBackup - Extract NetBackup {{ nbu_role | capitalize }} Software ("Windows")
+- name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }}  -> Extract NetBackup {{ nbu_role | capitalize }} Software to Temporary Directory (Windows)"
+  win_unzip:
+    src: "{{ nbu_tmp_dir }}\\{{ nbu_pkgs_ordered_list[nbu_version] }}.zip"
+    dest: "{{ nbu_tmp_dir }}"
+    creates: "{{ nbu_tmp_dir }}\\{{ nbu_pkgs_ordered_list[nbu_version] }}"
+
+# NetBackup - Upload NetBackup answer file ("Windows")
+- name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }}  -> Upload the NetBackup {{ nbu_role | capitalize }} installation response file (Windows)"
+  template:
+    src: "silent_response_{{ nbu_role }}.j2"
+    dest: "{{ nbu_tmp_dir }}\\{{ nbu_pkgs_ordered_list[nbu_version] }}\\x64\\silent_response.resp"
+
+- name: NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Attempting to stop NetBackup services
+  win_command: "{{ nbu_stop_cmd }}"
+  args:
+    chdir: "{{ os_path_nbu_install }}\\NetBackup\\bin"
+  failed_when: false
+  changed_when: false
+  register: nbstop_status_check_register
+  until: nbstop_status_check_register.rc | int in [0, 5]
+  delay: 5
+  retries: 3
+  when: 
+    - ( nbu_client_status == "upgrade" )
+
+- name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> {{ nbu_playbook_type }} NetBackup {{ nbu_role | capitalize }} Software (Windows)"
+  block:
+    - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> {{ nbu_playbook_type }} NetBackup {{ nbu_role | capitalize }} Software (Windows)"
+      win_command: "{{ win_client_install_cmd if nbu_role == 'client' else win_server_install_cmd }}"
+      args:
+        chdir: "{{ nbu_tmp_dir }}\\{{ nbu_pkgs_ordered_list[nbu_version] }}\\x64"
+      register: install_client_check_register
+      failed_when: false
+
+    - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Set fact for Install {{ nbu_role | capitalize }} Check Register"
+      set_fact: 
+        install_client_status: "{{ install_client_check_register.rc }}"
+
+- name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Check whether Netbackup {{ nbu_role | capitalize }} on Windows is successfully installed"
+  block:
+    - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Netbackup {{ nbu_role | capitalize }} installation Status on Windows"
+      ansible.builtin.debug:
+        msg: "Installation Step Successful with Installation Status: {{ install_client_status }}"
+      when: install_client_status | int == 0
+
+    - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Netbackup {{ nbu_role | capitalize }} installation Status on Windows"
+      ansible.builtin.debug:
+        msg: "Installation Step Successful with Installation Status: {{ install_client_status }}. Requires restart - Please restart the Client post completion"
+      when: install_client_status | int == 3010
+
+    - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Netbackup {{ nbu_role | capitalize }} installation Status on Windows"
+      ansible.builtin.debug:
+        msg: "The installer has initiated a restart. This message indicates success with Installation Status: {{ install_client_status }}"
+      when: install_client_status | int == 1641
+
+- name: Ansible::Log.info
+  fail:
+    msg:  "Netbackup Windows {{ nbu_role | capitalize }} installation failed with Error: {{ install_client_status }}. Please lookup the error code : https://learn.microsoft.com/en-us/windows/win32/msi/error-codes?redirectedfrom=MSDN"
+  when:
+    - ( install_client_status is defined )
+    - ( install_client_status | int != 0 )
+    - ( install_client_status | int != 1641 )
+    - ( install_client_status | int != 3010 )
+ 
+# Delete extracted direcotry post installation
+- name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Delete NetBackup {{ nbu_role | capitalize }} Software Temporary File/Directory (Windows)"
+  win_file:
+    path: "{{ item }}"
+    state: absent
+  with_items: 
+  - "{{ nbu_tmp_dir }}\\{{ nbu_pkgs_ordered_list[nbu_version] }}"
+  - "{{ nbu_tmp_dir }}\\{{ nbu_pkgs_ordered_list[nbu_version] }}.zip"
+
+# Task to make sure that the EEB Markers of older version is removed post successful upgrade.
+- name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} ->  Installation of NetBackup windows RPM Marker"
+  block:
+  #Look for installed EEB Markers and uninstall them.
+    - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Check the existence of EEB-Marker path"
+      win_stat:
+        path: "{{ os_path_nbu_install }}\\Patch\\EEB-Marker"
+      no_log: true
+      register: eeb_marker_folder_check_register
+
+    - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Found presence of EEB-Marker path"
+      block:
+        - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Get the list of EEB-Markers"
+          win_command: cmd /q /c "for %f in ("*.ini") do (for /f "delims=_ tokens=1,2" %a in ('echo %~nf') do echo SET%a_EEB%b)"
+          args:
+            chdir: "{{ os_path_nbu_install }}\\Patch\\EEB-Marker"
+          register: eeb_marker_installed_list_register
+          changed_when: false
+          no_log: true
+          failed_when: false
+
+        - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Remove EEB-Markers"
+          block:
+            - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> List of EEB-Markers found installed"
+              debug:
+                msg: "{{ item }}"
+              with_items: "{{ eeb_marker_installed_list_register.stdout_lines }}"
+
+            - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Get the list of EEB-Markers GUIDs to remove"
+              win_command: cmd /q /c "for %f in ("*.ini") do (for /f "delims== tokens=2" %a in ('findstr "ProductCode" %f') do echo %a)"
+              args:
+                chdir: '{{ os_path_nbu_install }}\Patch\EEB-Marker'
+              register: product_code_list_of_eebs_markers_register
+              changed_when: false
+              no_log: true
+              failed_when: false
+
+            - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Remove installed EEB-Markers"
+              win_package:
+                product_id: '{{ item }}'
+                state: absent
+              with_items: "{{ product_code_list_of_eebs_markers_register.stdout_lines }}"
+
+          when: eeb_marker_installed_list_register.stdout_lines
+      
+      when: ( eeb_marker_folder_check_register.stat.exists == true )
+
+  # EOF

@@ -1,8 +1,8 @@
-# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
+# $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
 
 # These vars are mostly customer-centric and would get updated.
 # Desired NetBackup Client Version to use in the format [x.x.x.x]
-# Supported versions: ['11.1.0.2', '11.1.0.0', '11.0.0.1', '11.0.0.0','10.5.0.1', '10.5.0.0' ]
+# Supported versions: ['11.2.0.0', '11.1.0.2', '11.1.0.0', '11.0.0.1', '11.0.0.0','10.5.0.1', '10.5.0.0' ]
 nbu_version: x.x.x.x
 
 Comment: >
@@ -14,7 +14,7 @@ Comment: >
   nbu_path_repo_client_eeb_pkg: ""
 
   # List of EEBs to be installed per version
-  nbu_client_eeb_ordered:
+  nbu_eeb_ordered:
     10.1.1.0:
       - "<eebinstall_name>"
 
@@ -23,6 +23,11 @@ nbu_primary_server_ans: PRIMARY01
 ignore_primary_connectivity_failures: false               # If using a masked primary for initial install, set the value to true to ignore connectivity validation and continue execution. 
 skip_primary_version_compatibility_check: false           # Skip Primary server version compatibility check
 
+# NetBackup Service User Validation (Windows - Typical Settings only)
+# Allowed values: 'LocalSystem' or 'LocalService' (case-insensitive)
+# Custom accounts are NOT supported.
+nbu_services_user: 'LocalService'
+
 # FTO (Feature Toggle Options)                            # Valid options given can be true|false|yes|no|y|n|1|0
 include_eeb_rpm_marker: false                             # If set to true, playbook wil create/delete extra RPM marker
 nbu_cert_management: false                                # For include cert mangement playbook
@@ -30,8 +35,10 @@ include_directio_install: 'MATCH'                          #   DirectIO package 
                                                            #   INCLUDE - Include the NetBackup DirectIO
                                                            #   EXCLUDE - Exclude the NetBackup DirectIO
                                                            #   MATCH   - Match the existing configuration on the host
+include_java_jre_install: 'MATCH'                          # Need to add marker here duplicating usage
 # Set this to true if packages are cached locally independently or by using staging playbook to avoid downloading the pakcages at install-time.
 install_pkgs_from_local_cache: false
+include_service_user_configuration: false                               # FTO: post-install nbserviceusercmd service user (Veritas KB 100053035 / NBU-260522)
 
 # NBCA configuration details
 nbu_primary_certdetails:

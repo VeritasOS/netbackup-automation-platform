@@ -1,0 +1,42 @@
+# $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
+
+# NetBackup Server - Install - CLIENT
+- name: NETBACKUP -> CLIENT INSTALL ("Linux")
+  gather_facts: true
+  become: yes
+  hosts: all
+  environment:
+    NB_TMPDIR: "/usr/openv/tmp"
+    PAR_GLOBAL_TMPDIR: "/usr/openv/tmp"
+  pre_tasks:
+    - name: Retrieving host distribution
+      setup:
+        gather_subset:
+          - "!all"
+          - "!min"
+          - "distribution"
+
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Load configurable variables"
+      ansible.builtin.include_vars: "vars/linux.yml"
+      tags: ["always"]
+      no_log: true
+
+  roles:
+    - role: 'netbackup'                                    # Load netbackup common defaults
+    - role: 'netbackup/posix'                              # Load netbackup default vars
+    - role: 'generic/is_nbu_version_supported'
+    - role: 'generic/os_compatibility'
+    - role: 'netbackup/common/evaluate-service-user/v2.0'           # Evaluate/ensure NetBackup service OS user/group before client install
+    - role: 'helper/detect_partial_install'
+    - role: 'generic/nbu_compatibility'
+    - role: 'netbackup/posix/nbu-client-install/v2.0'
+    - role: 'netbackup/common/nbu-change-serviceuser/v2.0'
+    - role: 'netbackup/common/nbu-get-certificate/v2.0'
+    - role: 'generic/nbu_verification'                      # Verifies certificate specific checks and report 
+    - role: 'netbackup/posix/nbu-eeb-mgmt/v2.0'
+    
+  vars:
+      nbu_role: "client"
+      nbu_playbook_type: "install"
+
+# EOF

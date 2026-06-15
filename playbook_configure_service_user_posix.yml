@@ -1,0 +1,35 @@
+# $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
+
+# NetBackup – Configure service user (POSIX: Linux, Solaris, AIX, and other unixes)
+# Loads vars/linux.yml and role netbackup/posix.
+
+- name: NETBACKUP -> CONFIGURE SERVICE USER ("Linux")
+  gather_facts: true
+  become: yes
+  hosts: all
+  pre_tasks:
+    - name: Retrieving host distribution
+      ansible.builtin.setup:
+        gather_subset:
+          - "!all"
+          - "!min"
+          - "distribution"
+
+    - name: "CONFIGURE-SERVICE-USER -> Load configurable variables"
+      ansible.builtin.include_vars: "vars/linux.yml"
+      tags: ["always"]
+      no_log: true
+
+  roles:
+    - role: netbackup
+    - role: netbackup/posix
+    - role: generic/is_nbu_version_supported
+    - role: helper/nbu_role_status
+    - role: netbackup/common/evaluate-service-user/v2.0
+    - role: generic/is_nbu_installed
+    - role: netbackup/common/nbu-change-serviceuser/v2.0
+
+  vars:
+    nbu_playbook_type: "service_user"
+
+# EOF

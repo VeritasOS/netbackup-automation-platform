@@ -1,0 +1,40 @@
+# $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
+
+# NetBackup EEB - WINDOWS (Operations)
+- name: NETBACKUP -> EEB Operations ("Windows")
+  gather_facts: true
+  hosts: all
+  pre_tasks:
+    - name: Retrieving host distribution
+      setup:
+        gather_subset:
+          - "!all"
+          - "!min"
+          - "distribution"
+          - "env"
+    
+    # Load configurable variables
+    - name: "NBU-EEB-OPERATIONS -> Load configurable variables"
+      ansible.builtin.include_vars: "vars/win32nt.yml"
+      tags: ["always"]
+      no_log: True
+
+    - name: "NBU-EEB-OPERATIONS -> Input validation for netbackup role"
+      ansible.builtin.fail:
+        msg: "'nbu_role' is required to proceed with EEB operations. For Windows, only 'client' or 'media' is supported. Usage: -e 'nbu_role=client' or 'nbu_role=media"
+      when:
+        - nbu_role == ""
+
+    - name: "NBU-EEB-OPERATIONS -> Validate Windows role"
+      ansible.builtin.fail:
+        msg: "Windows only supports 'client' and 'media' roles. Provided: '{{ nbu_role }}'"
+      when:
+        - nbu_role not in ["client", "media"]
+
+  roles:
+    - role: 'netbackup'                                # Load netbackup common defaults
+    - role: 'netbackup/win32nt'                        # Load netbackup default vars
+    - role: 'netbackup/win32nt/nbu-eeb-mgmt/v2.0'   # Handles both install and uninstall based on item content
+  vars:
+      nbu_role: ""                                     # Windows only supports 'client'
+# EOF

@@ -11,6 +11,7 @@ This platform offers comprehensive automation capabilities for NetBackup Primary
 * **NetBackup Installation & Upgrades**:
     * Fresh installation and upgrade of NetBackup Client on Windows, SuSE, RHEL, Solaris, AIX, Linux P-series, Linux Z-series, Rocky Linux, Oracle Linux, Debian and Ubuntu.
     * Fresh installation of NetBackup Media & Primary servers on SuSE and RHEL.
+    * Fresh installation of NetBackup Media server on Windows.
     * Upgrade NetBackup environments (from and to NB version 10.x onwards).
 * **Certificate Management**:
     * Independent certificate deployment, useful for initial setups or adding new primary servers.
@@ -27,6 +28,9 @@ This platform offers comprehensive automation capabilities for NetBackup Primary
     * Apply global security settings to enhance secure communications.
 * **Service Control**:
     * Playbooks to start, stop, and restart NetBackup services.
+* **Service User Configuration **:
+    * Automates creation and validation of the NetBackup Service User/Group on Linux/Unix and validation of the Windows Service User during fresh install
+    * Automates creation and validation of the NetBackup Service User/Group on Linux/Unix and validation of the Windows Service User during upgrade and as a standalone playbook.
 * **DirectIO Support**:
     * On RHEL, DirectIO is supported for Primary, Media, and Client. On Windows, DirectIO is supported for Client only.
     
@@ -34,6 +38,7 @@ This platform offers comprehensive automation capabilities for NetBackup Primary
 ## 🎯 Supported NetBackup Versions
 
 These playbooks support the following NetBackup Primary, Media, and Client versions:
+* `11.2.0.0`
 * `11.1.0.2`
 * `11.1.0.0`
 * `11.0.0.1`
@@ -60,9 +65,9 @@ The following table outlines the available playbooks and their functionalities, 
 
 | # | Playbook Name | Description & High-Level Workflow |
 |---|---|---|
-| 01 | [`playbook_install_client_linux.yml`](./playbook_install_client_linux.yml) | Performs fresh install or upgrade. Checks platform compatibility, installs missing dependent packages, runs defensive checks against Primary/Media roles, validates host state, performs installation/upgrade, deploys certificates if `nbu_cert_management` is true, performs connectivity validation, and installs provided EEBs. |
-| 02 | [`playbook_upgrade_client_linux.yml`](./playbook_upgrade_client_linux.yml) | Part of the fresh install/upgrade workflow for Linux clients. |
-| 03 | [`playbook_remove_client_linux.yml`](./playbook_remove_client_linux.yml) | Removes the specified NetBackup Client version. Runs defensive checks, verifies installed version, removes client footprint, and removes EEB markers. |
+| 01 | [`playbook_install_client_posix.yml`](./playbook_install_client_posix.yml) | Performs fresh install or upgrade. Checks platform compatibility, installs missing dependent packages, runs defensive checks against Primary/Media roles, validates host state, performs installation/upgrade, deploys certificates if `nbu_cert_management` is true, performs connectivity validation, and installs provided EEBs. |
+| 02 | [`playbook_upgrade_client_posix.yml`](./playbook_upgrade_client_posix.yml) | Part of the fresh install/upgrade workflow for Linux clients. |
+| 03 | [`playbook_remove_client_posix.yml`](./playbook_remove_client_posix.yml) | Removes the specified NetBackup Client version. Runs defensive checks, verifies installed version, removes client footprint, and removes EEB markers. |
 
 #### Windows Clients
 
@@ -74,18 +79,26 @@ The following table outlines the available playbooks and their functionalities, 
 
 ---
 
-### NetBackup Server Playbooks (Primary/Media)
+### NetBackup Server Playbooks
 
 #### Linux Servers (RHEL, SuSE, Oracle Linux)
 
 | # | Playbook Name | Description & High-Level Workflow |
 |---|---|---|
-| 01 | [`playbook_install_media_linux.yml`](./playbook_install_media_linux.yml) | Performs fresh install or upgrade for Media servers. Checks platform compatibility, installs missing packages, performs space checks, runs defensive checks, validates host state, installs/upgrades, installs ITA Data Collector (if enabled), deploys certificates (if `nbu_cert_management` is true), performs connectivity validation, and installs provided EEBs. |
-| 02 | [`playbook_upgrade_media_linux.yml`](./playbook_upgrade_media_linux.yml) | Part of the fresh install/upgrade workflow for Linux Media servers. |
-| 03 | [`playbook_install_primary_linux.yml`](./playbook_install_primary_linux.yml) | Performs fresh install or upgrade for Primary servers. |
-| 04 | [`playbook_upgrade_primary_linux.yml`](./playbook_upgrade_primary_linux.yml) | Part of the fresh install/upgrade workflow for Linux Primary servers. |
-| 05 | [`playbook_remove_media_linux.yml`](./playbook_remove_media_linux.yml) | Removes the specified NetBackup Server version. Runs defensive checks, verifies installed version, removes footprint, removes ITA Data Collector if found, and removes EEB RPM markers. |
-| 06 | [`playbook_remove_primary_linux.yml`](./playbook_remove_primary_linux.yml) | Removes the specified NetBackup Server version for Primary servers. |
+| 01 | [`playbook_install_media_posix.yml`](./playbook_install_media_posix.yml) | Performs fresh install or upgrade for Media servers. Checks platform compatibility, installs missing packages, performs space checks, runs defensive checks, validates host state, installs/upgrades, installs ITA Data Collector (if enabled), deploys certificates (if `nbu_cert_management` is true), performs connectivity validation, and installs provided EEBs. |
+| 02 | [`playbook_upgrade_media_posix.yml`](./playbook_upgrade_media_posix.yml) | Part of the fresh install/upgrade workflow for Linux Media servers. |
+| 03 | [`playbook_install_primary_posix.yml`](./playbook_install_primary_posix.yml) | Performs fresh install or upgrade for Primary servers. |
+| 04 | [`playbook_upgrade_primary_posix.yml`](./playbook_upgrade_primary_posix.yml) | Part of the fresh install/upgrade workflow for Linux Primary servers. |
+| 05 | [`playbook_remove_media_posix.yml`](./playbook_remove_media_posix.yml) | Removes the specified NetBackup Server version. Runs defensive checks, verifies installed version, removes footprint, removes ITA Data Collector if found, and removes EEB RPM markers. |
+| 06 | [`playbook_remove_primary_posix.yml`](./playbook_remove_primary_posix.yml) | Removes the specified NetBackup Server version for Primary servers. |
+
+#### Windows Media Server
+
+| # | Playbook Name | Description & High-Level Workflow |
+|---|---|---|
+| 01 | [`playbook_install_media_windows.yml`](./playbook_install_media_windows.yml) | Performs fresh install or upgrade for Windows Media servers. |
+| 02 | [`playbook_upgrade_media_windows.yml`](./playbook_upgrade_media_windows.yml) | Part of the fresh install/upgrade workflow for Windows Media servers. |
+| 03 | [`playbook_remove_media_windows.yml`](./playbook_remove_media_windows.yml) | Removes the specified NetBackup Media Server version for Windows. |
 
 ---
 
@@ -95,18 +108,22 @@ The following table outlines the available playbooks and their functionalities, 
 
 | # | Playbook Name | Description & High-Level Workflow |
 |---|---|---|
-| 01 | [`playbook_certificate_deployment_linux.yml`](./playbook_certificate_deployment_linux.yml) | Handles security configuration to establish connections between Primary, Clients, and Media. Can be used to add new primary servers or enroll external certificate authorities. Performs version checks and deploys certificates based on `nbu_cert_management` FTO. |
+| 01 | [`playbook_certificate_deployment_posix.yml`](./playbook_certificate_deployment_posix.yml) | Handles security configuration to establish connections between Primary, Clients, and Media. Can be used to add new primary servers or enroll external certificate authorities. Performs version checks and always deploys certificates when run as a standalone playbook (bypasses `nbu_cert_management` FTO). |
 | 02 | [`playbook_stage_packages_locally_redhat.yml`](./playbook_stage_packages_locally_redhat.yml) | Downloads NetBackup RPM or DVD packages locally. Validates supported versions and downloads packages to local YUM repo cache. |
-| 03 | [`playbook_start_services_linux.yml`](./playbook_start_services_linux.yml) | Starts all NetBackup services. |
-| 04 | [`playbook_stop_services_linux.yml`](./playbook_stop_services_linux.yml) | Stops all NetBackup services. |
-| 05 | [`playbook_restart_services_linux.yml`](./playbook_restart_services_linux.yml) | Restarts all NetBackup services. |
+| 03 | [`playbook_start_services_posix.yml`](./playbook_start_services_posix.yml) | Starts all NetBackup services. |
+| 04 | [`playbook_stop_services_posix.yml`](./playbook_stop_services_posix.yml) | Stops all NetBackup services. |
+| 05 | [`playbook_restart_services_posix.yml`](./playbook_restart_services_posix.yml) | Restarts all NetBackup services. |
+| 06 | [`playbook_configure_service_user_posix.yml`](./playbook_configure_service_user_posix.yml) | Standalone playbook to configure or validate the NetBackup Service User on existing POSIX hosts (Linux, Solaris, AIX, and other UNIX variants). Loads `vars/linux.yml` and creates the local `nbu_services_user`/`nbu_services_group` if missing (NSS-aware via `getent`). Runs regardless of the `include_service_user_configuration` FTO. |
+| 07 | [`playbook_nbeeb_management_posix.yml`](./playbook_nbeeb_management_posix.yml) | Standalone playbook for EEB operations on POSIX hosts. Installs, upgrades, adjusts overlapping EEBs, and removes EEBs. Also supports Tomcat/JRE install and upgrade as part of EEB workflows. |
 
 #### Windows Platforms
 
 | # | Playbook Name | Description & High-Level Workflow |
 |---|---|---|
-| 01 | [`playbook_certificate_deployment_windows.yml`](./playbook_certificate_deployment_windows.yml) | Handles certificate deployment for Windows. |
+| 01 | [`playbook_certificate_deployment_windows.yml`](./playbook_certificate_deployment_windows.yml) | Handles certificate deployment for Windows. Always deploys certificates when run as a standalone playbook (bypasses `nbu_cert_management` FTO). |
 | 02 | [`playbook_stage_packages_locally_windows.yml`](./playbook_stage_packages_locally_windows.yml) | Downloads NetBackup packages to local temp for Windows. |
+| 03 | [`playbook_configure_service_user_windows.yml`](./playbook_configure_service_user_windows.yml) | Standalone playbook to configure or validate the NetBackup Service User on existing Windows hosts. Loads `vars/win32nt.yml` and validates that `nbu_services_user` is `LocalSystem` or `LocalService` (case-insensitive); custom accounts are not supported. |
+| 04 | [`playbook_nbeeb_management_windows.yml`](./playbook_nbeeb_management_windows.yml) | Standalone playbook for EEB operations on Windows hosts. Installs, upgrades, adjusts overlapping EEBs, and removes EEBs. |
 
 #### Cross-Platform
 
@@ -149,7 +166,7 @@ These roles are integral to the playbooks and are called based on the required w
 | 02 | `netbackup/common/stage-package-locally` | Staging playbook to download NetBackup packages into a local cache for use during install-time. |
 | 03 | `netbackup/posix` <br> `netbackup/win32nt` | Contains static playbook specifications required for different workflows. |
 | 04 | `netbackup/posix/nbu-client-install` <br> `netbackup/posix/nbu-server-install` <br> `netbackup/win32nt/nbu-client-install` | Installs/upgrades NetBackup Primary/Media/Client based on conditions like new install (no existing NetBackup or proposed version installed) or upgrade (older version installed). |
-| 05 | `netbackup/posix/nbu-install-eeb`<br>`netbackup/win32nt/nbu-install-eeb` | Installs the list of EEBs provided in the initial configuration and creates a marker if `include_eeb_rpm_marker` FTO is `true`. |
+| 05 | `netbackup/posix/nbu-eeb-mgmt`<br>`netbackup/win32nt/nbu-eeb-mgmt` | Installs the list of EEBs provided in the initial configuration and creates a marker if `include_eeb_rpm_marker` FTO is `true`. |
 | 06 | `netbackup/posix/nbu-remove` <br> `netbackup/win32nt/nbu-remove` | Removes NetBackup Primary/Media/Client only if the proposed version is found installed. |
 | 07 | `netbackup/posix/nbu-stop-services` | Handles stopping NetBackup services if the proposed version is found installed. |
 | 08 | `netbackup/posix/symlink-operations` | Deals with validation and creation of symbolic links on Linux. |
@@ -157,6 +174,8 @@ These roles are integral to the playbooks and are called based on the required w
 | 10 | `netbackup/common/rest-api-integration` | Includes global security settings for configuring secure communications. |
 | 11 | `netbackup/posix/nbu-start-services` <br> `netbackup/posix/nbu-stop-services` | Handles starting and stopping NetBackup services. |
 | 12 | `netbackup/posix/pre-install-os-task` | Handles pre-installation OS tasks for Primary, including validating and creating specified local users/groups if missing.
+| 13 | `netbackup/common/evaluate-service-user` | Evaluates Service User configuration for NetBackup on UNIX/LINUX, validates `nbu_services_user`/`nbu_services_group` and creates them locally if missing (NSS-aware via `getent`); on Windows, validates `nbu_services_user` is `LocalSystem` or `LocalService`. On upgrades, reads the existing `SERVICE_USER` via `nbgetconfig` and fails fast on mismatch. Skipped on Media/Client when `include_service_user_configuration` is `false`; always runs on Primary. |
+| 14 | `netbackup/common/nbu-change-serviceuser` | Applies NetBackup service user changes on POSIX and Windows hosts. Invokes `evaluate-service-user` first, then stops NetBackup services, runs `nbserviceusercmd --changeUser` and restarts services. Used by install/upgrade playbooks and the standalone configure service user playbooks. Skipped on Media/Client when `include_service_user_configuration` is `false`; always runs when called from the standalone configure service user playbooks regardless of this FTO. |
 
 </details>
 
@@ -187,16 +206,16 @@ These variables offer flexible configuration for various scenarios.
 |  01 | `nbu_primary_certdetails` <br> (Mutually inclusive with `nbu_cert_management` FTO) | If the primary server uses only NBCA, the target host is configured using NBCA. Requires `hostname`, `nbu_server_fingerPrint`, and `nbu_server_authorization_token` in JSON format. | `JSON` |
 | 02 | `nbu_eca_certdetails[Linux]` <br> (Mutually inclusive with `nbu_cert_management` FTO) | If the primary server uses ECA or mixed mode, the target host is configured with ECA. Requires `nbu_eca_cert_path`, `nbu_eca_private_key_path`, `nbu_eca_trust_store_path`. Optional `nbu_eca_key_passphrasefile` and `eca_crl` details. | `JSON` |
 | 03 | `nbu_eca_certdetails[Windows]` <br> (Mutually inclusive with `nbu_cert_management` FTO) | Similar to Linux ECA configuration, supporting both file-based certificates and Windows Certificate Store. Requires `cert_store_type` (`windows_cert_store` or `windows_file_based`) and relevant paths/locations. | `JSON` |
-| 04 | `nbu_eeb_ordered` | Specifies an ordered list of EEBs to be installed. Supports upgrading, handling overlapping EEBs, uninstalling, and providing special arguments. | `JSON` |
-| 05 | `os_path_nbu_install` | Custom installation path for NetBackup. Default: `/usr/openv` for Linux, `C:\\Program Files\\Veritas` if nbu_version < 11.1 else `C:\\Program Files\\Cohesity NetBackup` for Windows. Recommended path ends with `openv` int Linux and `Veritas` or `Cohesity NetBackup` on Windows. | `string` |
+| 04 | `nbu_eeb_ordered` | Specifies an ordered list of EEBs to be installed. Supports upgrading, handling overlapping EEBs, uninstalling, and providing special arguments. | `JSON`<br>Eg.<br>primary:<br>&nbsp;&nbsp;10.1.1.0:<br>&nbsp;&nbsp;&nbsp;&nbsp;- "eebinstaller_4198042_1"<br>&nbsp;&nbsp;&nbsp;&nbsp;- "eebinstaller_4198042_2 -upgrade"<br><br>- <code>eebinstaller_4198042_1</code> will be installed as usual.<br>- <code>eebinstaller_4198042_2 -upgrade</code> will uninstall any previous version of <code>4198042</code> and install the new one.<br><br>From NetBackup version 10.0 onwards, using the <code>-upgrade</code> flag with an EEB will uninstall the older version of the same EEB (if present) and install the new EEB version. This ensures that only the latest version of the EEB is active.<br> |
+| 05 | `os_path_nbu_install` | Custom installation path for NetBackup. Default: `/usr/openv` for Linux, `C:\\Program Files\\Veritas` if nbu_version < 11.1 else `C:\\Program Files\\Cohesity NetBackup` for Windows. Recommended path ends with `openv` in Linux and `Veritas` or `Cohesity NetBackup` on Windows. **Note:** This variable is not considered when running the upgrade playbook. | `string` |
 | 06 | `nbu_directory_list_to_be_removed` | List of directories to be removed upon NetBackup uninstallation. | `list` |
 | 07 | `os_rhel_system_packages` | Add custom OS dependent packages for RHEL systems. | `JSON` |
 | 08 | `os_rhel_system_packages_symlink` | Add custom OS symlinks for RHEL systems. | `JSON` |
 | 09 | `nbu_license_file_name_list` | NetBackup license file for Primary install/upgrade (for `>= 10.2.0.1`). | `list` |
 | 10 | `nbu_webservices_group` | NetBackup webservices group. Default: `nbwebgrp`. | `string` |
 | 11 | `nbu_webservices_user` | NetBackup webservices user. Default: `nbwebsvc`. | `string` |
-| 12 | `nbu_services_group` | NetBackup services group. | `string` |
-| 13 | `nbu_services_user` | NetBackup services user. | `string` |
+| 12 | `nbu_services_group` | NetBackup services group (UNIX/LINUX). Used to create the local group if missing during install/upgrade when applicable. | `string` |
+| 13 | `nbu_services_user` | NetBackup services user (UNIX/LINUX): any non-empty account name (created locally if missing). Windows: must be `LocalSystem` or `LocalService` (case-insensitive); custom accounts are not supported. | `string` |
 | 14 | `nbu_database_user` | NetBackup database user. | `string` |
 | 15 | `postgresql_pooler_odbc_port` | Optional PostgreSQL pooler ODBC port. Default: `13787`. | `string` |
 | 16 | `security_properties_params` | Variables for global security settings (e.g., `certificateAutoDeployLevel`, `dteGlobalMode`). | `string` |
@@ -212,17 +231,18 @@ These boolean variables enable or disable specific features.
 | # | Input Variable | Description | Variable Type |
 |---|---|---|---|
 | 01 | `include_eeb_rpm_marker` | If `true`, an EEB marker is created during EEB installation. Default: `false`. | `bool` |
-| 02 | `nb_include_java_jre_install` | If `true`, JAVA/JRE RPM packages are installed. Default: `false`. | `bool` |
-| 03 | `nbu_cert_management[NBCA/ECA]` | If `true`, manages certificates. For NBCA, fetches host ID-based certificates from Primary. For ECA, uses external CA-signed certificates. Default: `true`. | `bool` |
-| 04 | `do_perform_nbcheck_preinstall` | If `true`, runs NBCheck before installation/upgrade. Default: `true`. | `bool` |
-| 05 | `install_pkgs_from_local_cache` | If `true`, packages are cached locally to avoid download at install-time. Default: `false`. | `bool` |
-| 06 | `ignore_primary_connectivity_failures` | If `true`, ignores connectivity validation with Primary and continues execution. Default: `false`. | `bool` |
-| 07 | `skip_primary_version_compatibility_check` | If `true`, skips Primary server version compatibility check. Default: `false`. | `bool` |
-| 08 | `should_force_process_termination` | If `true`, forcefully terminates running processes after 3 graceful shutdown attempts. Default: `false`. | `bool` |
-| 09 | `do_install_ita_dc` | If `true`, installs the ITA Data Collector optional package. Default: `true`. | `bool` |
-| 10 | `skip_missing_catalog_backup_check` | If `true`, skips the check for a successful catalog backup in the last 24 hours. Default: `false`. | `bool` |
+| 02 | `nbu_cert_management[NBCA/ECA]` | If `true`, manages certificates during install/upgrade workflows. For NBCA, fetches host ID-based certificates from Primary. For ECA, uses external CA-signed certificates. Default: `true`. | `bool` |
+| 03 | `do_perform_nbcheck_preinstall` | If `true`, runs NBCheck before installation/upgrade. Default: `true`. | `bool` |
+| 04 | `install_pkgs_from_local_cache` | If `true`, packages are cached locally to avoid download at install-time. Default: `false`. | `bool` |
+| 05 | `ignore_primary_connectivity_failures` | If `true`, ignores connectivity validation with Primary and continues execution. Default: `false`. | `bool` |
+| 06 | `skip_primary_version_compatibility_check` | If `true`, skips Primary server version compatibility check. Default: `false`. | `bool` |
+| 07 | `should_force_process_termination` | If `true`, forcefully terminates running processes after 3 graceful shutdown attempts. Default: `false`. | `bool` |
+| 08 | `do_install_ita_dc` | If `true`, installs the ITA Data Collector optional package. Default: `true`. | `bool` |
+| 09 | `skip_missing_catalog_backup_check` | If `true`, skips the check for a successful catalog backup in the last 24 hours. Default: `false`. | `bool` |
+| 10 | `include_java_jre_install` | Controls whether the Java/Jre packages are installed for NetBackup Primary, Media, and Client servers. Options: `INCLUDE` (always install), `EXCLUDE` (never install), `MATCH` (follow the host's current configuration). Default: `MATCH`. | `string` |
 | 11 | `include_directio_install` | Controls whether the DirectIO (NetBackup DirectIO) package is installed for NetBackup Primary, Media, and Client servers. Options: `INCLUDE` (always install), `EXCLUDE` (never install), `MATCH` (follow the host's current configuration). Default: `MATCH`. | `string` |
 |   | Note: DirectIO is only applicable from NetBackup version 11.1.0.0. |  |  |
+| 12 | `include_service_user_configuration` | If `true`, the install/upgrade workflow evaluates and configures NetBackup Service User on Media/Client hosts. Primary always validates regardless of this flag. Default: `false`. | `bool` |
 ---
 ## 🚀 Getting Started with NetBackup Ansible Playbooks
 
@@ -231,10 +251,12 @@ These boolean variables enable or disable specific features.
 Before running the playbooks, ensure the following:
 
 1.  **Ansible Core**: Supports `ansible-core 2.15` onwards.
-2.  **Python Interpreter**: Supports `python version 3.9` onwards.
-3.  **Ansible Automation Platform**: Must be configured and ready for use.
-4.  **Non-interactive Connection**: Establish a non-interactive connection to all managed nodes/target hosts.
-5.  **Artifact Repository Manager**: Configure an artifact repository manager (e.g., a yum repository) and upload all NetBackup RPMs with their respective repodata. This can be a web server accessible via URL, or a local/mounted file-system path.
+2.  **Python Interpreter**: Supports `python version 3.9` onwards. If higher python version installed, make sure to set 'ansible_python_interpreter' to that path using extra vars. <br>For example:
+    `ansible_python_interpreter: /usr/bin/python3`
+3.  **Managed Host Compatibility**: For detailed information regarding Ansible compatibility with specific managed host operating systems and versions, please refer to the official Red Hat Ansible Automation Platform documentation.
+4.  **Ansible Automation Platform**: Must be configured and ready for use.
+5.  **Non-interactive Connection**: Establish a non-interactive connection to all managed nodes/target hosts.
+6.  **Artifact Repository Manager**: Configure an artifact repository manager (e.g., a yum repository) and upload all NetBackup RPMs with their respective repodata. This can be a web server accessible via URL, or a local/mounted file-system path.
     * **Client RPMs**: `<NB_Package_DIR>/NetBackup_<NB_VERSION>_CLIENTS2/NBClients/anb/Clients/usr/openv/netbackup/client/Linux/RedHat3.10.0`
     * **Debian Client Packages**: `We use the complete DVD image for the debian platform and the uploaded image should follow a particular naming convention.`
             * Image Name: `NetBackup_<NB_VERSION>_CLIENTS2.tar.gz`
@@ -246,7 +268,9 @@ Before running the playbooks, ensure the following:
     * **Primary/Media RPMs**: `<NB_Package_DIR>/NetBackup_<NB_VERSION>_LinuxR_x86_64/linuxR_x86/anb`
     * **Client Windows DVD Packages**: `<NB_Package_DIR>/NetBackup_<NB_VERSION>_Win\`
     * **ITA Data Collector (for Primary server)**: `<NB_Package_DIR>/NetBackup_<NB_VERSION>_LinuxR_x86_64/linuxR_x86/catalog/anb/ita_dc.tar.gz`
-6.  **Ansible Inventory**: Ensure the Ansible inventory is pre-populated with your target hosts.
+    * **NBINFRA Tar (for Primary server)**: `<NB_Package_DIR>/NetBackup_<NB_VERSION>_LinuxR_x86_64/linuxR_x86/anb/nbinfra.tar.gz`
+    * Note: nbinfra.tar.gz file must be kept alongside with the rpm packages.
+7.  **Ansible Inventory**: Ensure the Ansible inventory is pre-populated with your target hosts.
 
 
 ### Usage
@@ -264,7 +288,7 @@ Playbook execution requires certain mandatory variables.
 
     * **Example (Linux with `vars/linux.yml` modified)**:
         ```bash
-        [user@host ~]$ ansible-playbook playbook_install_client_linux.yml -l linux -vv
+        [user@host ~]$ ansible-playbook playbook_install_client_posix.yml -l linux -vv
         ```
     * **Example (Windows with `vars/win32nt.yml` modified)**:
         ```bash
@@ -272,11 +296,19 @@ Playbook execution requires certain mandatory variables.
         ```
     * **Example (Linux with `--extra-vars`)**:
         ```bash
-        [user@host ~]$ ansible-playbook playbook_install_client_linux.yml -l linux -vv --extra-vars="nbu_version=10.3.0.0 os_path_nbu_install=/usr/openv"
+        [user@host ~]$ ansible-playbook playbook_install_client_posix.yml -l linux -vv --extra-vars="nbu_version=10.3.0.0 os_path_nbu_install=/usr/openv"
         ```
     * **Example (Windows with `--extra-vars`)**:
         ```bash
         [user@host ~]$ ansible-playbook playbook_install_client_windows.yml -l win -vv --extra-vars="nbu_version=10.3.0.0"
+        ```
+    * **Example (Service User configuration on Linux/Unix)**:
+        ```bash
+        [user@host ~]$ ansible-playbook playbook_configure_service_user_posix.yml -l linux -vv
+        ```
+    * **Example (Service User configuration on Windows)**:
+        ```bash
+        [user@host ~]$ ansible-playbook playbook_configure_service_user_windows.yml -l win -vv
         ```
 
 #### From within the Ansible Automation Platform (e.g., AWX)
@@ -304,7 +336,7 @@ The software is provided under a license agreement and must be used in accordanc
 ### Legal Notice
 
 Last updated: 2025-10-25
-Copyright © 2025 Cohesity, Inc. All rights reserved.
+Copyright © 2026 Cohesity, Inc. All rights reserved.
 Cohesity, the Cohesity Logo, and other Cohesity Marks are trademarks of Cohesity, Inc. or its affiliates in the US and/or internationally. Other names may be trademarks of their respective owners.
 This product may contain third-party software under open source or free software licenses. The license agreement does not alter your rights or obligations under these licenses. The product and documentation are distributed under licenses restricting use, copying, distribution, and decompilation/reverse engineering. No part of this document may be reproduced without prior written authorization from Cohesity, Inc.
 THE DOCUMENTATION IS PROVIDED "AS IS" AND ALL EXPRESS OR IMPLIED CONDITIONS, REPRESENTATIONS AND WARRANTIES, INCLUDING ANY IMPLIED WARRANTY OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NON-INFRINGEMENT, ARE DISCLAIMED, EXCEPT TO THE EXTENT THAT SUCH DISCLAIMERS ARE HELD TO BE LEGALLY INVALID. COHESITY, INC. SHALL NOT BE LIABLE FOR INCIDENTAL OR CONSEQUENTIAL DAMAGES IN CONNECTION WITH THE FURNISHING, PERFORMANCE, OR USE OF THIS DOCUMENTATION. THE INFORMATION CONTAINED IN THIS DOCUMENTATION IS SUBJECT TO CHANGE WITHOUT NOTICE.

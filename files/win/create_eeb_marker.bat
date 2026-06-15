@@ -1,4 +1,4 @@
-@REM $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
+@REM $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
 
 @echo off
 

@@ -1,4 +1,4 @@
-# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
+# $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
 
 ##############################################################################
 ####  Generic tasks to verify OS specification                            ####
@@ -7,10 +7,10 @@
 ##############################################################################
 - name: "NBU-OS-COMPATIBILITY -> Fail if unsupported OS architecture for primary/media role"
   fail:
-    msg: "ERROR - nbu_role '{{ nbu_role }}' is only supported for platforms RedHat:x86_64 and Suse:x86_64. Detected platform: {{ nbu_current_os_arch }}."
+    msg: "ERROR - nbu_role '{{ nbu_role }}' is only supported for platforms RedHat:x86_64, Suse:x86_64 and Windows. Detected platform: {{ nbu_current_os_arch }}."
   when:
     - nbu_role in ["primary", "media"]
-    - nbu_current_os_arch not in ["RedHat:x86_64", "Suse:x86_64"]
+    - nbu_current_os_arch not in ["RedHat:x86_64", "Suse:x86_64", "Windows"]
     
 - name: "NBU-OS-COMPATIBILITY -> Verify if the NetBackup Version is compatible"
   ansible.builtin.assert:  

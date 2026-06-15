@@ -18,7 +18,7 @@ INSTALL_ITA_DATA_COLLECTOR = {{ 'YES' if do_install_ita_dc else 'NO' }}
 INCLUDE_NBDIRECTIO = {{ include_directio_install | upper | default('MATCH') }} 
 {% endif %}
 {% if nbu_version >= "11.0.0.0" %}
-INCLUDE_JAVA_GUI_ON_PRIMARY = {{ 'INCLUDE' if nb_include_java_jre_install else 'EXCLUDE' }} 
+INCLUDE_JAVA_GUI_AND_JRE = {{ include_java_jre_install | upper | default('MATCH') }}
 {% endif %}
 {% if nbu_version <= "10.2.0.1" %}
 {% for item in nbu_license_key %}
@@ -33,4 +33,6 @@ LICENSE = {{ os_path_openv_tmp}}/{{ item }}
 {% endif %}
 {% if postgresql_pooler_odbc_port != "" %}
 VXDBMS_POSTGRESQL_POOLER_ODBC_PORT = {{ postgresql_pooler_odbc_port }}
+{% elif nbu_version >= "11.2.0.0" %}
+VXDBMS_POSTGRESQL_POOLER_ODBC_PORT = 13787
 {% endif %}

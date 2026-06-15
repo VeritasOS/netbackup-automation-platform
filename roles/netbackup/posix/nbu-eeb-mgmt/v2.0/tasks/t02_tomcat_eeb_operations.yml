@@ -1,0 +1,147 @@
+# $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
+
+###############################################################
+#### nbu-eeb-mgmt -> tasks -> t02_tomcat_eeb_operations.yml ####
+###############################################################
+
+# The "<id>_<ver>.tomcat" marker file is created at the end of a successful TomcatDeployer.sh run
+# We check for its presence here to make this play idempotent. If the marker
+# already exists for the current EEB, it means TomcatDeployer.sh has already been run
+# successfully for this EEB and we must NOT run it again on subsequent executions of the playbook for the same EEB.
+- name: "NBU-EEB-INSTALL -> Verify existence of {{ nbu_eeb_file_id }}_{{ nbu_eeb_file_ver }}.tomcat"
+  ansible.builtin.stat:
+    path: "{{ os_path_openv_tmp }}/{{ nbu_eeb_file_id }}_{{ nbu_eeb_file_ver }}.tomcat"
+  register: tomcat_eeb_status_register
+
+- name: Ansible::Log.info
+  ansible.builtin.debug:
+    msg: "The TomcatDeployer.sh has already been executed successfully ({{ nbu_eeb_file_id }}_{{ nbu_eeb_file_ver }})"
+  when:
+    - tomcat_eeb_status_register.stat.exists
+
+- name: "NBU-EEB-INSTALL -> Performing Tomcat EEB install operations"
+  block:
+    - name: "NBU-EEB-INSTALL -> Extract NetBackup version from EEB readme - {{ eeb_name }}"
+      ansible.builtin.shell: >-
+        {{ os_path_openv_tmp }}/{{ eeb_name }} -r
+        | awk '/Veritas Bug ID:/{flag=1; next} /NetBackup( Primary)? Server/{flag=0} flag'
+        | awk -F '_' '{print $2}'
+        | tr -d "\n"
+        | awk -F ' ' '{print $1}'
+      register: eeb_readme_nbu_version_register
+      changed_when: false
+      failed_when: false
+
+    - name: Ansible::Log.info
+      ansible.builtin.assert:
+        that:
+          - eeb_readme_nbu_version_register.stdout is match('^\\d+\\.\\d+(\\.\\d+){0,2}$')
+        fail_msg:
+          - "Failed to extract a valid NetBackup version from EEB readme ({{ eeb_name }} -r)."
+          - "Parsed value: '{{ eeb_readme_nbu_version_register.stdout | default('') }}'"
+        quiet: true
+
+    # Normalize the readme version by stripping trailing ".0" segments while
+    # preserving at least "major.minor" (e.g. "10.0.0.0" -> "10.0", but
+    # "11.0.0.1" stays intact and "10.0" is left as-is).
+    - name: "NBU-EEB-INSTALL -> Set-fact NBU version components from EEB readme"
+      ansible.builtin.set_fact:
+        nbu_version_short: "{{ eeb_readme_nbu_version_register.stdout | regex_replace('^(\\d+\\.\\d+)(\\.0)+$', '\\1') }}"
+        nbu_version_short_nodots: "{{ eeb_readme_nbu_version_register.stdout | regex_replace('^(\\d+\\.\\d+)(\\.0)+$', '\\1') | replace('.', '') }}"
+
+    - name: "NBU-EEB-INSTALL -> Set-fact EEB tar file name, extracted and backup folder names"
+      ansible.builtin.set_fact:
+        eeb_tar_file_name: "NetBackup_Unix_x64_{{ nbu_version_short_nodots }}EEB_ET{{ nbu_eeb_file_id }}_{{ nbu_eeb_file_ver }}.tar.gz"
+        eeb_tar_extracted_folder_name: "NetBackup_Unix_x64_{{ nbu_version_short_nodots }}EEB_ET{{ nbu_eeb_file_id }}_{{ nbu_eeb_file_ver }}"
+        tomcat_backup_folder_path: "{{ os_path_nbu_install_default }}/bkpcomp/NetBackup-webserver-{{ nbu_version_short }}-backup"
+
+    - name: "NBU-EEB-INSTALL -> Verify {{ eeb_tar_file_name }} file existence"
+      ansible.builtin.stat:
+        path: "{{ os_path_openv_tmp }}/{{ eeb_tar_file_name }}"
+      register: eeb_tar_file_status_register
+
+    - name: "NBU-EEB-INSTALL -> Executing Tomcat EEB internal operations"
+      block:
+        - name: "NBU-EEB-INSTALL -> Get the current apache-tomcat server version"
+          ansible.builtin.shell: >-
+            {{ os_path_nbu_install_default }}/java/jre/bin/java
+            -classpath {{ os_path_nbu_install_default }}/wmc/webserver/lib/catalina.jar
+            org.apache.catalina.util.ServerInfo
+            | grep "Server number:" | awk -F':' '{print $2}' | tr -d ' '
+          register: current_apache_tomcat_version_register
+          changed_when: false
+
+        - name: "NBU-EEB-INSTALL -> Pre-clean any stale extracted folder from prior runs"
+          ansible.builtin.file:
+            path: "{{ os_path_openv_tmp }}/{{ eeb_tar_extracted_folder_name }}"
+            state: absent
+
+        - name: "NBU-EEB-INSTALL -> Extracting {{ eeb_tar_file_name }} file to {{ os_path_openv_tmp }}"
+          ansible.builtin.unarchive:
+            src: "{{ os_path_openv_tmp }}/{{ eeb_tar_file_name }}"
+            dest: "{{ os_path_openv_tmp }}"
+            remote_src: yes
+
+        - name: "NBU-EEB-INSTALL -> Running TomcatDeployer.sh"
+          ansible.builtin.shell: ( ./TomcatDeployer.sh )
+          args:
+            chdir: "{{ os_path_openv_tmp }}/{{ eeb_tar_extracted_folder_name }}"
+          register: deployer_status_register
+          no_log: true
+          failed_when: false
+          changed_when: false
+
+        - name: Ansible::Log.info
+          ansible.builtin.assert:
+            that: ( deployer_status_register.rc == 0 )
+            success_msg:
+              - "TomcatDeployer.sh executed successfully for NBU {{ nbu_version }}, Refer below log for more details."
+              - "See log on target host: /usr/openv/tmp/TomcatDeployer_{{ nbu_eeb_file_id }}_{{ nbu_eeb_file_ver }}.log"
+            fail_msg:
+              - "Failed to execute TomcatDeployer.sh for NBU {{ nbu_version }}, Refer below errors and try re-running the playbook."
+              - "See log on target host: /usr/openv/tmp/TomcatDeployer_{{ nbu_eeb_file_id }}_{{ nbu_eeb_file_ver }}.log"
+              - "stdout (last lines): {{ deployer_status_register.stdout_lines | default([]) }}"
+              - "stderr: {{ deployer_status_register.stderr_lines | default([]) }}"
+            quiet: true
+
+        - name: "NBU-EEB-INSTALL -> Backup and Cleanup operation"
+          block:
+            - name: "NBU-EEB-INSTALL -> Verify {{ tomcat_backup_folder_path }} folder existence"
+              ansible.builtin.stat:
+                path: "{{ tomcat_backup_folder_path }}"
+              register: tomcat_backup_folder_status_register
+
+            - name: "NBU-EEB-INSTALL -> Renaming the apache-tomcat folder with its current server version"
+              ansible.builtin.command: "mv {{ tomcat_backup_folder_path }} {{ tomcat_backup_folder_path }}-{{ current_apache_tomcat_version_register.stdout }}"
+              changed_when: true
+              when:
+                - tomcat_backup_folder_status_register.stat.exists
+                - current_apache_tomcat_version_register is defined
+
+            # Create the "<id>_<ver>.tomcat" marker file only after a successful
+            # TomcatDeployer.sh run. Its presence is checked at the top of this
+            # play to skip re-running TomcatDeployer.sh for the same EEB on later
+            # playbook executions, keeping Tomcat EEB installs idempotent.
+            - name: "NBU-EEB-INSTALL -> Creating successful marker file for {{ nbu_eeb_file_id }}"
+              ansible.builtin.file:
+                path: "{{ os_path_openv_tmp }}/{{ nbu_eeb_file_id }}_{{ nbu_eeb_file_ver }}.tomcat"
+                state: touch
+
+            - name: Ansible::Log.info
+              ansible.builtin.debug:
+                msg:
+                  - "Prior Tomcat files were backed up to '{{ tomcat_backup_folder_path }}-{{ current_apache_tomcat_version_register.stdout }}' (not required for NetBackup operations)."
+                  - "Remove that folder’s contents when no longer needed to reclaim disk space."
+
+            - name: "NBU-EEB-INSTALL -> Cleanup extracted EEB tar folder {{ eeb_tar_extracted_folder_name }}"
+              ansible.builtin.file:
+                path: "{{ os_path_openv_tmp }}/{{ eeb_tar_extracted_folder_name }}"
+                state: absent
+          when:
+            - deployer_status_register.rc == 0
+      when:
+        - eeb_tar_file_status_register.stat.exists
+  when:
+    - ( eeb_task_type == "install" )
+    - ( not tomcat_eeb_status_register.stat.exists )
+#EOF

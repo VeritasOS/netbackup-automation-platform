@@ -1,4 +1,4 @@
-# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
+# $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
 
 #####################################################################
 #### nbu-install-verification -> tasks -> main.yml ####
@@ -39,7 +39,7 @@
       - (item.role is not defined or nbu_role in item.role)
       - (item.optional is not defined or (item.name == 'VRTSnbjre' and nbu_role == 'primary'))
   with_items:
-    - "{{ nbu_pkgs_ordered_list[nbu_version] }}"
+    - "{{ nbu_pkgs_ordered_list[nbu_rpm_version] }}"
 
 - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Include tasks for NetBackup {{ nbu_playbook_type }} status verification"
   ansible.builtin.include_tasks: t01_debian_status.yml

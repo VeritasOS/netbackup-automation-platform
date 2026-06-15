@@ -1,15 +1,20 @@
-# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
+# $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
 
 #####################################################################
 #### nbu-start-services -> tasks -> main.yml ####
 #####################################################################
 # Start NetBackup services and related services on Primary and or Media Server.
+- name: "NBU-START-SERVICES -> Default nbu_run_vxpbx_exchanged_start_script when caller did not pass it"
+  ansible.builtin.set_fact:
+    nbu_run_vxpbx_exchanged_start_script: "{{ nbu_run_vxpbx_exchanged_start_script | default(true) | bool }}"
+
 - name: "NBU-START-SERVICES -> Verifying that required NetBackup Startup scripts exist"
   ansible.builtin.stat:
     path: "{{ file_item }}"
   loop:
     - "{{ os_file_nbu_bpstart }}"
     - "{{ os_file_nbu_bpps }}"
+    - "{{ os_file_nbu_vxpbx_exchanged }}"
   register: netbackup_files_check_register
   loop_control:
     loop_var: file_item
@@ -24,15 +29,27 @@
       failed_when: false
       changed_when: false
 
-    - name: "NBU-START-SERVICES -> Starting vxpbx_exchanged if vxpbx_exchanged not running"
-      ansible.builtin.service:
-        name: vxpbx_exchanged
-        state: started
-        use: sysvinit
-      when: bpps_register.stdout|int == 0
+    - name: "NBU-START-SERVICES -> Start vxpbx_exchanged (PBX) via control script"
+      ansible.builtin.shell: ( {{ os_file_nbu_vxpbx_exchanged }} start )
+      register: nbu_start_services_vxpbx_start_result
+      retries: 2
+      delay: 5
+      until: nbu_start_services_vxpbx_start_result.rc == 0
+      no_log: true
+      failed_when: false
+      when:
+        - netbackup_files_check_register.results[2].stat.exists
+        - nbu_run_vxpbx_exchanged_start_script
+
+    # - name: "NBU-START-SERVICES -> Starting vxpbx_exchanged if vxpbx_exchanged not running"
+    #   ansible.builtin.service:
+    #     name: vxpbx_exchanged
+    #     state: started
+    #     use: sysvinit
+    #   when: bpps_register.stdout|int == 0
 
     - name: "NBU-START-SERVICES -> Starting NetBackup, even if single NetBackup service is not in running state."
-      ansible.builtin.shell: 
+      ansible.builtin.shell:
         cmd: "echo y | {{ os_file_nbu_bpstart }}"
       register: service_start_register
       retries: 2

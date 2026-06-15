@@ -1,4 +1,4 @@
-# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
+# $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
 
 - name: "NBCHECK -> Removing existing VRTSnbpck package and /usr folder from {{ os_path_openv_tmp  }}"
   file:
@@ -87,6 +87,5 @@
 
 - name: "NBCHECK -> Passing nbcheck CLI argument when postgresql_pooler_odbc_port (pg bouncer port) is different from default"
   set_fact:
-    pg_bouncer_port_param: "{{ '-Dpgb_port='+postgresql_pooler_odbc_port if nbu_role =='primary' else '' }}"
-
+    pg_bouncer_port_param: "{{ '-Dpgb_port='+(postgresql_pooler_odbc_port if postgresql_pooler_odbc_port != '' else '13787') if nbu_role == 'primary' else '' }}"
 #EOF

@@ -6,7 +6,7 @@ CA_CERTIFICATE_FINGERPRINT = SKIP
 {% if nbu_version <= "10.0.0.1" %}
 LICENSE = {{ nbu_license_key }}
 {% endif %}
-INCLUDE_JAVA_GUI_AND_JRE = {{ 'INCLUDE' if nb_include_java_jre_install else 'EXCLUDE' }}
+INCLUDE_JAVA_GUI_AND_JRE = {{ include_java_jre_install | upper | default('MATCH')}} 
 {% if nbu_version >= "11.1.0.0" %}
 INCLUDE_NBDIRECTIO = {{ include_directio_install | upper | default('MATCH')}} 
 {% endif %}

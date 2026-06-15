@@ -1,5 +1,5 @@
 #!/usr/openv/pdde/pdopensource/bin/python3
-# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
+# $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
 
 import sys
 #ver = f"{sys.version_info.major}.{sys.version_info.minor}"
@@ -12,6 +12,8 @@ import os
 import queue
 import re
 import requests
+from urllib.parse import urlparse
+import socket
 import shlex
 import socket
 import subprocess
@@ -22,9 +24,22 @@ import json
 import signal
 import atexit
 from base64 import urlsafe_b64encode
-from urllib3.exceptions import InsecureRequestWarning
 
 json_file = "crs_api_payload_template.json"
+
+# Certificate verification configuration
+# Can be set via environment variable: NBU_CA_BUNDLE=/path/to/ca-bundle.crt
+# If not set, defaults to True (uses system certificate store)
+CA_BUNDLE = os.environ.get('NBU_CA_BUNDLE', True)
+if CA_BUNDLE == 'False' or CA_BUNDLE == 'false':
+    CA_BUNDLE = False
+
+def get_verify_for_url(url):
+    parsed = urlparse(url)
+    local_names = {"localhost", "127.0.0.1", socket.gethostname()}
+    if parsed.hostname in local_names:
+        return False
+    return CA_BUNDLE
 
 logger = None
 msdp_cloud_storage_type = 'PureDisk'
@@ -310,8 +325,8 @@ def getNbuTokenFromApi(primaryServer, userName, password):
     reqbody["userName"] = userName
     reqbody["password"] = password
 
-    requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
-    response = requests.post(apiUrl, json=reqbody, headers=headers, verify=False)
+    verify = get_verify_for_url(apiUrl)
+    response = requests.post(apiUrl, json=reqbody, headers=headers, verify=verify)
     if response.status_code != 201:
         logger.error(f"Failied to get the netbackup token. details: {response}")
         return None
@@ -324,15 +339,16 @@ def runPostToNbuApi(apiUrl, reqbody, token, apicalltype='json'):
     """
     This function is used for sending post api request to nbu primary server.
     """
-    requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
     headers = {}
     headers["Authorization"] = 'Bearer ' + token
     headers["content-type"] = "application/vnd.netbackup+json;version=12.0"
 
     if apicalltype == "file":
-        response = requests.post(apiUrl, files=reqbody, headers=headers, verify=False)
+        verify = get_verify_for_url(apiUrl)
+        response = requests.post(apiUrl, files=reqbody, headers=headers, verify=verify)
     else:
-        response = requests.post(apiUrl, json=reqbody, headers=headers, verify=False)
+        verify = get_verify_for_url(apiUrl)
+        response = requests.post(apiUrl, json=reqbody, headers=headers, verify=verify)
 
     statusCode = response.status_code
     if statusCode == 201 or statusCode == 200:
@@ -349,11 +365,11 @@ def runGetToNbuApi(apiUrl, token, params):
     """
     This function is used for sending get api request to nbu primary server.
     """
-    requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
     headers = {}
     headers["Authorization"] = 'Bearer ' + token
     headers["content-type"] = "application/vnd.netbackup+json;version=12.0"
-    response = requests.get(url=apiUrl, headers=headers, verify=False, params=params)
+    verify = get_verify_for_url(apiUrl)
+    response = requests.get(url=apiUrl, headers=headers, verify=verify, params=params)
 
     statusCode = response.status_code
     if statusCode == 200:
@@ -536,12 +552,12 @@ def importKmsKey(args):
     payload = {'kmsReqBody': json.dumps(reqbody)}
     files=[ ('importKeyFile', ('kms_kg_file',open(args.kms_file_name,'rb'), 'text/plain'))]
 
-    requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
     headers = {}
     headers['Authorization'] = "Bearer " + token
     #headers['Content-Type'] = "multipart/vnd.netbackup+form-data;"
 
-    response = requests.post(apiUrl, headers=headers, data=payload, files=files, verify=False)
+    verify = get_verify_for_url(apiUrl)
+    response = requests.post(apiUrl, headers=headers, data=payload, files=files, verify=verify)
     statusCode = response.status_code
     logger.info(f"response for import kms key:\nreturn code:{statusCode}\n{response.text}")
     if statusCode == 201 or statusCode == 200:
