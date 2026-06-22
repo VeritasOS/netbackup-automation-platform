@@ -1,9 +1,11 @@
-# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
+# $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
 
 #############################################################
-#               Stop NetBackup Services   
+#               Stop NetBackup Services
 # We will attempt 3 times to stop process gracefully.
-# If we still find any process running, will force terminate 
+# If we still find any process running, will force terminate.
+# After bp.kill_all, optionally stop vxpbx_exchanged (PBX) when the control script exists and nbu_run_vxpbx_exchanged_stop_script is true.
+# Default is false in defaults/main.yml; callers pass true via include_role vars only for that invocation (avoid set_fact — it persists on the host).
 #############################################################
 
 - name: "NBU-STOP-SERVICES -> Verify file existence"
@@ -12,6 +14,7 @@
   loop:
     - "{{ os_path_nbu_install_default }}/netbackup/bin/bp.kill_all"
     - "{{ os_path_nbu_install_default }}/netbackup/bin/bpps"
+    - "{{ os_file_nbu_vxpbx_exchanged }}"
   register: netbackup_files_check_register
   loop_control:
     loop_var: file_item
@@ -21,14 +24,24 @@
 - name: "NBU-STOP-SERVICES -> Attempt to stop NetBackup processes"
   block:
     - name: "NBU-STOP-SERVICES -> Attempt to stop NetBackup processes"
-      ansible.builtin.shell: 
+      ansible.builtin.shell:
         cmd: "echo y | {{ os_path_nbu_install_default }}/netbackup/bin/bp.kill_all"
       register: bp_kill_result
       retries: 2
       delay: 5
       until: bp_kill_result.rc == 0
-      no_log: True
+      no_log: true
       failed_when: false
+
+    - name: "NBU-STOP-SERVICES -> Stop vxpbx_exchanged (PBX)"
+      ansible.builtin.shell: ( {{ os_file_nbu_vxpbx_exchanged }} stop )
+      register: nbu_stop_services_vxpbx_stop_result_register
+      retries: 2
+      delay: 5
+      until: nbu_stop_services_vxpbx_stop_result_register.rc == 0
+      no_log: true
+      failed_when: false
+      when: netbackup_files_check_register.results[2].stat.exists and nbu_run_vxpbx_exchanged_stop_script
 
     - name: "NBU-STOP-SERVICES -> Get the list of NetBackup processes still running"
       ansible.builtin.shell:
@@ -44,5 +57,5 @@
       when: should_force_process_termination | default(false)
       failed_when: false
   when:
-  - netbackup_files_check_register.results[0].stat.exists
-  - netbackup_files_check_register.results[1].stat.exists
+    - netbackup_files_check_register.results[0].stat.exists
+    - netbackup_files_check_register.results[1].stat.exists

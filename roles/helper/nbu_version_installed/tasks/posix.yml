@@ -1,4 +1,4 @@
-# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
+# $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
 
 # Verify whether the machine has the NetBackup software installed
 - name: "NBU-VERSION-CHECK -> Verify if NetBackup Software is currently installed"

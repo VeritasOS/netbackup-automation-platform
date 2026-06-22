@@ -1,0 +1,58 @@
+# $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
+
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Verify service user settings"
+  block:
+    # ── GUARD (media/client, install/upgrade only) ────────────────────────────────
+    # If the nbgetconfig CLI is present, NetBackup is already installed.
+    # Read SERVICE_USER from the running config and ensure it matches nbu_services_user.
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Stat nbgetconfig CLI"
+      ansible.builtin.stat:
+        path: "{{ os_file_nbu_nbgetconfig }}"
+      register: nbgetconfig_stat_register
+
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Read SERVICE_USER via nbgetconfig"
+      ansible.builtin.shell: "{{ nbgetconfig_value_cmd | replace('NBGETCONFIG_KEY', 'SERVICE_USER') }}"
+      register: nbgetconfig_service_user_register
+      changed_when: false
+      failed_when: false
+      when:
+        - nbgetconfig_stat_register.stat.exists
+
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Evaluate if there is a mismatch in SERVICE_USER input"
+      ansible.builtin.assert:
+        that:
+          - >-
+            (not nbgetconfig_stat_register.stat.exists)
+            or ((nbgetconfig_service_user_register.stdout | default('') | trim | length) == 0)
+            or ((nbgetconfig_service_user_register.stdout | default('') | trim | lower) == 'root')
+            or ((nbu_services_user | trim) == (nbgetconfig_service_user_register.stdout | default('') | trim))
+        fail_msg:
+          - "Mismatch detected: The service user configured in BPCONF ('{{ nbgetconfig_service_user_register.stdout | trim }}') differs from the one defined in your inventory ('{{ nbu_services_user | trim }}')."
+          - "Modifying the service user is not supported during installation or upgrade."
+          - "Please use the playbook_configure_service_user_posix.yml for this operation."
+
+  when:
+    - nbu_role in ['media', 'client']
+    - nbu_playbook_type != 'service_user'
+
+
+# ── COMMON (all roles — primary, media, client) ───────────────────────────────
+# getent covers all NSS sources (local + LDAP/SSSD), so rc=0 means the user
+# exists somewhere — do nothing. rc!=0 means absent everywhere — create locally.
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Add NetBackup services group"
+  ansible.builtin.group:
+    name: '{{ nbu_services_group }}'
+    state: present
+
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Check if NetBackup services user exists"
+  ansible.builtin.shell: getent passwd {{ nbu_services_user }}
+  register: nb_svc_user_getent_register
+  changed_when: false
+  failed_when: false
+
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Add NetBackup services user"
+  ansible.builtin.user:
+    name: '{{ nbu_services_user }}'
+    comment: NetBackup Service Account
+    group: '{{ nbu_services_group }}'
+  when: nb_svc_user_getent_register.rc != 0

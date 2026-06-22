@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
+# $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
 
 # create_eeb_pkg_marker.sh
 # Script to create a native Solaris PKG marker package for NetBackup EEB

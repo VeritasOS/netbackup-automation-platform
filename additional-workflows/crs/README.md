@@ -12,6 +12,7 @@ Prepare Automation Hosts/Ansible client.
 2. Add NBU primay server to ansible config file.
 3. For configure CRS, if KMS was enbaled, please get the kms file and kms variables.
 4. If registering NBU primay server to Alta setup is needed, please add your server on Alta GUI and download registration file.
+5. Download the root certificate of the NetBackup primary along with the broker certificate. Copy the certificates in a single file in the same order into /etc/pki/ca-trust/source/anchors/ folder.
 
 Update variables and encrypt it using ansible-vault if needed.
 --------------------------------------------------------------

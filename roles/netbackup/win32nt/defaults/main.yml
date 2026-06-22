@@ -1,4 +1,4 @@
-# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
+# $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
 
 # OS Path
 nbu_tmp_dir: C:\Windows\Temp
@@ -9,6 +9,12 @@ nbu_client_product_name: "NetBackup Client"
 nbu_media_product_name: "NetBackup Media Server"
 nbu_primary_product_name: "NetBackup Primary Server"
 nbu_path_nbcertcmd: "{{ os_path_nbu_install }}\\NetBackup\\bin\\nbcertcmd.exe"
+nbu_bin_path: "{{ os_path_nbu_install }}\\NetBackup\\bin"
+# Post-install nbserviceusercmd (Veritas KB 100053035 / NBU-260522); same relative layout as Linux goodies path.
+os_file_nbu_nbserviceusercmd: "{{ os_path_nbu_install }}\\NetBackup\\bin\\goodies\\nbserviceusercmd.exe"
+nbu_current_os_arch: "{{ ansible_os_family }}"
+registry_path_get_client_guid: "{{ 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Cohesity NetBackup Client' if nbu_version is version('11.1', '>=') else 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Veritas NetBackup Client' }}"
+registry_path_get_media_guid: "{{ 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Cohesity NetBackup' if nbu_version is version('11.1', '>=') else 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Veritas NetBackup' }}"
 
 # Disk Space variables
 nbu_path_install_space_validation:
@@ -18,31 +24,36 @@ nbu_path_install_space_validation:
 # Extra parameters to setup.exe w.r.t VCREDIST install preference for nbu_version>=10.4.0.0
 setup_vcredist_params_default: "/STOP_NB_BEFORE_VCREDIST:'YES' /VCREDIST_ATTEMPT_PREFERENCE:'YES' /VCREDIST_RESTART_PREFERENCE:'PROCEED'"
 
+# Windows install commands
+win_client_install_cmd: "{{ ('setup.exe /CLIENT -s /REALLYLOCAL /RESPFILE:' + \"'silent_response.resp'\") if nbu_version is version_compare('10.4.0.0', '<') else ('setup.exe /CLIENT -s ' + setup_vcredist_params_default + ' /REALLYLOCAL /RESPFILE:' + \"'silent_response.resp'\") }}"
+win_server_install_cmd: "{{ ('setup.exe /SERVER -s /REALLYLOCAL /RESPFILE:' + \"'silent_response.resp'\") if nbu_version is version_compare('10.4.0.0', '<') else ('setup.exe /SERVER -s ' + setup_vcredist_params_default + ' /REALLYLOCAL /RESPFILE:' + \"'silent_response.resp'\") }}"
+
 # Windows DVD image name for each NetBackup release.
 nbu_pkgs_ordered_list:
-  client:
-    11.1.0.2: 'NetBackup_11.1.0.2_Win'
-    11.1.0.0: 'NetBackup_11.1_Win'
-    11.0.0.1: 'NetBackup_11.0.0.1_Win'
-    11.0.0.0: 'NetBackup_11.0_Win'
-    10.5.0.1: 'NetBackup_10.5.0.1_Win'
-    10.5.0.0: 'NetBackup_10.5_Win'
-    10.4.0.1: 'NetBackup_10.4.0.1_Win'
-    10.4.0.0: 'NetBackup_10.4_Win'
-    10.3.0.1: 'NetBackup_10.3.0.1_Win'
-    10.3.0.0: 'NetBackup_10.3_Win'
-    10.2.0.1: 'NetBackup_10.2.0.1_Win'
-    10.2.0.0: 'NetBackup_10.2_Win'
-    10.1.1.0: 'NetBackup_10.1.1_Win'
-    10.1.0.0: 'NetBackup_10.1_Win'
-    10.0.0.1: 'NetBackup_10.0.0.1_Win'
-    10.0.0.0: 'NetBackup_10.0_Win'
-    9.1.0.1: 'NetBackup_9.1.0.1_Win'
-    9.1.0.0: 'NetBackup_9.1_Win'
-    9.0.0.0: 'NetBackup_9.0_Win'
-    8.3.0.2: 'NetBackup_8.3.0.2_Win'
-    8.3.0.1: 'NetBackup_8.3.0.1_Win'
-    8.3.0.0: 'NetBackup_8.3_Win'
+  11.2.0.0: 'NetBackup_11.2_Win'
+  11.1.0.2: 'NetBackup_11.1.0.2_Win'
+  11.1.0.0: 'NetBackup_11.1_Win'
+  11.0.0.1: 'NetBackup_11.0.0.1_Win'
+  11.0.0.0: 'NetBackup_11.0_Win'
+  10.5.0.1: 'NetBackup_10.5.0.1_Win'
+  10.5.0.0: 'NetBackup_10.5_Win'
+  10.4.0.1: 'NetBackup_10.4.0.1_Win'
+  10.4.0.0: 'NetBackup_10.4_Win'
+  10.3.0.1: 'NetBackup_10.3.0.1_Win'
+  10.3.0.0: 'NetBackup_10.3_Win'
+  10.2.0.1: 'NetBackup_10.2.0.1_Win'
+  10.2.0.0: 'NetBackup_10.2_Win'
+  10.1.1.0: 'NetBackup_10.1.1_Win'
+  10.1.0.0: 'NetBackup_10.1_Win'
+  10.0.0.1: 'NetBackup_10.0.0.1_Win'
+  10.0.0.0: 'NetBackup_10.0_Win'
+  9.1.0.1: 'NetBackup_9.1.0.1_Win'
+  9.1.0.0: 'NetBackup_9.1_Win'
+  9.0.0.0: 'NetBackup_9.0_Win'
+  8.3.0.2: 'NetBackup_8.3.0.2_Win'
+  8.3.0.1: 'NetBackup_8.3.0.1_Win'
+  8.3.0.0: 'NetBackup_8.3_Win'
+
 
 os_version_supported_minimum: 6.2
 
@@ -75,6 +86,10 @@ ignore_primary_connectivity_failures: false                     # If using a mas
 skip_primary_version_compatibility_check: false                 # Skip Primary server version compatibility check
 # Set this to true if packages are cached locally independently or by using staging playbook to avoid downloading the pakcages at install-time.
 install_pkgs_from_local_cache: false
+include_service_user_configuration: false                               # Post-install nbserviceusercmd service user (Veritas KB 100053035 / NBU-260522)
+# NetBackup service stop/start commands based on role
+nbu_stop_cmd: "{{ 'bpdown.exe -S' }}"
+nbu_stop_exe: "{{ 'bpdown.exe' }}"
 
 #List of directories to be removed
 nbu_directory_list_to_be_removed:

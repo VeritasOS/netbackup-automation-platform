@@ -1,0 +1,41 @@
+# $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
+
+# NetBackup EEB - LINUX (Operations)
+- name: NETBACKUP -> EEB Operations ("Linux")
+  gather_facts: true
+  become: yes
+  hosts: all
+  environment:
+    NB_TMPDIR: "/usr/openv/tmp"
+    PAR_GLOBAL_TMPDIR: "/usr/openv/tmp"
+  pre_tasks:
+    - name: Retrieving host distribution
+      setup:
+        gather_subset:
+          - "!all"
+          - "!min"
+          - "distribution"
+    
+    - name: "NBU-EEB-OPERATIONS -> Load configurable variables"
+      ansible.builtin.include_vars: "vars/linux.yml"
+      tags: ["always"]
+      no_log: true
+
+    - name: "NBU-EEB-OPERATIONS -> Input validation for netbackup role"
+      ansible.builtin.fail:
+        msg: "'nbu_role' is required to proceed with EEB operations. Supported values: ['primary','media','client']. Usage: -e 'nbu_role=client'"
+      when:
+        - nbu_role == ""
+
+  roles:
+   - role: 'netbackup'                                   # Load netbackup common defaults
+   - role: 'netbackup/posix'                             # Load netbackup default vars
+   - role: 'generic/is_nbu_version_supported'
+   - role: 'generic/is_nbu_installed'                    # Verify NBU is installed
+   - role: 'helper/detect_partial_install'
+   - role: 'generic/nbu_compatibility'                   # Verify target role and version match playbook
+   - role: 'netbackup/posix/nbu-eeb-mgmt/v2.0'           # Repo update, install and uninstall EEBs
+  vars:
+    nbu_role: ""                                         # Supported values ['primary','media','client']
+    nbu_playbook_type: "eeb"
+# EOF

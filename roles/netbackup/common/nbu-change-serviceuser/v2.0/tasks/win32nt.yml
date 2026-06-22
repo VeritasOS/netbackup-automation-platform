@@ -1,0 +1,78 @@
+# $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
+#
+# Veritas KB 100053035 "Changing service account" (Windows):
+# 1) Stop NetBackup: bpdown.exe -v -f (from <install_path>\NetBackup\bin)
+# 2) nbserviceusercmd.exe -changeUser <account> — only for LocalService / LocalSystem (see defaults nbu_windows_nbserviceusercmd_allowed_service_users)
+# 3) Start NetBackup: bpup.exe -v -f
+#
+# Preconditions: netbackup/win32nt defaults (os_path_nbu_install, nbu_stop_exe, os_file_nbu_nbserviceusercmd),
+# nbu_services_user; base install completed.
+
+- name: "NBU-SERVICE-USER -> Check nbserviceusercmd presence"
+  win_stat:
+    path: "{{ os_file_nbu_nbserviceusercmd }}"
+  register: nbu_nbserviceusercmd_stat_register
+  changed_when: false
+  failed_when: not nbu_nbserviceusercmd_stat_register.stat.exists
+
+- name: "NBU-SERVICE-USER -> Apply nbserviceusercmd -changeUser sequence (Windows)"
+  block: # Supports always tasks
+    - name: "NBU-SERVICE-USER -> Verify NetBackup stop and start executables exist"
+      win_stat:
+        path: "{{ netbackup_file }}"
+      register: nbu_svc_user_win_exe_check_register
+      loop:
+        - '{{ os_path_nbu_install }}\NetBackup\bin\{{ nbu_stop_exe }}'
+        - '{{ os_path_nbu_install }}\NetBackup\bin\bpup.exe'
+      loop_control:
+        loop_var: netbackup_file
+
+    - name: "NBU-SERVICE-USER -> Attempting to stop NetBackup services"
+      win_command: "{{ nbu_stop_cmd }}"
+      args:
+        chdir: "{{ os_path_nbu_install }}\\NetBackup\\bin"
+      failed_when: false
+      changed_when: false
+      register: nbu_svc_user_win_nbstop_register
+      until: nbu_svc_user_win_nbstop_register.rc | int in [0, 5]
+      delay: 5
+      retries: 3
+      when:
+        - nbu_svc_user_win_exe_check_register.results[0].stat.exists
+
+    - name: "NBU-SERVICE-USER -> Stop Veritas Private Branch Exchange (VRTSpbx)"
+      ansible.windows.win_service:
+        name: VRTSpbx
+        state: stopped
+
+    - name: "NBU-SERVICE-USER -> Run nbserviceusercmd -changeUser (Windows) and answer prompt"
+      win_command:
+        argv:
+          - "{{ os_file_nbu_nbserviceusercmd }}"
+          - "-changeUser"
+          - "{{ nbu_services_user | trim }}"
+      args:
+        stdin: "y\r\n"
+      register: nbu_svc_user_win_changeuser_register
+      failed_when: nbu_svc_user_win_changeuser_register.rc not in [0, 39]
+
+    - name: "NBU-SERVICE-USER -> Ansible::Log.info"
+
+      ansible.builtin.debug:
+        msg: "NetBackup is already configured to run under '{{ nbu_bpconf_service_user }}' service account. Skipping ...."
+      when: nbu_svc_user_win_changeuser_register.rc == 39
+  always:
+    - name: "NBU-SERVICE-USER -> Start Veritas Private Branch Exchange (VRTSpbx)"
+      ansible.windows.win_service:
+        name: VRTSpbx
+        state: started
+
+    - name: "NBU-SERVICE-USER -> Attempting to start NetBackup services"
+      win_command: "bpup.exe -f -v"
+      args:
+        chdir: "{{ os_path_nbu_install }}\\NetBackup\\bin"
+      changed_when: false
+      when:
+        - nbu_svc_user_win_exe_check_register.results[1].stat.exists
+
+#EOF

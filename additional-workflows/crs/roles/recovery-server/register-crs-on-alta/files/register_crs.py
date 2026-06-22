@@ -1,15 +1,27 @@
 #!/usr/bin/python3
-# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
+# $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
 
 import os
 import requests
 import json
 import sys
 import logging
-from requests.packages.urllib3.exceptions import InsecureRequestWarning
+from urllib.parse import urlparse
+import socket
 
-# Suppress only the single InsecureRequestWarning from urllib3 needed
-requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+# Certificate verification configuration
+# Can be set via environment variable: NBU_CA_BUNDLE=/path/to/ca-bundle.crt
+# If not set, defaults to True (uses system certificate store)
+CA_BUNDLE = os.environ.get('NBU_CA_BUNDLE', True)
+if CA_BUNDLE == 'False' or CA_BUNDLE == 'false':
+    CA_BUNDLE = False
+
+def get_verify_for_url(url):
+    parsed = urlparse(url)
+    local_names = {"localhost", "127.0.0.1", socket.gethostname()}
+    if parsed.hostname in local_names:
+        return False
+    return CA_BUNDLE
 
 logger = None
 
@@ -42,7 +54,8 @@ def login_to_netbackup(credentials):
         "userName": credentials['username'],
         "password": credentials['password']
     }
-    response = requests.post(url, headers=headers, data=json.dumps(payload), verify=False)
+    verify = get_verify_for_url(url)
+    response = requests.post(url, headers=headers, data=json.dumps(payload), verify=verify)
 
     if response.status_code == 201:
         logger.info("Login successful")
@@ -65,7 +78,8 @@ def upload_json(credentials, token, file_path):
         "proxyId": (None, "")
     }
 
-    response = requests.post(url, headers=headers, files=files, verify=False)
+    verify = get_verify_for_url(url)
+    response = requests.post(url, headers=headers, files=files, verify=verify)
     logger.info(f"Register api response: {response.text}")
 
     if response.status_code == 201:

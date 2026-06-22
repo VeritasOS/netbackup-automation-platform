@@ -1,4 +1,4 @@
-# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
+# $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
 
 # For certificate and upgrade playbook, if software is not installed, we don't want to proceed further.
 - name: "NBU-VERSION-CHECK -> Check whether NetBackup is installed on target host."
@@ -43,6 +43,6 @@
         - nbu_current_installed_version is defined
         - nbu_current_installed_version is version_compare(nbu_version,'>')
     when:
-      - nbu_playbook_type == "upgrade"
+      - nbu_playbook_type == "upgrade" or nbu_playbook_type == "eeb"
   
   

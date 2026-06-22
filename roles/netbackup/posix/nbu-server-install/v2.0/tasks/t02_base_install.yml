@@ -1,4 +1,4 @@
-# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
+# $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
 
 #########################################################
 #### nbu-server-install -> tasks -> t02_base_install ####
@@ -180,6 +180,30 @@
       register: download_status_register
   when:
   - nbu_version is version_compare('10.4.0.0' ,'>=')
+
+- name: "BLOCK: Download nbinfra.tar.gz package to {{ os_path_openv_tmp }}"
+  block:
+  - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Download nbinfra.tar.gz package to {{ os_path_openv_tmp }}"
+    get_url:
+      url: "{{ nbu_artifactory_repo_base_url }}{{ artifactory_repo }}{{ nbu_path_repo_base_pkg }}/nbinfra.tar.gz"
+      dest: "{{ os_path_openv_tmp }}/nbinfra.tar.gz"
+    register: nbinfra_download_register
+    failed_when: false
+
+  - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Ansible::Log.warn"
+    ansible.builtin.debug:
+      msg: >-
+        WARNING: Failed to download the VxUpdate infrastructure component nbinfra.tar.gz.
+        Without this component, the EEB uninstall workflow in VxUpdate will not function
+        correctly when targeting client or media server hosts running versions prior to
+        NetBackup 11.2. To resolve this, manually upload the infrastructure component
+        to the primary server.
+    when:
+      - nbinfra_download_register.failed is defined
+      - nbinfra_download_register.failed
+  when: 
+    - nbu_role == "primary"
+    - nbu_version is version_compare('11.2.0.0' ,'>=')
 
 - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Create partial install touch file and insert nbu_role."
   ansible.builtin.lineinfile:

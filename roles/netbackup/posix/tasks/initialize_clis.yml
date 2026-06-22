@@ -1,4 +1,4 @@
-# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
+# $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
 
 - name: "NBU-INITIALIZE-{{ nbu_playbook_type|upper }} -> Initializing platform specifics settings"
   ansible.builtin.set_fact:
@@ -12,6 +12,7 @@
     delete_nbu_links_cmd: "undefined"
     delete_nbu_files_cmd: "undefined"
     delete_nbu_directories_cmd: "undefined"
+    nbgetconfig_value_cmd: '{{ os_file_nbu_nbgetconfig }} NBGETCONFIG_KEY | awk ''{ print $3 }'''
     eeb_netbackup_version_cmd: "EEB_PATH/EEB_NAME -eeb_ver | awk -F'NetBackup_' '/NetBackup_/ {print $2}' | awk -F. '{printf \"%d.%d.%d.%d\\n\", $1, ($2?$2:0), ($3?$3:0), ($4?$4:0)}'"
     nbcheck_package_name: "VRTSnbpck"
 
@@ -99,6 +100,29 @@
             {{ directio_pkg_check.rc == 0 }}
           {%- endif -%}
   when: ansible_os_family == 'RedHat'
+
+- name: "NBU-INITIALIZE-{{ nbu_playbook_type|upper }} -> Initialize Java/JRE installation decision"
+  block:
+    - name: "NBU-INITIALIZE-{{ nbu_playbook_type|upper }} -> Check VRTSnbjava PKG status"
+      ansible.builtin.shell: "{{ pkg_status_check_cmd | replace('ITEM_PACKAGE_NAME', 'VRTSnbjava') }}"
+      register: java_pkg_check
+      failed_when: false
+      changed_when: false
+      when: include_java_jre_install | upper == 'MATCH'
+
+    - name: "NBU-INITIALIZE-{{ nbu_playbook_type|upper }} -> Initialize nb_include_java_jre_install"
+      ansible.builtin.set_fact:
+        nb_include_java_jre_install: >-
+          {%- if include_java_jre_install | upper == 'INCLUDE' -%}
+            true
+          {%- elif include_java_jre_install | upper == 'EXCLUDE' -%}
+            false
+          {%- elif include_java_jre_install | upper == 'MATCH' -%}
+            {{ java_pkg_check.rc == 0 }}
+          {%- endif -%}
+  when:
+    - ansible_os_family in ['RedHat', 'Suse']
+    - ansible_architecture == 'x86_64'
 
 - name: "NBU-INITIALIZE-{{ nbu_playbook_type|upper }} -> Initialize VRTSpddeu client installation decision"
   block:

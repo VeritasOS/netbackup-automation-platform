@@ -1,0 +1,19 @@
+# $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
+
+# Prerequisite: NetBackup must be installed and version must be readable.
+# Run after roles netbackup and either netbackup/posix or netbackup/win32nt so defaults
+# (nbap_ansible_system, paths, registry) are loaded.
+
+- name: "IS-NBU-INSTALLED -> Detect installed NetBackup version"
+  ansible.builtin.include_role:
+    name: helper/nbu_version_installed
+
+- name: "IS-NBU-INSTALLED -> Fail when NetBackup is not installed"
+  ansible.builtin.fail:
+    msg: >-
+      NetBackup does not appear to be installed on this host, or the installed version could not be read.
+      On Linux, expected version metadata at {{ os_path_nbu_install }}/netbackup/bin/version.
+      On Windows, expected NetBackup VERSION in the registry (HKLM\Software\Veritas\NetBackup\CurrentVersion).
+  when: (nbu_current_installed_version | default('', true) | string | trim | length) == 0
+
+# EOF

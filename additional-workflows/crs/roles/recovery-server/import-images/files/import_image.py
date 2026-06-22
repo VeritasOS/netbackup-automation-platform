@@ -1,19 +1,30 @@
 #!/usr/bin/python3
-# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
+# $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
 
 import os
 import sys
 import requests
 import json
 import urllib.parse
-from requests.packages.urllib3.exceptions import InsecureRequestWarning
 import time
 from datetime import datetime, timedelta
 import logging
+from urllib.parse import urlparse
+import socket
 
-# Suppress only the single InsecureRequestWarning from urllib3 needed
-requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+# Certificate verification configuration
+# Can be set via environment variable: NBU_CA_BUNDLE=/path/to/ca-bundle.crt
+# If not set, defaults to True (uses system certificate store)
+CA_BUNDLE = os.environ.get('NBU_CA_BUNDLE', True)
+if CA_BUNDLE == 'False' or CA_BUNDLE == 'false':
+    CA_BUNDLE = False
 
+def get_verify_for_url(url):
+    parsed = urlparse(url)
+    local_names = {"localhost", "127.0.0.1", socket.gethostname()}
+    if parsed.hostname in local_names:
+        return False
+    return CA_BUNDLE
 
 logger = None
 def set_logger():
@@ -31,7 +42,6 @@ def set_logger():
     console_handler.setFormatter(log_formatter_console)
     logger.addHandler(console_handler)
 
-
 def load_credentials(file_path):
     with open(file_path, 'r') as file:
         return json.load(file)
@@ -45,7 +55,8 @@ def login_to_netbackup(credentials):
         "userName": credentials['username'],
         "password": credentials['password']
     }
-    response = requests.post(url, headers=headers, data=json.dumps(payload), verify=False)
+    verify = get_verify_for_url(url)
+    response = requests.post(url, headers=headers, data=json.dumps(payload), verify=verify)
     
     if response.status_code == 201:
         logger.info("Login successful")
@@ -61,7 +72,8 @@ def get_disk_pools(server, token):
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json"
     }
-    response = requests.get(url, headers=headers, verify=False)
+    verify = get_verify_for_url(url)
+    response = requests.get(url, headers=headers, verify=verify)
     
     if response.status_code == 200:
         logger.info("Disk pools retrieved successfully")
@@ -161,7 +173,8 @@ def Run_get_shared_images_api(server, token, start_time=None, end_time=None, cli
         "accept": "application/vnd.netbackup+json;version=12.0"
     }
 
-    response = requests.get(url, headers=headers, params=params, verify=False)
+    verify = get_verify_for_url(url)
+    response = requests.get(url, headers=headers, params=params, verify=verify)
     if response.status_code == 200:
         image = response.json()
         if image['data']:
@@ -191,8 +204,9 @@ def import_image(credentials, token, image, lsuname):
         }
     }
     
+    verify = get_verify_for_url(url)
     while True:
-        response = requests.post(url, headers=headers, data=json.dumps(payload), verify=False)
+        response = requests.post(url, headers=headers, data=json.dumps(payload), verify=verify)
         #logger.info(f"Import Request URL: {response.url}")
         #logger.info(f"Import Request Payload: {json.dumps(payload, indent=4)}")
 

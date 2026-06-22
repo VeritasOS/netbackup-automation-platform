@@ -1,4 +1,4 @@
-# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
+# $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
 
 #################################################################################
 #### NBU-NBCA-CERTIFICATE-DEPLOYMENT -> tasks -> t01_win32nt_nbca_certificate.yml ####
@@ -220,15 +220,31 @@
     - ( nbu_is_master_valid_register.rc != 0 ) 
 
 - block:
-    - name: "NBU-NBCA-CERTIFICATE-DEPLOYMENT -> Copy Primary Server received from main.yml to registry on target host"
-      win_regedit:
-        path: "{{ nbu_registry_path }}\\CurrentVersion\\Config" 
+    - name: "NBU-NBCA-CERTIFICATE-DEPLOYMENT -> Get current Server registry value"
+      win_reg_stat:
+        path: "{{ nbu_registry_path }}\\CurrentVersion\\Config"
         name: Server
-        data: '{{ nbu_primary_server_ans }}'
+      register: nbu_server_registry_list
+
+    - name: "NBU-NBCA-CERTIFICATE-DEPLOYMENT -> Copy Primary Server to registry on target host (preserve other entries)"
+      win_regedit:
+        path: "{{ nbu_registry_path }}\\CurrentVersion\\Config"
+        name: Server
+        data: "{{ [nbu_primary_server_ans] + nbu_server_registry_list.value[1:] }}"
         type: multistring
+      when:
+        - nbu_server_registry_list.exists
+        - nbu_server_registry_list.value is defined
+
+    - name: "NBU-NBCA-CERTIFICATE-DEPLOYMENT -> Update EMMSERVER registry to Primary Server"
+      win_regedit:
+        path: "{{ nbu_registry_path }}\\CurrentVersion\\Config"
+        name: EMMSERVER
+        data: '{{ nbu_primary_server_ans }}'
+        type: string
 
     - name: Ansible::Log.info
       debug:
         msg: "Primary Server has established connectivity with target host and is ready for backup/restore operation."
-  when: 
+  when:
     - ( nbu_is_master_valid_register.rc == 0 )

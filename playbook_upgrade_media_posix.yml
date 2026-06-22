@@ -1,0 +1,42 @@
+# $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
+
+# NetBackup Server - Upgrade - Media Server
+- name: NETBACKUP -> MEDIA SERVER UPGRADE
+  gather_facts: true
+  become: yes
+  hosts: all
+  environment:
+    NB_TMPDIR: "/usr/openv/tmp"
+    PAR_GLOBAL_TMPDIR: "/usr/openv/tmp"
+  pre_tasks:
+    - name: Retrieving host distribution
+      setup:
+        gather_subset:
+          - "!all"
+          - "!min"
+          - "distribution"
+
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Load configurable variables"
+      ansible.builtin.include_vars: "vars/linux.yml"
+      tags: ["always"]
+      no_log: True
+
+  roles:
+   - role: 'netbackup'                               # Load netbackup common defaults
+   - role: 'netbackup/posix'                          # Load netbackup default vars
+   - role: 'generic/is_nbu_version_supported'
+   - role: 'generic/os_compatibility'
+   - role: 'netbackup/common/evaluate-service-user/v2.0'           # Evaluate/ensure NetBackup service OS user/group before media upgrade
+   - role: 'helper/detect_partial_install'
+   - role: 'generic/nbu_compatibility'
+   - role: 'generic/nbu_verification'                 # Verifies certificate specific checks and report
+   - role: 'netbackup/posix/nbu-server-install/v2.0'
+   - role: 'netbackup/common/nbu-change-serviceuser/v2.0'
+   - role: 'generic/nbu_verification'                 # Verifies certificate specific checks and report
+   - role: 'netbackup/posix/nbu-eeb-mgmt/v2.0'
+  vars:
+    # Role Control
+    nbu_role: "media"
+    nbu_playbook_type: "upgrade"
+    
+# EOF

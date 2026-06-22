@@ -1,8 +1,8 @@
-# $Copyright: Copyright (c) 2025 Cohesity, Inc. All rights reserved $
+# $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
  
 # These vars are mostly customer-centric and would get updated.
 # Desired NetBackup Client Version to use in the format [x.x.x.x]
-# Supported versions: ['11.1.0.2', '11.1.0.0', '11.0.0.1', '11.0.0.0', '10.5.0.1', '10.5.0.0' ]
+# Supported versions: ['11.2.0.0', '11.1.0.2', '11.1.0.0', '11.0.0.1', '11.0.0.0', '10.5.0.1', '10.5.0.0' ]
 nbu_version: x.x.x.x
 
 Comment: >
@@ -43,7 +43,7 @@ nbu_webservices_group: nbwebgrp
 nbu_webservices_user: nbwebsvc
 # NetBackup - Services Account
 nbu_services_group: ''                        # This is the group name for NetBackup services user
-nbu_services_user: ''                        # This is the NetBackup services user name
+nbu_services_user: ''                         # This is the NetBackup services user name. It should not be domain\username format.
 nbu_database_user: "{{ nbu_services_user }}"
 postgresql_pooler_odbc_port: ''
 
@@ -57,9 +57,13 @@ nbu_directory_list_to_be_removed:                         # Custom list of direc
 - "{{ os_path_nbu_install }}"
 - "{{ os_path_nbu_install_default }}"
 
+
 # FTO (Feature Toggle Options)                            # Valid options given can be true|false|yes|no|y|n|1|0
 include_eeb_rpm_marker: false                             # If set to true, playbook will create/delete extra RPM marker. This option is not applicable for Debian
-nb_include_java_jre_install: false                        # For include java jre packages
+include_java_jre_install: 'MATCH'                         # Java/Jre package installation behavior: 
+                                                           #   INCLUDE - Include the Java/Jre packages
+                                                           #   EXCLUDE - Exclude the Java/Jre packages
+                                                           #   MATCH   - Match the existing configuration on the host
 include_directio_install: 'MATCH'                         # DirectIO package installation behavior:
                                                            #   INCLUDE - Include the NetBackup DirectIO
                                                            #   EXCLUDE - Exclude the NetBackup DirectIO
@@ -71,6 +75,7 @@ include_vrtspddeu_client_install: 'MATCH'                  # VRTSpddeu package i
 nbu_cert_management: true                                # For include cert mangement playbook
 do_perform_nbcheck_preinstall: true                       # If set to true nbcheck gets called before NBU install/upgrade, else skip
 should_force_process_termination: false                   # After 3 attempts of graceful shutdown, forcefully terminate the running processes
+include_service_user_configuration: false                               # FTO: post-install nbserviceusercmd service user (Veritas KB 100053035 / NBU-260522)
 
 # primary specific options
 do_install_ita_dc: false                                  # If set to true, will attempt to install ITA Data Collector along with Primary Server

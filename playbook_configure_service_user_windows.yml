@@ -1,0 +1,36 @@
+# $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
+
+# NetBackup – Configure service user (Windows)
+# Windows inventory settings. Loads vars/win32nt.yml and
+# role netbackup/win32nt. Requires ansible.windows on the control node / AWX EE.
+
+- name: NETBACKUP -> CONFIGURE SERVICE USER ("Windows")
+  gather_facts: true
+  hosts: all
+  pre_tasks:
+    - name: Retrieving host distribution
+      ansible.builtin.setup:
+        gather_subset:
+          - "!all"
+          - "!min"
+          - "distribution"
+          - "env"
+
+    - name: "CONFIGURE-SERVICE-USER -> Load configurable variables"
+      ansible.builtin.include_vars: "vars/win32nt.yml"
+      tags: ["always"]
+      no_log: true
+
+  roles:
+    - role: netbackup
+    - role: netbackup/win32nt
+    - role: generic/is_nbu_version_supported
+    - role: helper/nbu_role_status
+    - role: netbackup/common/evaluate-service-user/v2.0
+    - role: generic/is_nbu_installed
+    - role: netbackup/common/nbu-change-serviceuser/v2.0
+
+  vars:
+    nbu_playbook_type: "service_user"
+
+# EOF
