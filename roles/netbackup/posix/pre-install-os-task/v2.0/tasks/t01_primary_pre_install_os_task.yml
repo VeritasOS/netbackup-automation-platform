@@ -49,17 +49,23 @@
   when:
     - user_check_results.results[0].rc != 0
 
-- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Determine if user '{{ nbu_services_user }}' belongs to the '{{ nbu_webservices_group }}' secondary group."
-  ansible.builtin.shell: ( id -Gn {{ nbu_services_user }} | grep -q {{ nbu_webservices_group }} )
-  register: secondarygroup_check_result
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Verify '{{ nbu_webservices_group }}' is NOT the primary group of '{{ nbu_services_user }}'"
+  ansible.builtin.shell: id -gn {{ nbu_services_user }}
+  register: primary_group_check_register
   failed_when: false
+
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Fail if '{{ nbu_webservices_group }}' is the primary group"
+  ansible.builtin.fail:
+    msg: "The group '{{ nbu_webservices_group }}' is currently the primary group for '{{ nbu_services_user }}'. nbcheck requires it to be a secondary group. Please change the user's primary group on the OS."
+  when: 
+    - primary_group_check_register.rc == 0
+    - primary_group_check_register.stdout | default('') == nbu_webservices_group
 
 - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Add NetBackup Web Services group membership to NetBackup service account"
   ansible.builtin.user:
     name: '{{ nbu_services_user }}'
     groups: '{{ nbu_webservices_group }}'
     append: true
-  when: secondarygroup_check_result.rc != 0
 
 # OS - Configure netbackup database user account
 - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Create new  database user {{ nbu_database_user }}for NetBackup Database User Account"

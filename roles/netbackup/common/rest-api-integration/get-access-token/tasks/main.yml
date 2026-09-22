@@ -20,8 +20,9 @@
               password: "{{ nbu_rbac_user_password }}"
             body_format: json
             status_code: 201, 401
-            validate_certs: no
-          no_log: true
+            validate_certs: "{{ nbu_api_validate_certs }}"
+            ca_path: "{{ nbu_api_ca_path }}"
+          no_log: "{{ nbu_api_no_log | bool }}"
           failed_when: false
           register: task_login_result
           retries: 1
@@ -39,7 +40,7 @@
           ansible.builtin.set_fact:
             user_access_token: "{{ task_login_result.json.token }}"
             userLoggedIn: true
-          no_log: true
+          no_log: "{{ nbu_api_no_log | bool }}"
 
       when:
         - action == "login"
@@ -51,10 +52,12 @@
             url: "{{ nbu_api_base_url + 'logout' }}"
             method: POST
             status_code: 200
-            validate_certs: no
+            validate_certs: "{{ nbu_api_validate_certs }}"
+            ca_path: "{{ nbu_api_ca_path }}"
             headers:
               X-NetBackup-Audit-Reason: 'Logging out transient ansible session'
-              Authorization: "Bearer {{ user_access_token }}" 
+              Authorization: "{{ user_access_token }}"
+          no_log: "{{ nbu_api_no_log | bool }}"
           failed_when: false
           register: task_logout_result
           retries: 1

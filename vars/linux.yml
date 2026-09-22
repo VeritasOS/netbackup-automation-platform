@@ -2,7 +2,7 @@
  
 # These vars are mostly customer-centric and would get updated.
 # Desired NetBackup Client Version to use in the format [x.x.x.x]
-# Supported versions: ['11.2.0.0', '11.1.0.2', '11.1.0.0', '11.0.0.1', '11.0.0.0', '10.5.0.1', '10.5.0.0' ]
+# Supported versions: ['11.2.0.1', '11.2.0.0', '11.1.0.2', '11.1.0.0', '11.0.0.1', '11.0.0.0', '10.5.0.1', '10.5.0.0' ]
 nbu_version: x.x.x.x
 
 Comment: >
@@ -27,6 +27,16 @@ Comment: >
     primary:
         10.1.1.0:
          - "<eebinstall_name>"    
+
+# Software Repo - TLS certificate validation for package downloads
+nbu_repo_validate_certs: yes
+
+# NetBackup REST API - TLS certificate validation
+nbu_api_validate_certs: yes
+
+
+# NetBackup REST API - suppress sensitive output in task logs (credentials, tokens, passphrases)
+nbu_api_no_log: true
 
 # NB Configuration variables
 

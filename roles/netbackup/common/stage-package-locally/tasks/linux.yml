@@ -12,7 +12,7 @@
     enabled: no
     gpgcheck: no
     state: present
-    sslverify: no
+    sslverify: "{{ nbu_repo_validate_certs }}"
   when:
     - ansible_os_family == 'RedHat'
 
@@ -25,7 +25,7 @@
     state: latest
     disablerepo: "*"
     enablerepo: netbackup
-    validate_certs: no
+    validate_certs: "{{ nbu_repo_validate_certs }}"
     download_only: true
   register: download_result
   with_items:

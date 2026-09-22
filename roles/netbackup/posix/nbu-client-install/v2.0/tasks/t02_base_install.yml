@@ -112,7 +112,7 @@
     name:
       - "VRTSnbpck"
     state: latest
-    validate_certs: no
+    validate_certs: "{{ nbu_repo_validate_certs }}"
     disablerepo: '*'
     enablerepo: netbackup
   when:
@@ -198,7 +198,7 @@
     state: latest
     disablerepo: "*"
     enablerepo: netbackup
-    validate_certs: no
+    validate_certs: "{{ nbu_repo_validate_certs }}"
     cacheonly: "{{ install_pkgs_from_local_cache }}"
   register: result
   with_items: "{{ nbu_pkgs_with_condition }}"

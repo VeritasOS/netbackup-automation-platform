@@ -26,7 +26,7 @@
         url: "{{ nbu_artifactory_repo_base_url }}{{ artifactory_repo }}{{ nbu_path_repo_base_pkg }}/.pkg_defaults"
         dest: "{{ os_path_openv_tmp }}/netbackup_sunos_packages/.pkg_defaults"
         mode: '0644'
-        validate_certs: no
+        validate_certs: "{{ nbu_repo_validate_certs }}"
 
     - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Download NetBackup {{ item.name }}{{ package_extension }} package"
       ansible.builtin.get_url:
@@ -34,7 +34,7 @@
         dest: "{{ os_path_openv_tmp }}/netbackup_sunos_packages/{{ item.name }}{{ package_extension }}"
         mode: '0644'
         force: true
-        validate_certs: no
+        validate_certs: "{{ nbu_repo_validate_certs }}"
 
     - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Extract {{ item.name }}{{ package_extension }} package"
       ansible.builtin.shell: ( gunzip -f "{{ item.name }}{{ package_extension }}" )

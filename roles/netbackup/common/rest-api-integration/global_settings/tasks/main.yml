@@ -14,7 +14,9 @@
     body: "{{ security_properties_params | to_json }}"
     body_format: json
     status_code: 200
-    validate_certs: no
+    validate_certs: "{{ nbu_api_validate_certs }}"
+    ca_path: "{{ nbu_api_ca_path }}"
+  no_log: "{{ nbu_api_no_log | bool }}"
   register: task_security_properties_result
   retries: 2
   delay: 2
@@ -30,7 +32,9 @@
     body: "{{ lookup('template', 'setPassphraseConstraintsRequest.j2') }}"
     body_format: json
     status_code: 204
-    validate_certs: no
+    validate_certs: "{{ nbu_api_validate_certs }}"
+    ca_path: "{{ nbu_api_ca_path }}"
+  no_log: "{{ nbu_api_no_log | bool }}"
   register: task_passphrase_constraints_result
   retries: 2
   delay: 2
@@ -48,7 +52,9 @@
       credValue: "{{ drpkgpassphrase }}"
     body_format: json
     status_code: 200
-    validate_certs: no
+    validate_certs: "{{ nbu_api_validate_certs }}"
+    ca_path: "{{ nbu_api_ca_path }}"
+  no_log: "{{ nbu_api_no_log | bool }}"
   register: task_security_credentials_result
   retries: 2
   delay: 2

@@ -49,7 +49,7 @@
     enabled: no
     gpgcheck: no
     state: present
-    sslverify: no
+    sslverify: "{{ nbu_repo_validate_certs }}"
   when:
     - ansible_os_family == 'RedHat'
 

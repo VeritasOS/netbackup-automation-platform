@@ -1,3 +1,5 @@
+# $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
+
 - name: "NBU-INITIALIZE-{{ nbu_playbook_type|upper }} -> Validate include_directio_install value"
   ansible.builtin.assert:
     that:
@@ -13,7 +15,7 @@
       - include_vrtspddeu_client_install | upper in ['INCLUDE', 'EXCLUDE', 'MATCH']
     fail_msg: "ERROR: include_vrtspddeu_client_install must be exactly one of: INCLUDE, EXCLUDE, MATCH (no spaces allowed). Current value: '{{ include_vrtspddeu_client_install }}'"
     success_msg: "PASS: include_vrtspddeu_client_install value '{{ include_vrtspddeu_client_install | upper }}' is valid"
-  when: 
+  when:
     - ansible_os_family in ['RedHat', 'Suse']
     - ansible_architecture == 'x86_64'
 
@@ -24,3 +26,6 @@
       - include_java_jre_install | upper in ['INCLUDE', 'EXCLUDE', 'MATCH']
     fail_msg: "ERROR: include_java_jre_install must be exactly one of: INCLUDE, EXCLUDE, MATCH (no spaces allowed). Current value: '{{ include_java_jre_install }}'"
     success_msg: "PASS: include_java_jre_install value '{{ include_java_jre_install | upper }}' is valid"
+
+
+#EOF

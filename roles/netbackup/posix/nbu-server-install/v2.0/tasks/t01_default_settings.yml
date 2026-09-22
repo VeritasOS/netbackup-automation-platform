@@ -67,7 +67,7 @@
     enabled: no
     gpgcheck: no
     state: present
-    sslverify: no
+    sslverify: "{{ nbu_repo_validate_certs }}"
   when:
   - ansible_os_family == 'RedHat'
 
@@ -100,6 +100,7 @@
         dest: "{{ os_path_openv_tmp }}/{{ item }}"
         mode: '744'
         force: yes
+        validate_certs: "{{ nbu_repo_validate_certs }}"
       with_items: "{{ nbu_license_file_name_list }}"
       failed_when: false
       register: slic_license_file_download_register

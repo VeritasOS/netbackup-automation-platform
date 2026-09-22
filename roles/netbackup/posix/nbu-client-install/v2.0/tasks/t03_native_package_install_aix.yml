@@ -28,7 +28,7 @@
         dest: "{{ os_path_openv_tmp  }}/netbackup_aix_packages/{{ item.name }}.image.gz"
         mode: '0644'
         force: true
-        validate_certs: no
+        validate_certs: "{{ nbu_repo_validate_certs }}"
 
     - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Extract {{ item.name }}.image.gz package"
       ansible.builtin.shell: ( gunzip -f "{{ item.name }}.image.gz" )

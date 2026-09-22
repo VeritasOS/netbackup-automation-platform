@@ -34,7 +34,7 @@
   win_get_url:
     url: "{{ nbu_artifactory_repo_base_url }}{{ artifactory_repo }}{{ nbu_path_repo_client_base_pkg }}{{ nbu_pkgs_ordered_list[nbu_version] }}.zip"
     dest: "{{ nbu_tmp_dir }}\\{{ nbu_pkgs_ordered_list[nbu_version] }}.zip"
-    force: false
+    force: "{{ nbu_repo_force }}"
     validate_certs: "{{ nbu_repo_validate_certs }}"
   when: not install_pkgs_from_local_cache
 

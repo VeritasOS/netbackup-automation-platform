@@ -27,7 +27,7 @@
         dest: "{{ os_path_openv_tmp }}/{{ eeb_name }}"
         mode: '0755'
         force: true
-        validate_certs: no
+        validate_certs: "{{ nbu_repo_validate_certs }}"
       when: nbap_invocation_method == "ansible"
 
     # Check NetBackup EEB installer version
@@ -207,7 +207,7 @@
             state: "{{ 'absent' if 'uninstall' in item else 'latest' }}"
             disablerepo: "*"
             enablerepo: netbackup
-            validate_certs: no
+            validate_certs: "{{ nbu_repo_validate_certs }}"
           when:
           - ansible_os_family == 'RedHat'
 
@@ -227,7 +227,7 @@
                 dest: "{{ os_path_openv_tmp }}/netbackup_sunos_packages/{{ nbu_eeb_package_marker_name }}{{ package_extension_wo_gz }}"
                 mode: '0644'
                 force: true
-                validate_certs: no
+                validate_certs: "{{ nbu_repo_validate_certs }}"
               when:
                 - "'uninstall' not in (item | default('') | string)"
 

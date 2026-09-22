@@ -38,6 +38,7 @@ This platform offers comprehensive automation capabilities for NetBackup Primary
 ## 🎯 Supported NetBackup Versions
 
 These playbooks support the following NetBackup Primary, Media, and Client versions:
+* `11.2.0.1`
 * `11.2.0.0`
 * `11.1.0.2`
 * `11.1.0.0`
@@ -223,6 +224,9 @@ These variables offer flexible configuration for various scenarios.
 | 18 | `drpkgpassphrase` | Variable required for disaster recovery passphrase. | `string` |
 | 19 | `nbu_db_data_path` | Variable required to specify the PostgreSQL database user path. | `string` |
 | 20 | `nbu_client_name_ans` | This variable is required for setting the FQDN(Fully Qualified Domain Name). | `string` |
+| 21 | `nbu_repo_validate_certs` | Enables TLS certificate validation when downloading NetBackup packages from the configured yum/Artifactory repository (used by package install, EEB, staging, and nbcheck workflows). Default: `yes`. Set to `no` only when the repository uses a certificate not trusted by the managed host OS. | `bool` |
+| 22 | `nbu_api_validate_certs` | Enables TLS certificate validation for NetBackup REST API calls to the Primary server (HTTPS port `1556`). Applies to REST API login/logout, global security settings, and catalog image checks. Default: `yes`. When enabled, Ansible verifies the Primary server certificate before transmitting RBAC credentials, bearer tokens, or the disaster recovery passphrase. The Primary version compatibility check (`security/serverinfo`) is excluded; it is an unauthenticated GET and does not transmit secrets. Set to `no` only for non-production troubleshooting. | `bool` |
+| 23 | `nbu_api_no_log` | Suppresses sensitive REST API task output in Ansible logs (RBAC credentials, bearer tokens, API keys, disaster recovery passphrase). Applies to REST API login/logout, global security settings, and catalog image checks. Default: `true`. Set to `false` only for non-production debugging; leave enabled in production. | `bool` |
 
 ### Feature Toggle Options (FTO)
 

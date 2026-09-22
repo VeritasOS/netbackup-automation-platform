@@ -15,6 +15,7 @@
         url: "{{ nbu_artifactory_repo_base_url }}{{ artifactory_repo }}{{ nbu_path_repo_base_pkg }}/{{ netbackup_debian_package }}{{package_extension}}"
         dest: "{{ os_path_openv_tmp }}"
         mode: '0644'
+        validate_certs: "{{ nbu_repo_validate_certs }}"
       
     # Extract NetBackup Debian package
     - name: "NBU-CLIENT-{{ nbu_playbook_type|upper }} -> Extract NetBackup Debian package"

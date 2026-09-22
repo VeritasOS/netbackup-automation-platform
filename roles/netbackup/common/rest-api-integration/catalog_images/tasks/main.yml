@@ -12,11 +12,12 @@
         method: GET
         headers:
           Content-Type: "{{ nbu_api_content_type }}"
-          Authorization: "Bearer {{ user_access_token }}" 
+          Authorization: "{{ user_access_token }}" 
         status_code: 200
-        validate_certs: no
+        validate_certs: "{{ nbu_api_validate_certs }}"
+        ca_path: "{{ nbu_api_ca_path }}"
         return_content: true
-      no_log: true
+      no_log: "{{ nbu_api_no_log | bool }}"
       failed_when: false
       register: catalog_images_result
       retries: 2
@@ -26,7 +27,7 @@
     - name: "NBU-CATALOG-IMAGES-BACKUP -> Parse catalog images API response"
       ansible.builtin.set_fact:
         catalog_images_result_content: "{{ catalog_images_result.content | from_json }}"
-      no_log: true
+      no_log: "{{ nbu_api_no_log | bool }}"
       when: catalog_images_result is defined
 
     - name: "NBU-CATALOG-IMAGES-BACKUP -> Set the error message if unable to execute the API"
@@ -44,12 +45,13 @@
             method: GET
             headers:
               Content-Type: "{{ nbu_api_content_type }}"
-              Authorization: "Bearer {{ user_access_token }}" 
+              Authorization: "{{ user_access_token }}" 
             status_code: 200
-            validate_certs: no
+            validate_certs: "{{ nbu_api_validate_certs }}"
+            ca_path: "{{ nbu_api_ca_path }}"
             return_content: true
           failed_when: false
-          no_log: true
+          no_log: "{{ nbu_api_no_log | bool }}"
           register: config_policies_catarc_result
           retries: 2
           delay: 2
@@ -58,7 +60,7 @@
         - name: "NBU-CATALOG-IMAGES-BACKUP -> Parse catarc policy API response"
           ansible.builtin.set_fact:
             config_policies_catarc_result_content: "{{ config_policies_catarc_result.content | from_json }}"
-          no_log: true
+          no_log: "{{ nbu_api_no_log | bool }}"
           when: config_policies_catarc_result is defined
 
         - name: "NBU-CATALOG-IMAGES-BACKUP-> Failed if catalog images backup were present but catarc policy does not exist."

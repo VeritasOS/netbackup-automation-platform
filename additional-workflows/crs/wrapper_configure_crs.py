@@ -68,10 +68,13 @@ def main():
     logger.debug(f"Start to run script {__file__}")
     try:
         # set the ansible vault password environment.
+        #os.environ['CRO_ANSIBLE_VAULT_PASSWORD'] = "test" or
         #os.environ['ANSIBLE_VAULT_PASSWORD'] = "test"
-        if 'ANSIBLE_VAULT_PASSWORD' not in os.environ:
-            logger.debug("the environment var ANSIBLE_VAULT_PASSWORD was not set.")
+        vault_password = os.environ.get('CRO_ANSIBLE_VAULT_PASSWORD') or os.environ.get('ANSIBLE_VAULT_PASSWORD')
+        if not vault_password:
+            logger.debug("Neither CRO_ANSIBLE_VAULT_PASSWORD nor ANSIBLE_VAULT_PASSWORD was set.")
             return 1
+        os.environ['ANSIBLE_VAULT_PASSWORD'] = vault_password
         os.environ['ANSIBLE_VAULT_PASSWORD_FILE'] = os.path.join(CURRENT_DIR, "vault_pass")
     except Exception as err:
         traceback.print_exc()
