@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
 
 import os
-print(os.environ['ANSIBLE_VAULT_PASSWORD'])
+
+password = os.environ.get('CRO_ANSIBLE_VAULT_PASSWORD') or os.environ.get('ANSIBLE_VAULT_PASSWORD')
+if password is None:
+	raise KeyError("Neither CRO_ANSIBLE_VAULT_PASSWORD nor ANSIBLE_VAULT_PASSWORD is set")
+print(password)

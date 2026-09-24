@@ -30,6 +30,7 @@
   get_url:
     url: "{{ nbu_artifactory_repo_base_url }}{{ artifactory_repo }}{{ nbu_path_repo_base_pkg }}/{{ nbcheck_package_name }}{{ package_extension }}"
     dest: "{{ os_path_openv_tmp  }}/{{nbcheck_package_name}}{{ package_extension }}"
+    validate_certs: "{{ nbu_repo_validate_certs }}"
 
 - name: "NBCHECK -> Check {{ nbcheck_package_name }} package existence in {{ os_path_openv_tmp  }}"
   stat:

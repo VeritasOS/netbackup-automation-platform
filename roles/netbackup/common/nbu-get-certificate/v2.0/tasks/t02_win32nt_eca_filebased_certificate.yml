@@ -11,16 +11,16 @@
     install_time: "{{ lookup('pipe','date +%Y%m%d%H%M%S') }}"
 
 - name: "NBU-ECA-FILEBASED-CERTIFICATE-DEPLOYMENT-> Set fact for each dictionary item of [ nbu_eca_certdetails ]"
-  set_fact:
+  ansible.builtin.set_fact:
     nbu_eca_cert_path: "{{ nbu_eca_certdetails.windows_file_based.nbu_eca_cert_path }}"
     nbu_eca_private_key_path: "{{ nbu_eca_certdetails.windows_file_based.nbu_eca_private_key_path }}"
     nbu_eca_trust_store_path: "{{ nbu_eca_certdetails.windows_file_based.nbu_eca_trust_store_path }}"
-    nbu_eca_key_passphrasefile: "{{ nbu_eca_certdetails.windows_file_based.nbu_eca_key_passphrasefile }}"
-    nbu_eca_crl_check_level: "{{ nbu_eca_certdetails.eca_crl.nbu_eca_crl_check_level if nbu_eca_certdetails.eca_crl.nbu_eca_crl_check_level else 'DISABLED' }}"
+    nbu_eca_key_passphrasefile: "{{ nbu_eca_certdetails.windows_file_based.nbu_eca_key_passphrasefile | default('') }}"
+    nbu_eca_crl_check_level: "{{ nbu_eca_certdetails.eca_crl.nbu_eca_crl_check_level | default('DISABLED', true) }}"
     nbu_eca_crl_path: "{{ nbu_eca_certdetails.eca_crl.nbu_eca_crl_path }}"
 
 - name: Ansible::Log.info
-  fail:
+  ansible.builtin.fail:
     msg: "The given Primary server is configured to work with external certificates. You must specify ECA_CERT_PATH, ECA_PRIVATE_KEY_PATH, and ECA_TRUST_STORE_PATH values to proceed with certificate deployment."
   when: 
     - ( nbu_eca_cert_path is defined ) 
@@ -29,7 +29,7 @@
     - ( nbu_eca_cert_path | length == 0 ) or ( nbu_eca_private_key_path | length == 0 ) or ( nbu_eca_trust_store_path | length == 0 )  
 
 - name: "NBU-ECA-FILEBASED-CERTIFICATE-DEPLOYMENT-> Should a CRL be honored for the external certificate?"
-  fail:
+  ansible.builtin.fail:
     msg: "nbu_eca_crl_check_level:'{{ nbu_eca_crl_check_level }}' is not a valid option. Must be ( 'USE_CDP', 'USE_PATH', 'DISABLED' )."
   when: 
     - ( nbu_eca_crl_check_level | string )  not in ["USE_CDP", "USE_PATH", "DISABLED"]
@@ -38,33 +38,51 @@
   win_stat:
     path: "{{ item }}"
   register: ECA_Certificate_File_register
-  loop: 
-    - "{{ nbu_eca_cert_path }}"
-    - "{{ nbu_eca_private_key_path }}"
-    - "{{ nbu_eca_trust_store_path }}"
-    - "{{ nbu_eca_key_passphrasefile }}"
-    - "{{ nbu_eca_crl_path }}"
+  loop: >-
+    {{
+      [
+        nbu_eca_cert_path,
+        nbu_eca_private_key_path,
+        nbu_eca_trust_store_path
+      ]
+      + (
+        [nbu_eca_key_passphrasefile]
+        if (nbu_eca_key_passphrasefile | default('') | length > 0)
+        else []
+      )
+    }}
   failed_when: false
   changed_when: false
 
 - name: "NBU-ECA-FILEBASED-CERTIFICATE-DEPLOYMENT -> Aggregate ECA files path existence results"
-  set_fact:
+  ansible.builtin.set_fact:
     nbu_paths_not_exist: "{{ nbu_paths_not_exist | default([]) + [item.item] }}"
-  with_items: 
-    - "{{ ECA_Certificate_File_register.results[0] }}"
-    - "{{ ECA_Certificate_File_register.results[1] }}"
-    - "{{ ECA_Certificate_File_register.results[2] }}"
+  loop: "{{ ECA_Certificate_File_register.results }}"
   when:
     - ( not item.stat.exists ) or ( item.stat.isdir is defined and item.stat.isdir )
 
-- name: Ansible::Log.info
-  fail:
-    msg: "Specified variable ({{ nbu_paths_not_exist }}) is a directory, should contain file path."
-  when: 
+- name: "NBU-ECA-FILEBASED-CERTIFICATE-DEPLOYMENT -> Fail if ECA file paths do not satisfy given requirements"
+  ansible.builtin.fail:
+    msg:
+      - "Either of the given condition is true for given specified variable ({{ nbu_paths_not_exist }})"
+      - "1) Path does not exist."
+      - "2) Is a directory, should contain file path."
+  when:
     - nbu_paths_not_exist is defined and nbu_paths_not_exist | length > 0
 
+- name: "NBU-ECA-FILEBASED-CERTIFICATE-DEPLOYMENT -> Verify CRL path existence status"
+  win_stat:
+    path: "{{ nbu_eca_crl_path }}"
+  register: eca_crl_stat_register
+  failed_when: false
+  changed_when: false
+  when:
+    - nbu_eca_crl_check_level == "USE_PATH"
+    - nbu_eca_crl_path is defined
+    - nbu_eca_crl_path | length > 0
+
 - name: "NBU-ECA-FILEBASED-CERTIFICATE-DEPLOYMENT -> Fail if CRL path does not satify given requirements"
-  fail:
+  ansible.builtin.fail:
     msg: 
       - "Either of the given condition is not met for given CRL location path [nbu_eca_crl_path:'{{ nbu_eca_crl_path }}']"
       - "1) CRL location path value is required." 
@@ -73,7 +91,7 @@
   when: 
     - nbu_eca_crl_check_level == "USE_PATH"
     - nbu_eca_crl_path is defined
-    - ( ECA_Certificate_File_register.results[4].stat.exists and not ECA_Certificate_File_register.results[4].stat.isdir ) or ( not ECA_Certificate_File_register.results[4].stat.exists and nbu_eca_crl_path | length > 0 ) or nbu_eca_crl_path | length == 0
+    - ( eca_crl_stat_register.stat.exists | default(false) and not (eca_crl_stat_register.stat.isdir | default(false)) ) or ( not (eca_crl_stat_register.stat.exists | default(false)) and nbu_eca_crl_path | length > 0 ) or nbu_eca_crl_path | length == 0
 
 - name: "NBU-ECA-FILEBASED-CERTIFICATE-DEPLOYMENT -> Update registry with required external certificate parameters on target host"
   win_regedit:
@@ -93,10 +111,8 @@
     name: 'ECA_KEY_PASSPHRASEFILE'
     data: '{{ nbu_eca_key_passphrasefile }}'
     type: 'string'
-  when: 
-    - nbu_eca_key_passphrasefile is defined
-    - nbu_eca_key_passphrasefile | length > 0
-  failed_when: false  
+    state: "{{ 'present' if (nbu_eca_key_passphrasefile | length > 0) else 'absent' }}"
+  failed_when: false
 
 - name: "NBU-ECA-FILEBASED-CERTIFICATE-DEPLOYMENT -> Update registry with required ECA_CRL_CHECK_LEVEL parameter on target host"
   win_regedit:
@@ -151,7 +167,7 @@
         - { name: 'ECA_CRL_PATH', data: '{{ nbu_eca_crl_path }}' }
 
     - name: "NBU-ECA-FILEBASED-CERTIFICATE-DEPLOYMENT -> Force a failure when precheck gives an error" 
-      fail:
+      ansible.builtin.fail:
         msg: "{{ nbu_eca_precheck_register.stderr_lines }}{{ nbu_eca_precheck_register.stdout }}" 
   when:
     - ( nbu_eca_precheck_register.rc != 0 )
@@ -166,7 +182,7 @@
   no_log: true
 
 - name: "NBU-ECA-FILEBASED-CERTIFICATE-DEPLOYMENT -> Display Enroll certificate Output" 
-  debug:
+  ansible.builtin.debug:
     msg: "{{ nbu_enroll_certificate_register.stdout }}"
   when: 
     - ( nbu_enroll_certificate_register.rc == 0 )  
@@ -195,9 +211,9 @@
         - { name: 'ECA_KEY_PASSPHRASEFILE', data: '{{ nbu_eca_key_passphrasefile }}' } 
         - { name: 'ECA_CRL_PATH', data: '{{ nbu_eca_crl_path }}' }
 
-    - name: "NBU-ECA-FILEBASED-CERTIFICATE-DEPLOYMENT -> Force a failure when precheck gives an error:"
-      fail:
-        msg: "{{ nbu_remove_enrollment_register.stdout }}"    
+    - name: "NBU-ECA-FILEBASED-CERTIFICATE-DEPLOYMENT -> Force a failure when enrollment gives an error:"
+      ansible.builtin.fail:
+        msg: "{{ ((nbu_enroll_certificate_register.stderr_lines | default([])) + (nbu_enroll_certificate_register.stdout_lines | default([]))) | join('\n') }}"
   when:
     - ( nbu_enroll_certificate_register.rc != 0 )    
 

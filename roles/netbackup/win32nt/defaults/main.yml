@@ -30,6 +30,7 @@ win_server_install_cmd: "{{ ('setup.exe /SERVER -s /REALLYLOCAL /RESPFILE:' + \"
 
 # Windows DVD image name for each NetBackup release.
 nbu_pkgs_ordered_list:
+  11.2.0.1: 'NetBackup_11.2.0.1_Win'
   11.2.0.0: 'NetBackup_11.2_Win'
   11.1.0.2: 'NetBackup_11.1.0.2_Win'
   11.1.0.0: 'NetBackup_11.1_Win'
@@ -59,7 +60,7 @@ os_version_supported_minimum: 6.2
 
 # Software Repo
 nbu_repo_force: no
-nbu_repo_validate_certs: no
+nbu_repo_validate_certs: yes
 
 # EEB Patch
 nbu_eeb_file_base: "{{ item | basename }}"                      # Extract filename from EEB path
