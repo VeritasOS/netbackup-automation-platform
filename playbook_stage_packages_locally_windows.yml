@@ -1,3 +1,4 @@
+---
 # $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
 
 # NetBackup Stage Packages Locally
@@ -6,7 +7,7 @@
   hosts: all
   pre_tasks:
     - name: Retrieving host distribution
-      setup:
+      ansible.builtin.setup:
         gather_subset:
           - "!all"
           - "!min"
@@ -15,12 +16,12 @@
     - name: "NBU-STAGE-PACKAGES -> Load configurable variables"
       ansible.builtin.include_vars: "vars/win32nt.yml"
       tags: ["always"]
-      no_log: True
+      no_log: true
   roles:
-    - role: 'netbackup'                           # Load netbackup common defaults
-    - role: 'netbackup/win32nt'                   # Load netbackup default vars
+    - role: 'netbackup' # Load netbackup common defaults
+    - role: 'netbackup/win32nt' # Load netbackup default vars
     - role: 'generic/is_nbu_version_supported'
-    - role: 'netbackup/common/stage-package-locally'
+    - role: 'netbackup/common/stage_package_locally'
   vars:
     nbu_playbook_type: "stage"
     nbu_role: "client"

@@ -5,4 +5,3 @@ collections:
   - ansible.windows
   - community.windows
   - community.general
-

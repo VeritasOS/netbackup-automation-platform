@@ -1,0 +1,45 @@
+---
+# $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
+
+###########################################################
+#### nbu_eeb_mgmt -> tasks -> main.yml ####
+###########################################################
+- name: "NBU-EEB-MGMT -> Configure NetBackup Repository"
+  ansible.builtin.include_tasks: t01_nbu_repo_management.yml
+  when:
+    - nbu_playbook_type is defined
+    - nbu_playbook_type == 'eeb'
+
+# Install NetBackup EEBS for the specific NetBackup Version
+- name: "NBU-EEB-MGMT -> NBU services start and stop block"
+  block:
+    - name: "NBU-EEB-MGMT -> Stopping NetBackup daemons"
+      ansible.builtin.include_role:
+        name: 'netbackup/{{ nbap_ansible_system }}/nbu_stop_services'
+
+    - name: "NBU-EEB-MGMT -> Include tasks for NetBackup EEB installation"
+      ansible.builtin.include_tasks: t01_base_patch_eeb.yml
+      loop: "{{ nbu_eeb_ordered[nbu_role][nbu_version] }}"
+      when:
+        - nbu_eeb_ordered[nbu_role][nbu_version] is defined
+
+  always:
+
+    - name: "NBU-EEB-MGMT -> Stopping NetBackup daemons"
+      ansible.builtin.include_role:
+        name: 'netbackup/{{ nbap_ansible_system }}/nbu_stop_services'
+
+    # Start the NetBackup daemons, if they are down
+    - name: "NBU-EEB-MGMT -> Start the NetBackup Daemons"
+      ansible.builtin.include_role:
+        name: 'netbackup/{{ nbap_ansible_system }}/nbu_start_services'
+
+    # Verify Tomcat / Web Services are healthy ONLY if a Tomcat EEB was installed/uninstalled
+    - name: "NBU-EEB-MGMT -> Verify NetBackup Web Services (Tomcat) are responding"
+      ansible.builtin.command: "{{ os_path_nbu_install_default }}/netbackup/bin/nbcertcmd -ping"
+      register: nbcertcmd_ping_check
+      failed_when: nbcertcmd_ping_check.rc != 0
+      changed_when: false
+      when: tomcat_eeb_processed | default(false) | bool
+
+# EOF

@@ -20,6 +20,7 @@ This platform offers comprehensive automation capabilities for NetBackup Primary
 * **EEB (Emergency Engineering Binary) Management**:
     * Deployment and management of EEBs with automatic marker creation for easy detection.
     * Supports installing multiple EEBs, upgrading EEBs, adjusting subsequent overlapping EEBs, and removing EEBs.
+    * **Tomcat EEB (Linux Primary only):** Automated deploy and uninstall rollback for Tomcat EEBs (readme-based detection) via primary install and `playbook_nbeeb_management_posix.yml` with `nbu_role=primary`. Uninstall rollback is supported once, using the backup tarball created when the Tomcat EEB was installed through this automation; manual EEB installs are not covered.
 * **EEB Marker Creation Scripts**:
     * Automation includes scripts for creating EEB markers, simplifying detection of installed EEBs. Marker creation is supported for all platforms except AIX, Debian and Ubuntu.
 * **Package Staging**:
@@ -115,7 +116,7 @@ The following table outlines the available playbooks and their functionalities, 
 | 04 | [`playbook_stop_services_posix.yml`](./playbook_stop_services_posix.yml) | Stops all NetBackup services. |
 | 05 | [`playbook_restart_services_posix.yml`](./playbook_restart_services_posix.yml) | Restarts all NetBackup services. |
 | 06 | [`playbook_configure_service_user_posix.yml`](./playbook_configure_service_user_posix.yml) | Standalone playbook to configure or validate the NetBackup Service User on existing POSIX hosts (Linux, Solaris, AIX, and other UNIX variants). Loads `vars/linux.yml` and creates the local `nbu_services_user`/`nbu_services_group` if missing (NSS-aware via `getent`). Runs regardless of the `include_service_user_configuration` FTO. |
-| 07 | [`playbook_nbeeb_management_posix.yml`](./playbook_nbeeb_management_posix.yml) | Standalone playbook for EEB operations on POSIX hosts. Installs, upgrades, adjusts overlapping EEBs, and removes EEBs. Also supports Tomcat/JRE install and upgrade as part of EEB workflows. |
+| 07 | [`playbook_nbeeb_management_posix.yml`](./playbook_nbeeb_management_posix.yml) | Standalone playbook for EEB operations on POSIX hosts. Installs, upgrades, adjusts overlapping EEBs, and removes EEBs. **Linux Primary:** includes Tomcat EEB support; other roles/platforms use standard EEB install/uninstall only. |
 
 #### Windows Platforms
 
@@ -163,20 +164,20 @@ These roles are integral to the playbooks and are called based on the required w
 
 | # | Role Name | Role Description |
 |---|---|---|
-| 01 | `netbackup/common/nbu-get-certificate` | Checks the Primary Server's Certificate mode (NBCA/ECA) and performs certificate deployment for Client/Media installations accordingly. |
-| 02 | `netbackup/common/stage-package-locally` | Staging playbook to download NetBackup packages into a local cache for use during install-time. |
+| 01 | `netbackup/common/nbu_get_certificate` | Checks the Primary Server's Certificate mode (NBCA/ECA) and performs certificate deployment for Client/Media installations accordingly. |
+| 02 | `netbackup/common/stage_package_locally` | Staging playbook to download NetBackup packages into a local cache for use during install-time. |
 | 03 | `netbackup/posix` <br> `netbackup/win32nt` | Contains static playbook specifications required for different workflows. |
-| 04 | `netbackup/posix/nbu-client-install` <br> `netbackup/posix/nbu-server-install` <br> `netbackup/win32nt/nbu-client-install` | Installs/upgrades NetBackup Primary/Media/Client based on conditions like new install (no existing NetBackup or proposed version installed) or upgrade (older version installed). |
-| 05 | `netbackup/posix/nbu-eeb-mgmt`<br>`netbackup/win32nt/nbu-eeb-mgmt` | Installs the list of EEBs provided in the initial configuration and creates a marker if `include_eeb_rpm_marker` FTO is `true`. |
-| 06 | `netbackup/posix/nbu-remove` <br> `netbackup/win32nt/nbu-remove` | Removes NetBackup Primary/Media/Client only if the proposed version is found installed. |
-| 07 | `netbackup/posix/nbu-stop-services` | Handles stopping NetBackup services if the proposed version is found installed. |
-| 08 | `netbackup/posix/symlink-operations` | Deals with validation and creation of symbolic links on Linux. |
-| 09 | `netbackup/posix/nbu-install-verification` | Performs validations to determine installation status (install/none/upgrade) based on existing and proposed NetBackup versions. |
-| 10 | `netbackup/common/rest-api-integration` | Includes global security settings for configuring secure communications. |
-| 11 | `netbackup/posix/nbu-start-services` <br> `netbackup/posix/nbu-stop-services` | Handles starting and stopping NetBackup services. |
-| 12 | `netbackup/posix/pre-install-os-task` | Handles pre-installation OS tasks for Primary, including validating and creating specified local users/groups if missing.
-| 13 | `netbackup/common/evaluate-service-user` | Evaluates Service User configuration for NetBackup on UNIX/LINUX, validates `nbu_services_user`/`nbu_services_group` and creates them locally if missing (NSS-aware via `getent`); on Windows, validates `nbu_services_user` is `LocalSystem` or `LocalService`. On upgrades, reads the existing `SERVICE_USER` via `nbgetconfig` and fails fast on mismatch. Skipped on Media/Client when `include_service_user_configuration` is `false`; always runs on Primary. |
-| 14 | `netbackup/common/nbu-change-serviceuser` | Applies NetBackup service user changes on POSIX and Windows hosts. Invokes `evaluate-service-user` first, then stops NetBackup services, runs `nbserviceusercmd --changeUser` and restarts services. Used by install/upgrade playbooks and the standalone configure service user playbooks. Skipped on Media/Client when `include_service_user_configuration` is `false`; always runs when called from the standalone configure service user playbooks regardless of this FTO. |
+| 04 | `netbackup/posix/nbu_client_install` <br> `netbackup/posix/nbu_server_install` <br> `netbackup/win32nt/nbu_win_install` | Installs/upgrades NetBackup Primary/Media/Client based on conditions like new install (no existing NetBackup or proposed version installed) or upgrade (older version installed). |
+| 05 | `netbackup/posix/nbu_eeb_mgmt`<br>`netbackup/win32nt/nbu_eeb_mgmt` | Installs the list of EEBs provided in the initial configuration and creates a marker if `include_eeb_rpm_marker` FTO is `true`. POSIX Primary adds Tomcat EEB handling; Windows role does not. |
+| 06 | `netbackup/posix/nbu_remove` <br> `netbackup/win32nt/nbu_win_remove` | Removes NetBackup Primary/Media/Client only if the proposed version is found installed. |
+| 07 | `netbackup/posix/nbu_stop_services` | Handles stopping NetBackup services if the proposed version is found installed. |
+| 08 | `netbackup/posix/symlink_operations` | Deals with validation and creation of symbolic links on Linux. |
+| 09 | `netbackup/posix/nbu_install_verification` | Performs validations to determine installation status (install/none/upgrade) based on existing and proposed NetBackup versions. |
+| 10 | `netbackup/common/rest_api_integration` | Includes global security settings for configuring secure communications. |
+| 11 | `netbackup/posix/nbu_start_services` <br> `netbackup/posix/nbu_stop_services` | Handles starting and stopping NetBackup services. |
+| 12 | `netbackup/posix/pre_install_os_task` | Handles pre-installation OS tasks for Primary, including validating and creating specified local users/groups if missing.
+| 13 | `netbackup/common/evaluate_service_user` | Evaluates Service User configuration for NetBackup on UNIX/LINUX, validates `nbu_services_user`/`nbu_services_group` and creates them locally if missing (NSS-aware via `getent`); on Windows, validates `nbu_services_user` is `LocalSystem` or `LocalService`. On upgrades, reads the existing `SERVICE_USER` via `nbgetconfig` and fails fast on mismatch. Skipped on Media/Client when `include_service_user_configuration` is `false`; always runs on Primary. |
+| 14 | `netbackup/common/nbu_change_serviceuser` | Applies NetBackup service user changes on POSIX and Windows hosts. Invokes `evaluate_service_user` first, then stops NetBackup services, runs `nbserviceusercmd --changeUser` and restarts services. Used by install/upgrade playbooks and the standalone configure service user playbooks. Skipped on Media/Client when `include_service_user_configuration` is `false`; always runs when called from the standalone configure service user playbooks regardless of this FTO. |
 
 </details>
 
@@ -194,9 +195,22 @@ These variables are crucial for playbook execution.
 | 01 | `nbu_version` \* | Desired NetBackup Version (e.g., `x.x.x.x`). | `string` |
 | 02 | `nbu_artifactory_repo_base_url` * | Base URL to the NetBackup yum repository. Can be a web server URL (e.g., `http://your.repo.com/`) or a local/mounted file-system path (e.g., `file:///path/to/your/repo/`). | `url` |
 | 03 | `nbu_path_repo_base_pkg` \* | Path appended to the base URL for the NetBackup yum repository. | `url` |
-| 04 | `nbu_path_repo_client_eeb_pkg` | Relative path of the EEB installer file. | `url` |
-| 05 | `nbu_primary_server_ans` \* | Primary Server hostname. Required only for Media/Client. Default: `PRIMARY01`. | `string` |
-| 06 | `nbu_cust_reg_file_name` \* | Usage insights customer registration key file for NetBackup Primary server installation/upgrade (`<= 10.2.0.1`). | `string` |
+| 04 | `nbu_artifactory_yum_repo_name` \* | Artifactory **folder** segment appended after `nbu_artifactory_repo_base_url` for **RPM/YUM** on Linux (and EEB marker RPM). May be set directly or mapped from `yum_awx_inventory_name` via role defaults. Trailing `/` is optional; normalized when playbooks run. | `string` |
+| 05 | `nbu_artifactory_eeb_repo_name` \* | **Linux (POSIX) only.** Folder segment for the EEB **installer** (`nbu_path_repo_eeb_pkg`). May be set directly or mapped from `eeb_awx_inventory_name`. **May match `nbu_artifactory_yum_repo_name`** if marker and installer share one repo folder. Trailing `/` is optional; normalized when playbooks run. | `string` |
+| 06 | `yum_awx_inventory_name` | AWX/Tower extra var supplying the YUM repo folder value (maps into `nbu_artifactory_yum_repo_name`). | `string` |
+| 07 | `eeb_awx_inventory_name` | AWX/Tower extra var supplying the Generic EEB repo folder (maps into `nbu_artifactory_eeb_repo_name`). | `string` |
+| 08 | `nbu_primary_server_ans` \* | Primary Server hostname. Required only for Media/Client. Default: `PRIMARY01`. | `string` |
+| 09 | `nbu_cust_reg_file_name` \* | Usage insights customer registration key file for NetBackup Primary server installation/upgrade (`<= 10.2.0.1`). | `string` |
+
+#### Artifactory URL layout (POSIX)
+
+`nbu_artifactory_repo_base_url` is followed by **one** repo folder name, then the path segment for the artifact type:
+
+- **RPM / YUM:** `nbu_artifactory_repo_base_url` + `nbu_artifactory_yum_repo_name` + `nbu_path_repo_base_pkg`
+- **EEB installer:** `nbu_artifactory_repo_base_url` + `nbu_artifactory_eeb_repo_name` + `nbu_path_repo_eeb_pkg` + installer name
+- **EEB marker RPM:** `nbu_artifactory_repo_base_url` + `nbu_artifactory_yum_repo_name` + `nbu_path_repo_base_pkg`
+
+Documented placeholders live only in the `comment:` block in `vars/linux.yml` (uncomment/copy per your process). At runtime, supply AWX/Tower extra vars `yum_awx_inventory_name` and `eeb_awx_inventory_name` (mapped via role defaults to `nbu_artifactory_yum_repo_name` / `nbu_artifactory_eeb_repo_name`).
 
 ### Configurable Options
 
@@ -207,7 +221,7 @@ These variables offer flexible configuration for various scenarios.
 |  01 | `nbu_primary_certdetails` <br> (Mutually inclusive with `nbu_cert_management` FTO) | If the primary server uses only NBCA, the target host is configured using NBCA. Requires `hostname`, `nbu_server_fingerPrint`, and `nbu_server_authorization_token` in JSON format. | `JSON` |
 | 02 | `nbu_eca_certdetails[Linux]` <br> (Mutually inclusive with `nbu_cert_management` FTO) | If the primary server uses ECA or mixed mode, the target host is configured with ECA. Requires `nbu_eca_cert_path`, `nbu_eca_private_key_path`, `nbu_eca_trust_store_path`. Optional `nbu_eca_key_passphrasefile` and `eca_crl` details. | `JSON` |
 | 03 | `nbu_eca_certdetails[Windows]` <br> (Mutually inclusive with `nbu_cert_management` FTO) | Similar to Linux ECA configuration, supporting both file-based certificates and Windows Certificate Store. Requires `cert_store_type` (`windows_cert_store` or `windows_file_based`) and relevant paths/locations. | `JSON` |
-| 04 | `nbu_eeb_ordered` | Specifies an ordered list of EEBs to be installed. Supports upgrading, handling overlapping EEBs, uninstalling, and providing special arguments. | `JSON`<br>Eg.<br>primary:<br>&nbsp;&nbsp;10.1.1.0:<br>&nbsp;&nbsp;&nbsp;&nbsp;- "eebinstaller_4198042_1"<br>&nbsp;&nbsp;&nbsp;&nbsp;- "eebinstaller_4198042_2 -upgrade"<br><br>- <code>eebinstaller_4198042_1</code> will be installed as usual.<br>- <code>eebinstaller_4198042_2 -upgrade</code> will uninstall any previous version of <code>4198042</code> and install the new one.<br><br>From NetBackup version 10.0 onwards, using the <code>-upgrade</code> flag with an EEB will uninstall the older version of the same EEB (if present) and install the new EEB version. This ensures that only the latest version of the EEB is active.<br> |
+| 04 | `nbu_eeb_ordered` | Specifies an ordered list of EEBs to be installed. Supports upgrading, handling overlapping EEBs, uninstalling, and providing special arguments.<br><br><strong>POSIX</strong> uses <code>nbu_role</code> → <code>nbu_version</code> → list (<code>nbu_eeb_ordered[nbu_role][nbu_version]</code>).<br><strong>Windows</strong> uses <code>nbu_version</code> → list only (<code>nbu_eeb_ordered[nbu_version]</code>), as in <code>vars/win32nt.yml</code>. | `JSON`<br>Eg. (POSIX)<br>primary:<br>&nbsp;&nbsp;10.1.1.0:<br>&nbsp;&nbsp;&nbsp;&nbsp;- "eebinstaller_4198042_1"<br>&nbsp;&nbsp;&nbsp;&nbsp;- "eebinstaller_4198042_2 -upgrade"<br><br>Eg. (Windows)<br>10.1.1.0:<br>&nbsp;&nbsp;- "eebinstaller_4138919_1_AMD64"<br><br>- <code>eebinstaller_4198042_1</code> will be installed as usual.<br>- <code>eebinstaller_4198042_2 -upgrade</code> will uninstall any previous version of <code>4198042</code> and install the new one.<br><br>From NetBackup version 10.0 onwards, using the <code>-upgrade</code> flag with an EEB will uninstall the older version of the same EEB (if present) and install the new EEB version. This ensures that only the latest version of the EEB is active.<br> |
 | 05 | `os_path_nbu_install` | Custom installation path for NetBackup. Default: `/usr/openv` for Linux, `C:\\Program Files\\Veritas` if nbu_version < 11.1 else `C:\\Program Files\\Cohesity NetBackup` for Windows. Recommended path ends with `openv` in Linux and `Veritas` or `Cohesity NetBackup` on Windows. **Note:** This variable is not considered when running the upgrade playbook. | `string` |
 | 06 | `nbu_directory_list_to_be_removed` | List of directories to be removed upon NetBackup uninstallation. | `list` |
 | 07 | `os_rhel_system_packages` | Add custom OS dependent packages for RHEL systems. | `JSON` |
@@ -220,7 +234,7 @@ These variables offer flexible configuration for various scenarios.
 | 14 | `nbu_database_user` | NetBackup database user. | `string` |
 | 15 | `postgresql_pooler_odbc_port` | Optional PostgreSQL pooler ODBC port. Default: `13787`. | `string` |
 | 16 | `security_properties_params` | Variables for global security settings (e.g., `certificateAutoDeployLevel`, `dteGlobalMode`). | `string` |
-| 17 | `setPassphraseConstraintsRequest` | Variables for setting passphrase constraints (e.g., `minPassphraseLength`). | `string` |
+| 17 | `set_passphrase_constraints_request` | Variables for setting passphrase constraints (e.g., `minPassphraseLength`). | `string` |
 | 18 | `drpkgpassphrase` | Variable required for disaster recovery passphrase. | `string` |
 | 19 | `nbu_db_data_path` | Variable required to specify the PostgreSQL database user path. | `string` |
 | 20 | `nbu_client_name_ans` | This variable is required for setting the FQDN(Fully Qualified Domain Name). | `string` |

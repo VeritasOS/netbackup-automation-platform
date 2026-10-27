@@ -1,3 +1,4 @@
+---
 # $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
 
 # Verify if the proposed NetBackup software version is compatible to installed primary.
@@ -9,9 +10,9 @@
   ansible.builtin.uri:
     url: "{{ nbu_api_base_url + 'security/serverinfo' }}"
     method: GET
-    return_content: yes
+    return_content: true
     body_format: json
-    validate_certs: no
+    validate_certs: false
   register: api_serverinfo_response_register
   failed_when: false
 
@@ -19,10 +20,13 @@
   ansible.builtin.fail:
     msg: "Failed to access primary server url {{ nbu_api_base_url + 'security/serverinfo' }}"
   ignore_errors: "{{ ignore_primary_connectivity_failures }}"
+  register: primary_server_access_fail_register
   when:
     - api_serverinfo_response_register.status != 200
 
 - name: "NBU-COMPATIBILITY -> Perform primary server version compatibility check"
+  when: api_serverinfo_response_register.status == 200
+
   block:
     - name: "NBU-COMPATIBILITY -> Set primary server current version"
       ansible.builtin.set_fact:
@@ -31,7 +35,7 @@
     # Formatting NetBackup Version into x.x.x.x format
     - name: "NBU-COMPATIBILITY -> Formatting NetBackup Version into x.x.x.x format"
       ansible.builtin.set_fact:
-        nbu_primary_current_version: "{{ nbu_primary_current_version + '.' + '0' * (1 - (nbu_primary_current_version | regex_replace('.', '') | length) ) }}"
+        nbu_primary_current_version: "{{ nbu_primary_current_version + '.' + '0' * (1 - (nbu_primary_current_version | regex_replace('.', '') | length)) }}"
       when: nbu_primary_current_version | regex_findall('\.') | length < 3
       loop: "{{ range(3) | list }}"
 
@@ -42,6 +46,6 @@
         fail_msg: "Proposed 'nbu_version: {{ nbu_version }}' should be equal or less than primary server current version ({{ nbu_primary_current_version }})"
         success_msg: "Proposed 'nbu_version: {{ nbu_version }}' is compatible to primary server current version ({{ nbu_primary_current_version }})"
       ignore_errors: "{{ ignore_primary_connectivity_failures }}"
-  when: api_serverinfo_response_register.status == 200
+      register: primary_version_compatibility_assert_register
 
 # EOF
