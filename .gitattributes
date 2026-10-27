@@ -1,0 +1,4 @@
+*.sh linguist-detectable=true
+*.j2 linguist-detectable=true
+*.yml linguist-detectable=true
+*.cfg linguist-detectable=true

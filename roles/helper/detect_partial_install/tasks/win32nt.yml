@@ -1,4 +1,3 @@
----
 # $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
 
 - name: "NBU-PARTIAL-INSTALL-DETECTION -> Setting facts for Windows"
@@ -7,4 +6,4 @@
     nbap_partial_role_detected: "{{ nbu_detected_role }}"
     nbap_previous_playbook_type: "{{ nbu_playbook_type }}"
 
-# EOF
+#EOF

@@ -1,0 +1,71 @@
+#####################################################################
+#### nbu-win-install -> tasks -> t01_install_status.yml ####
+#####################################################################
+
+# These tasks will verify the workflow is being executed on a current NetBackup client/server
+# and will determine whether the NetBackup client/server software requires installing.
+# If the client/server is not a valid client/server or the client/server software doesnt require install, the install
+# workflow will exit after this task and no further tasks will be performed.
+
+# Verify whether the NetBackup client/server has the NetBackup client/server software installed
+# The install will not proceed if the NetBackup client/server software is not already installed. 
+# NetBackup Client/Server Software - Base - Check whether the NetBackup Client/Server is already installed
+- name: "NBU-{{ nbu_role|upper }}-INSTALL -> Verify NetBackup {{ nbu_role| capitalize }} is installed or not"
+  win_reg_stat:
+    path: "{{ nbu_registry_path }}\\CurrentVersion"
+    name: Install Type
+  register: nbu_install_type_register
+  ignore_errors: true
+  changed_when: false
+
+
+# Verify new client/server, install NetBackup
+- name: "NBU-{{ nbu_role|upper }}-INSTALL -> Verify whether to install NetBackup {{ nbu_role| capitalize }} - Set fact to 'install'"
+  ansible.builtin.set_fact:
+    nbu_client_status: install
+  when:
+    - ( not nbu_install_type_register.exists )
+
+# NetBackup Client/Server Software - Base - Check whether the NetBackup Client/Server is already installed
+- name: "NBU-{{ nbu_role|upper }}-INSTALL -> Verify what version of the NetBackup {{ nbu_role| capitalize }} software is currently installed"
+  win_reg_stat:
+    path: "{{ nbu_registry_path }}\\CurrentVersion"
+    name: VERSION
+  register: nbu_version_register
+  when: 
+    - nbu_install_type_register.exists
+    - nbu_install_type_register.value == vars['nbu_' ~ nbu_role ~ '_product_name']
+
+- name: Set Fact and formatting of nbu version
+  block:
+    # NetBackup Client/Server Software - Set the current version of the NetBackup Client/Server as a fact
+    - name: "NBU-{{ nbu_role|upper }}-INSTALL -> Set the current NetBackup {{ nbu_role | capitalize }} Version as Fact"
+      set_fact:
+        nbu_client_current_version: "{{ nbu_version_register.value }}"
+
+    # Formatting NetBackup Version into x.x.x.x format
+    - name: "NBU-{{ nbu_role|upper }}-INSTALL -> Formatting NetBackup Version into x.x.x.x format"
+      ansible.builtin.set_fact:
+        nbu_client_current_version: "{{ nbu_client_current_version + '.' + '0' * (1 - (nbu_client_current_version | regex_replace('.', '') | length) ) }}"
+      when: nbu_client_current_version | regex_findall('\.') | length < 3
+      loop: "{{ range(3) | list }}"
+  when: 
+    - nbu_version_register.value is defined
+
+# NetBackup {{ nbu_role| capitalize }} software is installed and up-to-date
+- name: "NBU-{{ nbu_role|upper }}-INSTALL -> Verify whether installed NetBackup {{ nbu_role| capitalize }} version ({{ nbu_client_current_version }}) is up-to-date - Set fact to 'none'"
+  set_fact:
+    nbu_client_status: none
+  when: 
+    - nbu_version_register.value is defined
+    - nbu_client_current_version is version(nbu_version, '==')
+    
+- name: Ansible::Log.info
+  fail:
+    msg: "This machine has an incompatible version:{{ nbu_client_current_version }} installed, therefore exit immediately."
+  when:
+    - ( nbu_version_register.value is defined )
+    - ( nbu_client_current_version is version_compare(nbu_version,'>') or nbu_client_current_version is version_compare(nbu_version,'<') )
+
+# EOF
+

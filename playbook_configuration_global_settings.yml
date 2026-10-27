@@ -1,40 +1,39 @@
----
 # $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
 
 # NetBackup Apply Global Settings
 - name: NETBACKUP -> Apply Global Settings
   gather_facts: true
-  become: true
+  become: yes
   hosts: all
   pre_tasks:
     - name: Retrieving host distribution
-      ansible.builtin.setup:
+      setup:
         gather_subset:
           - "!all"
           - "!min"
           - "distribution"
-
-    - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} Fail if nbu_primary_server_ans is defined"
+          
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} Fail if nbu_primary_server_ans is defined"
       ansible.builtin.fail:
-        msg: "The 'nbu_primary_server_ans' should not be defined for {{ nbu_role | lower }} {{ nbu_playbook_type | lower }} playbook."
+        msg: "The 'nbu_primary_server_ans' should not be defined for {{ nbu_role|lower }} {{ nbu_playbook_type|lower }} playbook."
       when:
-        - nbu_primary_server_ans is defined
-
+      - nbu_primary_server_ans is defined
+      
     - name: "NBU-GLOBAL-SETTINGS -> Load configurable variables"
       ansible.builtin.include_vars: "vars/linux.yml"
       tags: ["always"]
-      no_log: true
+      no_log: True
 
   roles:
-    - role: 'netbackup' # Load netbackup common defaults
-    - role: 'netbackup/posix' # Load netbackup default vars
+    - role: 'netbackup'                        # Load netbackup common defaults
+    - role: 'netbackup/posix'                  # Load netbackup default vars
     - role: 'generic/is_nbu_version_supported'
     - role: 'generic/nbu_compatibility'
-    - { role: 'netbackup/common/rest_api_integration', action: "login" }
-    - role: 'netbackup/common/rest_api_integration/global_settings'
-    - { role: 'netbackup/common/rest_api_integration', action: "logout" }
+    - { role: 'netbackup/common/rest-api-integration',  action: "login" }
+    - role: 'netbackup/common/rest-api-integration/global_settings'
+    - { role: 'netbackup/common/rest-api-integration',  action: "logout" }
   vars:
     nbu_playbook_type: "global-settings"
-    nbu_role: "primary" # Supported values ['primary', 'media', 'client']
+    nbu_role: "primary"                  # Supported values ['primary','media','client'] 
 
 # EOF

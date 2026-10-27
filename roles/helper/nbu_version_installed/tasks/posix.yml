@@ -1,4 +1,3 @@
----
 # $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
 
 # Verify whether the machine has the NetBackup software installed
@@ -7,20 +6,16 @@
     path: "{{ os_path_nbu_install }}/netbackup/bin/version"
   register: netbackup_version_file_register
   failed_when: false
-  changed_when: false
+  changed_when: false 
 
 - name: "NBU-VERSION-CHECK -> Verify what version of the NetBackup software is currently installed"
-  ansible.builtin.shell:
-    cmd: "{{ version_check_cmd | replace('ITEM_PACKAGE_NAME', nbu_rpm_vrtsnbcfg) }}"
+  ansible.builtin.shell: 
+    cmd:  "{{ version_check_cmd | replace('ITEM_PACKAGE_NAME', nbu_rpm_vrtsnbcfg) }}"
   changed_when: false
   failed_when: false
   register: nbu_version_register
 
 - name: "NBU-VERSION-CHECK -> Verify installed NetBackup software version"
-  when:
-    - ( nbu_version_register.rc == 0 )
-    - ( nbu_version_register.stdout != "" )
-
   block:
     - name: "NBU-VERSION-CHECK -> Set NetBackup Version from version.txt"
       ansible.builtin.set_fact:
@@ -28,13 +23,15 @@
 
     - name: "NBU-VERSION-CHECK -> Formatting NetBackup Version into x.x.x.x format"
       ansible.builtin.set_fact:
-        nbu_current_installed_version: "{{ nbu_current_installed_version + '.' + '0' * (1 - (nbu_current_installed_version | regex_replace('.', '') | length)) \
-                                         }}"
+        nbu_current_installed_version: "{{ nbu_current_installed_version + '.' + '0' * (1 - (nbu_current_installed_version | regex_replace('.', '') | length) ) }}"
       when: nbu_current_installed_version | regex_findall('\.') | length < 3
       loop: "{{ range(3) | list }}"
-
-    - name: "Ansible::Log.info"
+    
+    - name: Ansible::Log.info
       ansible.builtin.debug:
         msg: "The NetBackup version ({{ nbu_current_installed_version }}) is currently installed."
+  when:
+    - ( nbu_version_register.rc == 0 )
+    - ( nbu_version_register.stdout != "" )
 
 # EOF

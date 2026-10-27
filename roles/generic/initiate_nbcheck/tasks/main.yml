@@ -1,4 +1,3 @@
----
 # $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
 
 # Execute the role which detect the partial install status
@@ -7,12 +6,10 @@
     name: 'helper/detect_partial_install'
 
 - name: "NBU-NBCHECK -> Execute the task based on partial installation detection"
-  when:
-    - (not nbap_partial_install_detected)
   block:
     - name: "NBU-NBCHECK -> Execution of symlink operation role"
       ansible.builtin.include_role:
-        name: 'netbackup/{{ nbap_ansible_system }}/symlink_operations'
+        name: 'netbackup/{{ nbap_ansible_system }}/symlink-operations'
 
     - name: "NBCHECK -> Include tasks for NBChecks"
       ansible.builtin.include_tasks: "{{ nbap_ansible_system }}.yml"
@@ -26,7 +23,6 @@
       ansible.builtin.copy:
         content: "{{ 'n' if 'media' in nbu_role else 'y' }}"
         dest: /tmp/nb_mstr_ans
-        mode: "0644"
       when: nbu_role == "media" or nbu_role == "primary"
-
-# EOF
+  when:
+    - (not nbap_partial_install_detected)

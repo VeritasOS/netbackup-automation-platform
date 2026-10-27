@@ -1,4 +1,3 @@
----
 # $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
 
 # NetBackup Client Remove - Windows
@@ -8,24 +7,24 @@
 
   pre_tasks:
     - name: Retrieving host distribution
-      ansible.builtin.setup:
+      setup:
         gather_subset:
           - "distribution"
 
-    - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Load configurable variables"
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Load configurable variables"
       ansible.builtin.include_vars: "vars/win32nt.yml"
       tags: ["always"]
-      no_log: true
+      no_log: True      
 
   roles:
-    - role: 'netbackup' # Load netbackup common defaults
-    - role: 'netbackup/win32nt' # Load netbackup default vars
+    - role: 'netbackup'                                # Load netbackup common defaults
+    - role: 'netbackup/win32nt'                        # Load netbackup default vars
     - role: 'generic/is_nbu_version_supported'
     - role: 'generic/os_compatibility'
     - role: 'generic/nbu_compatibility'
-    - role: 'netbackup/win32nt/nbu_win_remove/v2.0'
+    - role: 'netbackup/win32nt/nbu-win-remove/v2.0'
   vars:
     nbu_role: "client"
     nbu_playbook_type: "remove"
-
-# EOF
+    
+#EOF

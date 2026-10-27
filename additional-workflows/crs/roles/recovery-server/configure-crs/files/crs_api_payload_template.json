@@ -1,0 +1,510 @@
+{
+    "aws": {
+        "rvlt": {
+            "createStorageServer": {
+                "data": {
+                    "type": "storageServer",
+                    "attributes": {
+                        "name": "test-storage.veritas.com",
+                        "storageCategory": "MSDP",
+                        "mediaServerDetails": {
+                            "name": "test-media.veritas.com"
+                        },
+                        "additionalMediaServersDetails": [],
+                        "encryptionEnabled": false,
+                        "msdpAttributes": {
+                            "storagePath": "/data/msdp",
+                            "credentials": {
+                                "userName": "test_user",
+                                "password": "******"
+                            },
+                            "imageSharingInCloud": true
+                        }
+                    }
+                }
+            },
+            "createCrendential": {
+                "data": {
+                    "type": "credentialRequest",
+                    "attributes": {
+                      "name": "aws-rvlt-cred",
+                      "tag": null,
+                      "category": "Veritas Alta Recovery Vault",
+                      "description": null,
+                      "contents": {
+                        "refresh_token": "******"
+                      }
+                    }
+                  }
+            },
+            "createDiskVolume": {
+                "data": {
+                    "type": "diskVolume",
+                    "attributes": {
+                        "diskVolumeName": "test-aws-rvlt-vol",
+                        "virtualLsuMembers": [],
+                        "region": "us-east-1",
+                        "encryptionEnabled": false,
+                        "readOnly": true,
+                        "kmsEnabled": false,
+                        "requestCloudCacheCapacity": 38,
+                        "cloudAttributes": {
+                            "bucketName": "nra8****929583",
+                            "subBucketName": "test-aws-rvlt-vol",
+                            "postRehydrateRetentionPeriod": null,
+                            "providerId": "vamazon",
+                            "serverSideEncryptionEnabled": false,
+                            "needTokenRenew": true,
+                            "urlAccessStyle": "VIRTUAL_STYLE",
+                            "sslDetails": {
+                                "useSSLMode": "DATA",
+                                "checkCertificateRevocation": true,
+                                "httpPort": 80,
+                                "httpsPort": 443
+                            },
+                            "objectLockConfiguration": {
+                                "objectLockEnabled": false
+                            },
+                            "proxyServerEnabled": false,
+                            "storageClass": "Alta-Recovery-Vault-Standard-AWS",
+                            "s3RegionDetails": [
+                                {
+                                    "regionName": "US East (N. Virginia)",
+                                    "regionId": "us-east-1",
+                                    "serviceHost": "s3.dualstack.us-east-1.amazonaws.com"
+                                }
+                            ],
+                            "cloudCredentials": {
+                                "authType": "ACCESS_KEY",
+                                "accessKeyDetails": {
+                                    "cmsCredName": "aws-rvlt-cred"
+                                }
+                            },
+                            "serviceEndpoint": "s3.dualstack.us-east-1.amazonaws.com"
+                        }
+                    }
+                }
+            },
+            "createDiskPool": {
+                "data": {
+                    "type": "diskPool",
+                    "attributes": {
+                        "name": "crs-diskpool",
+                        "diskVolumes": [
+                            {
+                                "name": "test-aws-rvlt-vol"
+                            }
+                        ],
+                        "maximumIoStreams": {
+                            "limitIoStreams": false
+                        },
+                        "highWaterMark": 98,
+                        "lowWaterMark": 80
+                    },
+                    "relationships": {
+                        "storageServers": {
+                            "data": [
+                                {
+                                    "type": "storageServer",
+                                    "id": "PureDisk:jin-vm-01.internal.cloudapp.net"
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "msdp-c": {
+            "createStorageServer": {
+                "data": {
+                    "type": "storageServer",
+                    "attributes": {
+                      "name": "jin-vm-02.internal.cloudapp.net",
+                      "storageCategory": "MSDP",
+                      "mediaServerDetails": {
+                        "name": "jin-vm-02.internal.cloudapp.net"
+                      },
+                      "additionalMediaServersDetails": [],
+                      "encryptionEnabled": false,
+                      "msdpAttributes": {
+                        "storagePath": "/data/msdp",
+                        "credentials": {
+                          "userName": "stu_user",
+                          "password": "******"
+                        },
+                        "imageSharingInCloud": true
+                      }
+                   }
+                }
+            },
+            "createCrendential": {
+                "data": {
+                    "type": "credentialRequest",
+                    "attributes": {
+                      "name": "crs_creds",
+                      "tag": null,
+                      "category": "MSDP-C",
+                      "description": null,
+                      "contents": {
+                        "aws_auth_type": "aws_access_key_option",
+                        "aws_access_key_option": null,
+                        "access_key_id": "AKIAYJIJQC7T6MH77DMM",
+                        "secret_access_key": "******",
+                        "iam_anywhere_option": null,
+                        "trust_anchor_arn": null,
+                        "profile_arn": null,
+                        "role_arn": null,
+                        "iam_anywhere_ca_cert": null,
+                        "iam_anywhere_private_key": null
+                      }
+                    }
+                  }
+            },                 
+            "createDiskVolume": {
+                "data": {
+                    "type": "diskVolume",
+                    "attributes": {
+                      "diskVolumeName": "volume-aws-no-kms",
+                      "virtualLsuMembers": [],
+                      "region": "us-east-1",
+                      "encryptionEnabled": false,
+                      "readOnly": true,
+                      "kmsEnabled": false,
+                      "requestCloudCacheCapacity": 41,
+                      "cloudAttributes": {
+                        "bucketName": "jin-imagesharing",
+                        "subBucketName": "volume-aws-no-kms",
+                        "postRehydrateRetentionPeriod": null,
+                        "providerId": "amazon",
+                        "serverSideEncryptionEnabled": false,
+                        "needTokenRenew": false,
+                        "urlAccessStyle": "VIRTUAL_STYLE",
+                        "sslDetails": {
+                          "useSSLMode": "DATA",
+                          "checkCertificateRevocation": true,
+                          "httpPort": 80,
+                          "httpsPort": 443
+                        },
+                        "objectLockConfiguration": {
+                          "objectLockEnabled": false
+                        },
+                        "proxyServerEnabled": false,
+                        "storageClass": "STANDARD",
+                        "s3RegionDetails": [
+                          {
+                            "regionName": "US East (N. Virginia)",
+                            "regionId": "us-east-1",
+                            "serviceHost": "s3.dualstack.us-east-1.amazonaws.com"
+                          }
+                        ],
+                        "cloudCredentials": {
+                          "authType": "ACCESS_KEY",
+                          "accessKeyDetails": {
+                            "cmsCredName": "crs_creds"
+                          }
+                        },
+                        "serviceEndpoint": "s3.dualstack.us-east-1.amazonaws.com"
+                      }
+                    }
+                  }
+            },
+            "createDiskVolumeWithRole": {
+                "data": {
+                    "type": "diskVolume",
+                    "attributes": {
+                      "diskVolumeName": "volume-aws-no-kms",
+                      "virtualLsuMembers": [],
+                      "region": "us-east-1",
+                      "encryptionEnabled": false,
+                      "readOnly": true,
+                      "kmsEnabled": false,
+                      "requestCloudCacheCapacity": 41,
+                      "cloudAttributes": {
+                        "bucketName": "jin-imagesharing",
+                        "subBucketName": "volume-aws-no-kms",
+                        "postRehydrateRetentionPeriod": null,
+                        "providerId": "amazon",
+                        "serverSideEncryptionEnabled": false,
+                        "needTokenRenew": false,
+                        "urlAccessStyle": "VIRTUAL_STYLE",
+                        "sslDetails": {
+                          "useSSLMode": "DATA",
+                          "checkCertificateRevocation": true,
+                          "httpPort": 80,
+                          "httpsPort": 443
+                        },
+                        "objectLockConfiguration": {
+                          "objectLockEnabled": false
+                        },
+                        "proxyServerEnabled": false,
+                        "storageClass": "STANDARD",
+                        "s3RegionDetails": [
+                          {
+                            "regionName": "US East (N. Virginia)",
+                            "regionId": "us-east-1",
+                            "serviceHost": "s3.dualstack.us-east-1.amazonaws.com"
+                          }
+                        ],
+                        "cloudCredentials": {
+                          "authType": "CREDENTIAL_ROLE",
+                          "awsIdentityRole": {
+                            "awsIdentityRoleType": "EC2_ROLE"
+                          }
+                        },
+                        "serviceEndpoint": "s3.dualstack.us-east-1.amazonaws.com"
+                      }
+                    }
+                  }
+            },
+	        "createDiskPool": {
+                "data": {
+                    "type": "diskPool",
+                    "attributes": {
+                      "name": "crs-dp",
+                      "diskVolumes": [
+                        {
+                          "name": "qing-test-vol"
+                        }
+                      ],
+                      "maximumIoStreams": {
+                        "limitIoStreams": false
+                      },
+                      "highWaterMark": 98,
+                      "lowWaterMark": 80
+                    },
+                    "relationships": {
+                      "storageServers": {
+                        "data": [
+                          {
+                            "type": "storageServer",
+                            "id": "PureDisk:test-storage-server"
+                          }
+                        ]
+                      }
+                    }
+                }
+            }
+        }
+    },
+    "azure": {
+        "rvlt": {
+            "createStorageServer": {
+                "data": {
+                    "type": "storageServer",
+                    "attributes": {
+                        "name": "qing-nbu104.qing-crs.veritas.com",
+                        "storageCategory": "MSDP",
+                        "mediaServerDetails": {
+                            "name": "qing-nbu104.qing-crs.veritas.com"
+                        },
+                        "additionalMediaServersDetails": [],
+                        "encryptionEnabled": false,
+                        "msdpAttributes": {
+                            "storagePath": "/msdp",
+                            "credentials": {
+                                "userName": "stu_user",
+                                "password": "******"
+                            },
+                            "imageSharingInCloud": true
+                        }
+                    }
+                }
+            },
+            "createCrendential": {
+                "data": {
+                    "type": "credentialRequest",
+                    "attributes": {
+                      "name": "azure-crs-cred",
+                      "tag": null,
+                      "category": "Veritas Alta Recovery Vault",
+                      "description": null,
+                      "contents": {
+                        "storage_account": "nrv81ve0001acct3dfb87",
+                        "refresh_token": "******"
+                      }
+                    }
+                }
+            },
+            "createDiskVolume": {
+                "data": {
+                    "type": "diskVolume",
+                    "attributes": {
+                        "diskVolumeName": "test-azure-rvlt-vol",
+                        "virtualLsuMembers": [],
+                        "encryptionEnabled": false,
+                        "readOnly": true,
+                        "kmsEnabled": false,
+                        "requestCloudCacheCapacity": 38,
+                        "cloudAttributes": {
+                            "bucketName": "nrv8****acct3dfb87",
+                            "subBucketName": "test-azure-rvlt-vol",
+                            "postRehydrateRetentionPeriod": null,
+                            "providerId": "vazure",
+                            "needTokenRenew": true,
+                            "urlAccessStyle": "VIRTUAL_STYLE",
+                            "sslDetails": {
+                                "useSSLMode": "DATA",
+                                "checkCertificateRevocation": true,
+                                "httpPort": 80,
+                                "httpsPort": 443
+                            },
+                            "objectLockConfiguration": {
+                                "objectLockEnabled": false
+                            },
+                            "proxyServerEnabled": false,
+                            "storageTier": "Alta-Recovery-Vault-Standard-AZURE",
+                            "serviceEndpoint": "blob.core.windows.net",
+                            "cloudCredentials": {
+                                "authType": "ACCESS_KEY",
+                                "accessKeyDetails": {
+                                    "cmsCredName": "azure-crs-cred"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "createDiskPool": {
+                "data": {
+                    "type": "diskPool",
+                    "attributes": {
+                        "name": "test-azure-rvlt-vol",
+                        "diskVolumes": [
+                            {
+                                "name": "test-azure-rvlt-vol"
+                            }
+                        ],
+                        "maximumIoStreams": {
+                            "limitIoStreams": false
+                        },
+                        "highWaterMark": 98,
+                        "lowWaterMark": 80
+                    },
+                    "relationships": {
+                        "storageServers": {
+                            "data": [
+                                {
+                                    "type": "storageServer",
+                                    "id": "PureDisk:test-storage-server.internal.cloudapp.net"
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "msdp-c": {
+            "createStorageServer": {
+                "data": {
+                    "type": "storageServer",
+                    "attributes": {
+                      "name": "jin-vm-02.internal.cloudapp.net",
+                      "storageCategory": "MSDP",
+                      "mediaServerDetails": {
+                        "name": "jin-vm-02.internal.cloudapp.net"
+                      },
+                      "additionalMediaServersDetails": [],
+                      "encryptionEnabled": false,
+                      "msdpAttributes": {
+                        "storagePath": "/data/msdp",
+                        "credentials": {
+                          "userName": "test_credential",
+                          "password": "******"
+                        },
+                        "imageSharingInCloud": true
+                      }
+                    }
+                }
+            },
+            "createCrendential": {
+                "data": {
+                    "type": "credentialRequest",
+                    "attributes": {
+                      "name": "azure-crs-cred",
+                      "tag": null,
+                      "category": "MSDP-C",
+                      "description": null,
+                      "contents": {
+                        "az_auth_type": "az_access_key_option",
+                        "az_access_key_option": null,
+                        "storage_account": "msdpqazurenormal",
+                        "access_key": "******",
+                        "service_principal_option": null,
+                        "client_id": null,
+                        "tenant_id": null,
+                        "secret_key": null
+                      }
+                   }
+                }
+            },
+            "createDiskVolume": {
+                "data": {
+                   "type": "diskVolume",
+                   "attributes": {
+                     "diskVolumeName": "volume-azure-test",
+                     "virtualLsuMembers": [],
+                     "encryptionEnabled": true,
+                     "readOnly": true,
+                     "kmsEnabled": true,
+                     "requestCloudCacheCapacity": 41,
+                     "cloudAttributes": {
+                       "bucketName": "jin-imagesharing-test",
+                       "subBucketName": "volume-azure-test",
+                       "postRehydrateRetentionPeriod": null,
+                       "providerId": "azure",
+                       "needTokenRenew": false,
+                       "urlAccessStyle": "VIRTUAL_STYLE",
+                       "sslDetails": {
+                         "useSSLMode": "DATA",
+                         "checkCertificateRevocation": true,
+                         "httpPort": 80,
+                         "httpsPort": 443
+                       },
+                       "objectLockConfiguration": {
+                         "objectLockEnabled": false
+                       },
+                       "proxyServerEnabled": false,
+                       "storageTier": "ACCOUNT_ACCESS_TIER",
+                       "serviceEndpoint": "blob.core.windows.net",
+                       "cloudCredentials": {
+                         "authType": "ACCESS_KEY",
+                         "accessKeyDetails": {
+                           "cmsCredName": "azure-crs-cred"
+                         }
+                       }
+                     }
+                   }
+                 }
+            },
+	        "createDiskPool": {
+                "data": {
+                    "type": "diskPool",
+                    "attributes": {
+                      "name": "crs-dp",
+                      "diskVolumes": [
+                        {
+                          "name": "qing-test-vol"
+                        }
+                      ],
+                      "maximumIoStreams": {
+                        "limitIoStreams": false
+                      },
+                      "highWaterMark": 98,
+                      "lowWaterMark": 80
+                    },
+                    "relationships": {
+                      "storageServers": {
+                        "data": [
+                          {
+                            "type": "storageServer",
+                            "id": "PureDisk:test-storage-server"
+                          }
+                        ]
+                      }
+                    }
+                }
+            }
+        }
+    }
+}
+

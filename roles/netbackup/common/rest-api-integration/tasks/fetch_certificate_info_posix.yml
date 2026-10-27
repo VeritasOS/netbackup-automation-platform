@@ -1,0 +1,86 @@
+# $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
+
+- name: "NBU-CERTIFICATE-DEPLOYMENT -> Verify NetBackup file {{ os_file_nbu_nbcertcmd }} existence status"
+  ansible.builtin.stat:
+    path: "{{ os_file_nbu_nbcertcmd }}"
+  register: nbcertcmd_existence_register
+  failed_when: false
+  changed_when: false
+
+- name: "NBU-CERTIFICATE-DEPLOYMENT -> Set NBCA webtruststore path for REST API TLS validation (Linux)"
+  ansible.builtin.set_fact:
+    nbu_api_ca_path: "{{ (os_path_nbu_install | default('/usr/openv')) + '/var/webtruststore/cacert.pem' }}"
+    nbu_eca_mode: "OFF"
+    nbu_nbca_mode: "ON"
+
+- name: "NBU-CERTIFICATE-DEPLOYMENT -> Start NetBackup services if found stopped"
+  ansible.builtin.include_role:
+    name: 'netbackup/{{ nbap_ansible_system }}/nbu-start-services'
+
+- name: "BLOCK: NBU-CERTIFICATE-DEPLOYMENT-> Retrieve certificate mode for primary server: {{ nbu_primary_server_ans }}"
+  block:
+    - name: "NBU-CERTIFICATE-DEPLOYMENT-> Retrieve certificate mode for primary server: {{ nbu_primary_server_ans }}"
+      ansible.builtin.shell: ( {{ os_file_nbu_nbcertcmd }} -getSecConfig -caUsage -server "{{ nbu_primary_server_ans }}" )
+      changed_when: false
+      register: certificate_mode_register
+      failed_when: false
+
+    - name: "NBU-CERTIFICATE-DEPLOYMENT -> Failed to retrieve certificate mode for primary server ({{ nbu_primary_server_ans }})"
+      ansible.builtin.fail:
+        msg: "{{ certificate_mode_register.stderr }}"
+      when:
+        - ( certificate_mode_register.rc != 0 )
+        - certificate_mode_register.stderr != ""
+
+    - name: "NBU-CERTIFICATE-DEPLOYMENT-> Extract certificate mode of NBCA and ECA"
+      ansible.builtin.set_fact:
+        nbu_nbca_mode: "{{ certificate_mode_register.stdout_lines[0].split(':')[1] | trim }}"
+        nbu_eca_mode: "{{ certificate_mode_register.stdout_lines[1].split(':')[1] | trim }}"
+
+    - name: "NBU-CERTIFICATE-DEPLOYMENT -> Fetch ECA trust store path (Linux)"
+      block:
+        - name: "NBU-CERTIFICATE-DEPLOYMENT -> Verify nbgetconfig CLI existence"
+          ansible.builtin.stat:
+            path: "{{ os_file_nbu_nbgetconfig }}"
+          register: nbgetconfig_existence_register
+
+        - name: "NBU-CERTIFICATE-DEPLOYMENT -> Fail when ECA trust store path cannot be determined (Linux)"
+          ansible.builtin.fail:
+            msg:
+              - "ECA trust store path (ECA_TRUST_STORE_PATH) is required for REST API TLS certificate validation (validate_certs)."
+              - "The nbgetconfig utility was not found at '{{ os_file_nbu_nbgetconfig }}' or ECA_TRUST_STORE_PATH is not configured on this host."
+              - "Without a valid ECA trust store path, NetBackup REST API calls will fail."
+          when: not nbgetconfig_existence_register.stat.exists
+
+        - name: "NBU-CERTIFICATE-DEPLOYMENT -> Fetch ECA trust store path from nbgetconfig CLI"
+          block:
+            - name: "NBU-CERTIFICATE-DEPLOYMENT -> Read ECA_TRUST_STORE_PATH via nbgetconfig"
+              ansible.builtin.shell: "{{ os_file_nbu_nbgetconfig }} ECA_TRUST_STORE_PATH | awk '{ print $3 }'"
+              register: nbgetconfig_eca_trust_store_register
+              changed_when: false
+              failed_when: false
+
+            - name: "NBU-CERTIFICATE-DEPLOYMENT -> Fail when ECA_TRUST_STORE_PATH is empty (Linux)"
+              ansible.builtin.fail:
+                msg:
+                  - "ECA trust store path (ECA_TRUST_STORE_PATH) is required for REST API TLS certificate validation (validate_certs)."
+                  - "The nbgetconfig utility was not found at '{{ os_file_nbu_nbgetconfig }}' or ECA_TRUST_STORE_PATH is not configured on this host."
+                  - "Without a valid ECA trust store path, NetBackup REST API calls will fail."
+              when:
+                - (nbgetconfig_eca_trust_store_register.stdout | trim | length) == 0
+
+            - name: "NBU-CERTIFICATE-DEPLOYMENT -> Set ECA trust store path for REST API TLS validation (Linux)"
+              ansible.builtin.set_fact:
+                nbu_api_ca_path: "{{ nbgetconfig_eca_trust_store_register.stdout | trim }}"
+              when:
+                - (nbgetconfig_eca_trust_store_register.stdout | trim | length) > 0
+          when:
+            - nbgetconfig_existence_register.stat.exists
+      when:
+        - nbu_eca_mode == "ON"
+        - nbu_nbca_mode == "OFF"
+
+  when:
+    - nbcertcmd_existence_register.stat.exists
+
+#EOF

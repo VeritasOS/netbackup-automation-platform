@@ -1,19 +1,18 @@
----
 # $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
 
-- name: "NBCHECK -> Removing existing VRTSnbpck package and /usr folder from {{ os_path_openv_tmp }}"
-  ansible.builtin.file:
+- name: "NBCHECK -> Removing existing VRTSnbpck package and /usr folder from {{ os_path_openv_tmp  }}"
+  file:
     path: "{{ item }}"
     state: absent
   with_items:
-    - "{{ os_path_openv_tmp }}/VRTSnbpck{{ package_extension }}"
-    - "{{ os_path_openv_tmp }}/usr"
-    - "{{ os_path_openv_tmp }}/nbcheck"
+   - "{{ os_path_openv_tmp  }}/VRTSnbpck{{ package_extension }}"
+   - "{{ os_path_openv_tmp  }}/usr"
+   - "{{ os_path_openv_tmp  }}/nbcheck"
 
 - name: "NBCHECK -> Verify base directory {{ os_path_nbu_install_default }} existence"
-  ansible.builtin.stat:
+  stat:
     path: "{{ os_path_nbu_install_default }}"
-  register: base_dir_existence_status_register
+  register:  base_dir_existence_status_register
 
 - name: "NBCHECK -> Ansible::Log.info"
   ansible.builtin.assert:
@@ -26,25 +25,21 @@
   ansible.builtin.file:
     path: "{{ os_path_openv_tmp }}"
     state: directory
-    mode: "0755"
 
-- name: "NBCHECK -> Download {{ nbcheck_package_name }} package to {{ os_path_openv_tmp }}"
-  ansible.builtin.get_url:
-    url: >-
-      {{ nbu_artifactory_repo_base_url }}{{ nbu_artifactory_yum_repo_name_normalize }}{{ nbu_path_repo_base_pkg }}/{{
-      nbcheck_package_name }}{{ package_extension }}
-    dest: "{{ os_path_openv_tmp }}/{{ nbcheck_package_name }}{{ package_extension }}"
+- name: "NBCHECK -> Download {{ nbcheck_package_name }} package to {{ os_path_openv_tmp  }}"
+  get_url:
+    url: "{{ nbu_artifactory_repo_base_url }}{{ artifactory_repo }}{{ nbu_path_repo_base_pkg }}/{{ nbcheck_package_name }}{{ package_extension }}"
+    dest: "{{ os_path_openv_tmp  }}/{{nbcheck_package_name}}{{ package_extension }}"
     validate_certs: "{{ nbu_repo_validate_certs }}"
-    mode: "0644"
 
-- name: "NBCHECK -> Check {{ nbcheck_package_name }} package existence in {{ os_path_openv_tmp }}"
-  ansible.builtin.stat:
-    path: "{{ os_path_openv_tmp }}/{{ nbcheck_package_name }}{{ package_extension }}"
+- name: "NBCHECK -> Check {{ nbcheck_package_name }} package existence in {{ os_path_openv_tmp  }}"
+  stat:
+    path: "{{ os_path_openv_tmp  }}/{{nbcheck_package_name}}{{ package_extension }}"
   no_log: true
   register: file_status_register
 
-- name: "NBCHECK -> Extract {{ nbcheck_package_name }}{{ package_extension }} package"
-  ansible.builtin.shell: ( gunzip -f "{{ nbcheck_package_name }}{{ package_extension }}" )
+- name: "NBCHECK -> Extract {{nbcheck_package_name}}{{ package_extension }} package"
+  ansible.builtin.shell: ( gunzip -f "{{nbcheck_package_name}}{{package_extension}}" )
   args:
     chdir: "{{ os_path_openv_tmp }}"
   when:
@@ -68,31 +63,30 @@
     - file_status_register.stat.exists
 
 - name: "NBCHECK -> Set-Fact NBCheck test name list based on nbu role"
-  ansible.builtin.set_fact:
+  set_fact:
     test_name_list: "{{ nbcheck_test_name[nbu_role] }}"
 
 - name: "NBCHECK -> Set Fact NBCheck service user CLI argument"
-  ansible.builtin.set_fact:
-    db_service_user_arg: "{{ '-Dservice_user=' + nbu_services_user if nbu_role == 'primary' else '' }}"
+  set_fact:
+    db_service_user_arg: "{{ '-Dservice_user='+nbu_services_user if nbu_role =='primary' else '' }}"
 
 - name: "NBCHECK -> Set fact for installing ITA DC NBCheck CLI argument"
-  ansible.builtin.set_fact:
-    install_it_analytics: "{{ '-Dinstall_it_analytics=yes' if nbu_role == 'primary' and do_install_ita_dc else '' }}"
+  set_fact:
+    install_it_analytics: "{{ '-Dinstall_it_analytics=yes' if nbu_role =='primary' and do_install_ita_dc else '' }}"
 
 - name: "NBCHECK -> Passing nbcheck CLI argument when websvc group is different from default web group"
-  ansible.builtin.set_fact:
-    nbweb_service_group: "{{ '-Dwebsvc_group=' + nbu_webservices_group if nbu_role == 'primary' else '' }}"
+  set_fact:
+    nbweb_service_group: "{{ '-Dwebsvc_group='+nbu_webservices_group if nbu_role =='primary' else '' }}"
 
 - name: "NBCHECK -> Passing nbcheck CLI argument when websvc user is different from default web user"
-  ansible.builtin.set_fact:
-    nbweb_service_user: "{{ '-Dwebsvc_user=' + nbu_webservices_user if nbu_role == 'primary' else '' }}"
+  set_fact:
+    nbweb_service_user: "{{ '-Dwebsvc_user='+nbu_webservices_user if nbu_role =='primary' else '' }}"
 
 - name: "NBCHECK -> Passing nbcheck CLI argument when database user is different from default user"
-  ansible.builtin.set_fact:
-    postgres_user_param: "{{ '-Dpostgres_user=' + nbu_database_user if nbu_role == 'primary' else '' }}"
+  set_fact:
+    postgres_user_param: "{{ '-Dpostgres_user='+nbu_database_user if nbu_role =='primary' else '' }}"
 
 - name: "NBCHECK -> Passing nbcheck CLI argument when postgresql_pooler_odbc_port (pg bouncer port) is different from default"
-  ansible.builtin.set_fact:
-    pg_bouncer_port_param: "{{ '-Dpgb_port=' + (postgresql_pooler_odbc_port if postgresql_pooler_odbc_port != '' else '13787') if nbu_role == 'primary' else \
-                             '' }}"
-# EOF
+  set_fact:
+    pg_bouncer_port_param: "{{ '-Dpgb_port='+(postgresql_pooler_odbc_port if postgresql_pooler_odbc_port != '' else '13787') if nbu_role == 'primary' else '' }}"
+#EOF

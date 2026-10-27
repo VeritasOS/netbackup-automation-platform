@@ -1,0 +1,26 @@
+# $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
+
+#############################################################
+#### NetBackup Service User Creation and Validation      ####
+#### Supports: Primary, Media, Client roles              ####
+#### Platforms: POSIX (Linux/Unix), Windows              ####
+#############################################################
+
+# Pretty SKIP message when FTO is off (excluding service_user playbook and primary role)
+- name: "NBU-SERVICE-USER -> SKIP: service user configuration disabled"
+  ansible.builtin.debug:
+    msg: >-
+      Service user configuration bypassed, the required feature configuration option (configure_service_user) is currently disabled.
+      Existing service account on the host will be preserved; no validation or changes will be performed.
+  when:
+    - not (include_service_user_configuration | bool)
+    - nbu_playbook_type != "service_user"
+    - nbu_role is defined and nbu_role != "primary"
+
+# Run validation when FTO is on OR nbu_role is primary (primary always validates)
+- name: "NBU-SERVICE-USER -> Include common service user validation"
+  ansible.builtin.include_tasks: t01_validate_service_user.yml
+  when:
+    - (include_service_user_configuration | bool) or (nbu_role is defined and nbu_role == "primary") or (nbu_playbook_type == "service_user" )
+
+# EOF

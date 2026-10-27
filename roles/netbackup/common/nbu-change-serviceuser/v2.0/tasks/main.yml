@@ -1,0 +1,20 @@
+# $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
+
+- name: "NBU-SERVICE-USER -> Validate and Create Netbackup Services OS user/group"
+  ansible.builtin.include_role:
+    name: "netbackup/common/evaluate-service-user/v2.0"
+
+- name: "NBU-SERVICE-USER -> Post-install nbserviceusercmd change-user (platform dispatch)"
+  block:
+    - name: "NBU-SERVICE-USER -> Load platform tasks for nbserviceusercmd change-user"
+      ansible.builtin.include_tasks: "{{ nbap_ansible_system }}.yml"
+  when:
+    - include_service_user_configuration or nbu_playbook_type == "service_user"
+
+- name: "Ansible::Log.info"
+  ansible.builtin.debug:
+    msg: "Service user configuration bypassed; the required feature configuration option (include_service_user_configuration) is currently disabled."
+  when: not (include_service_user_configuration or nbu_playbook_type == "service_user" or nbu_role == "primary")
+
+
+#EOF

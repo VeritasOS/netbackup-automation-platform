@@ -1,25 +1,19 @@
----
 # $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
 
 - name: "NBCHECK ->  NBCheck error block"
-  when: extract_file_status_register.rc == 0
   block:
     - name: "NBCHECK -> Checking for {{ 'Critical' if item.critical else 'Non-Critical' }} system conditions..."
-      ansible.builtin.shell: ( {{ nb_check_path }} --keepgoing --failures-only --test={{ item.testName }} --role_from_installer={{ nbcheck_role_list[nbu_role]
-        }} {{ db_service_user_arg }} {{ install_it_analytics }} {{ nbweb_service_group }} {{ nbweb_service_user }} {{ postgres_user_param }} {{
-        pg_bouncer_port_param }})
+      ansible.builtin.shell: ( {{ nb_check_path }} --keepgoing --failures-only --test={{ item.testName }} --role_from_installer={{ nbcheck_role_list[nbu_role] }} {{ db_service_user_arg }} {{ install_it_analytics }} {{ nbweb_service_group }} {{ nbweb_service_user }} {{ postgres_user_param }} {{ pg_bouncer_port_param }})
       failed_when: false
       register: nbcheck_result_register
       no_log: true
 
-    - name: "NBCHECK -> Below {{ 'Critical' if item.critical else 'Non-Critical' }} NBChecks {{ 'passed' if (nbcheck_result_register.stdout | length == 0) else
-        'failed' }} for  Target host"
-      ansible.builtin.assert:
-        that:
+    - name: "NBCHECK -> Below {{ 'Critical' if item.critical else 'Non-Critical' }} NBChecks {{ 'passed' if (nbcheck_result_register.stdout | length == 0) else 'failed' }} for  Target host"
+      assert:
+        that: 
           - nbcheck_result_register.stdout | length == 0
         fail_msg: "{{ nbcheck_result_register.stdout }}"
         success_msg: "All the {{ 'Critical' if item.critical else 'Non-Critical' }} NBChecks passed."
-      ignore_errors: "{{ item.critical == false }}"
-      register: nbcheck_assert_register
+      ignore_errors: "{{item.critical == false}}"
 
-# EOF
+  when: extract_file_status_register.rc == 0

@@ -1,0 +1,95 @@
+#####################################################################
+#### nbu-win-install -> tasks -> t01_upgrade_status.yml ####
+#####################################################################
+
+# These tasks will verify the workflow is being executed on a current NetBackup client/server
+# and will determine whether the NetBackup software requires upgrading to a newer version.
+# If the client/server is not a valid client/server or the client/server software doesnt require upgrading, the upgrade
+# workflow will exit after this task and no further tasks will be performed.
+
+# Verify NetBackup installation type (consolidates client and media checks into one task)
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Verify NetBackup installation type"
+  win_reg_stat:
+    path: "{{ nbu_registry_path }}\\CurrentVersion"
+    name: Install Type
+  register: nbu_install_type_register
+  failed_when:
+    - nbu_install_type_register.value != vars['nbu_' ~ nbu_role ~ '_product_name']
+
+
+# Get NetBackup version only when install type is valid
+- name: "NBU-{{ nbu_role|upper }}-UPGRADE -> Get NetBackup {{ nbu_role | capitalize }} Software Version"
+  win_reg_stat:
+    path: "{{ nbu_registry_path }}\\CurrentVersion"
+    name: VERSION
+  register: nbu_version_register
+  when:
+    - nbu_install_type_register.value == vars['nbu_' ~ nbu_role ~ '_product_name']
+
+  
+ # NetBackup client/server software - Set the current version of the NetBackup client/server as a fact
+- name: "NBU-{{ nbu_role|upper }}-UPGRADE -> Set the current NetBackup {{ nbu_role | capitalize }} Version as Fact"
+  set_fact:
+    nbu_client_current_version: "{{ nbu_version_register.value | default(nbu_version) }}"
+  when: nbu_version_register.value is defined
+
+# Formatting NetBackup Version into x.x.x.x format
+- name: "NBU-{{ nbu_role|upper }}-UPGRADE -> Formatting NetBackup Version into x.x.x.x format"
+  ansible.builtin.set_fact:
+     nbu_client_current_version: "{{ nbu_client_current_version + '.' + '0' * (1 - (nbu_client_current_version | regex_replace('.', '') | length) ) }}"
+  when: nbu_client_current_version | regex_findall('\.') | length < 3
+  loop: "{{ range(3) | list }}"
+
+# Verify if the installed NetBackup client/server version is out-of-date and requires upgrading
+# If current version is lower than proposed version, upgrade
+- name: "NBU-{{ nbu_role|upper }}-UPGRADE -> Verify whether installed NetBackup {{ nbu_role | capitalize }} version ({{ nbu_client_current_version }}) is out-of-date - Set fact to 'upgrade'"
+  set_fact:
+    nbu_client_status: upgrade
+  when: 
+    - nbu_version_register.value is defined
+    - nbu_client_current_version is version(nbu_version, '<')
+
+# Verify if the installed NetBackup client/server version matches the proposed NetBackup version
+# If current version matches proposed version, no upgrade required
+- name: "NBU-{{ nbu_role|upper }}-UPGRADE -> Verify whether installed NetBackup {{ nbu_role | capitalize }} version {{ nbu_client_current_version }} is up-to-date - Set fact to 'none'"
+  set_fact:
+    nbu_client_status: none
+  when: 
+    - nbu_version_register.value is defined
+    - nbu_client_current_version is version(nbu_version, '==')
+
+# Verify if the installed NetBackup client/server version is a higher version than the proposed NetBackup version
+# If current version is higher than proposed version, no upgrade required
+- name: "NBU-{{ nbu_role|upper }}-UPGRADE -> Verify whether installed NetBackup {{ nbu_role | capitalize }} version {{ nbu_client_current_version }} is higher than proposed NetBackup version - Set fact to 'none'"
+  set_fact:
+    nbu_client_status: none
+  when: 
+    - nbu_version_register.value is defined
+    - nbu_client_current_version is version(nbu_version, '>')
+
+- name: Ansible::Log.info
+  fail:
+    msg:  "This machine doesn't have Netackup {{ nbu_role | capitalize }} installed, hence cannot be upgraded, therefore exit immediately."
+  when:
+    - nbu_install_type_register.value != vars['nbu_' ~ nbu_role ~ '_product_name']
+
+- name: "NBU-{{ nbu_role|upper }}-UPGRADE -> Verify if the installed NetBackup {{ nbu_role | capitalize }} version is compatible for upgrade with ({{ nbu_version }})"
+  fail:
+    msg: "Installed NetBackup client version ({{ nbu_client_current_version }}) is higher than proposed Netbackup Version, therefore exit immediately"
+  when: 
+    - nbu_version_register.value is defined
+    - nbu_client_current_version is version(nbu_version, '>')
+
+- name: "NBU-{{ nbu_role|upper }}-UPGRADE -> Verify if the installed NetBackup {{ nbu_role | capitalize }} version is compatible for upgrade with ({{ nbu_version }})"
+  debug:
+    msg: "Installed NetBackup {{ nbu_role | capitalize }} version ({{ nbu_client_current_version }}) is up-to-date, therefore exit immediately"
+  when: 
+    - nbu_version_register.value is defined
+    - nbu_client_current_version is version(nbu_version, '==')
+
+- name: "NBU-{{ nbu_role|upper }}-UPGRADE -> Resetting install directory to {{ installed_path_register.value }} as its an upgrade"
+  set_fact:
+    os_path_nbu_install: "{{ installed_path_register.value }}"
+  when: installed_path_register is defined
+
+# EOF

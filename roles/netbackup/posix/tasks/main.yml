@@ -1,27 +1,11 @@
----
 # $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
 
-- name: "NBU-INITIALIZE-{{ nbu_playbook_type | upper }} -> Check Python interpreter version"
+- name: "NBU-INITIALIZE-{{ nbu_playbook_type|upper }} -> Check Python interpreter version"
   ansible.builtin.fail:
-    msg: "Host {{ ansible_fqdn }} is using Python {{ ansible_python_version }} ({{ ansible_python.executable }}), which does not meet the minimum requirement of
-      3.9. If higher python version installed, make sure to set 'ansible_python_interpreter' to that path using extra vars."
+    msg: "Host {{ ansible_fqdn }} is using Python {{ ansible_python_version }} ({{ ansible_python.executable }}), which does not meet the minimum requirement of 3.9. If higher python version installed, make sure to set 'ansible_python_interpreter' to that path using extra vars."
   when: ansible_python_version is version('3.9', '<')
 
-# Repo folder names may be set with or without a trailing '/'; URLs concatenate base + folder + path.
-- name: "NBU-INITIALIZE-{{ nbu_playbook_type | upper }} -> Normalize Artifactory repo folder names for URL concatenation"
-  ansible.builtin.set_fact:
-    nbu_artifactory_yum_repo_name_normalize: >-
-      {{
-        '' if (nbu_artifactory_yum_repo_name | default('') | trim | length) == 0
-        else (nbu_artifactory_yum_repo_name | default('') | trim | regex_replace('^/+', '') | regex_replace('/+$', '')) ~ '/'
-      }}
-    nbu_artifactory_eeb_repo_name_normalize: >-
-      {{
-        '' if (nbu_artifactory_eeb_repo_name | default('') | trim | length) == 0
-        else (nbu_artifactory_eeb_repo_name | default('') | trim | regex_replace('^/+', '') | regex_replace('/+$', '')) ~ '/'
-      }}
-
-- name: "NBU-INITIALIZE-{{ nbu_playbook_type | upper }} -> Initialize platform specific CLIs"
+- name: "NBU-INITIALIZE-{{ nbu_playbook_type|upper }} -> Initialize platform specific CLIs"
   ansible.builtin.include_tasks: "initialize_clis.yml"
 
-# EOF
+#EOF

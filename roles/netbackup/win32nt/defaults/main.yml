@@ -1,4 +1,3 @@
----
 # $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
 
 # OS Path
@@ -14,28 +13,20 @@ nbu_bin_path: "{{ os_path_nbu_install }}\\NetBackup\\bin"
 # Post-install nbserviceusercmd (Veritas KB 100053035 / NBU-260522); same relative layout as Linux goodies path.
 os_file_nbu_nbserviceusercmd: "{{ os_path_nbu_install }}\\NetBackup\\bin\\goodies\\nbserviceusercmd.exe"
 nbu_current_os_arch: "{{ ansible_os_family }}"
-registry_path_get_client_guid: "{{ 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Cohesity NetBackup Client' \
-  if nbu_version is version('11.1', '>=') else \
-  'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Veritas NetBackup Client' }}"
-registry_path_get_media_guid: "{{ 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Cohesity NetBackup' \
-  if nbu_version is version('11.1', '>=') else \
-  'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Veritas NetBackup' }}"
+registry_path_get_client_guid: "{{ 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Cohesity NetBackup Client' if nbu_version is version('11.1', '>=') else 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Veritas NetBackup Client' }}"
+registry_path_get_media_guid: "{{ 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Cohesity NetBackup' if nbu_version is version('11.1', '>=') else 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Veritas NetBackup' }}"
 
 # Disk Space variables
 nbu_path_install_space_validation:
-  - { path: "{{ nbu_tmp_dir }}", space_required_MB: 5650 }
-  - { path: "{{ os_path_nbu_base }}", space_required_MB: 1024 }
+  - { path: "{{nbu_tmp_dir}}", space_required_MB: 5650 }
+  - { path: "{{os_path_nbu_base}}", space_required_MB: 1024 }
 
 # Extra parameters to setup.exe w.r.t VCREDIST install preference for nbu_version>=10.4.0.0
 setup_vcredist_params_default: "/STOP_NB_BEFORE_VCREDIST:'YES' /VCREDIST_ATTEMPT_PREFERENCE:'YES' /VCREDIST_RESTART_PREFERENCE:'PROCEED'"
 
 # Windows install commands
-win_client_install_cmd: "{{ ('setup.exe /CLIENT -s /REALLYLOCAL /RESPFILE:' + \"'silent_response.resp'\") \
-  if nbu_version is version_compare('10.4.0.0', '<') else ('setup.exe /CLIENT -s ' + setup_vcredist_params_default + \
-  ' /REALLYLOCAL /RESPFILE:' + \"'silent_response.resp'\") }}"
-win_server_install_cmd: "{{ ('setup.exe /SERVER -s /REALLYLOCAL /RESPFILE:' + \"'silent_response.resp'\") \
-  if nbu_version is version_compare('10.4.0.0', '<') else ('setup.exe /SERVER -s ' + setup_vcredist_params_default + \
-  ' /REALLYLOCAL /RESPFILE:' + \"'silent_response.resp'\") }}"
+win_client_install_cmd: "{{ ('setup.exe /CLIENT -s /REALLYLOCAL /RESPFILE:' + \"'silent_response.resp'\") if nbu_version is version_compare('10.4.0.0', '<') else ('setup.exe /CLIENT -s ' + setup_vcredist_params_default + ' /REALLYLOCAL /RESPFILE:' + \"'silent_response.resp'\") }}"
+win_server_install_cmd: "{{ ('setup.exe /SERVER -s /REALLYLOCAL /RESPFILE:' + \"'silent_response.resp'\") if nbu_version is version_compare('10.4.0.0', '<') else ('setup.exe /SERVER -s ' + setup_vcredist_params_default + ' /REALLYLOCAL /RESPFILE:' + \"'silent_response.resp'\") }}"
 
 # Windows DVD image name for each NetBackup release.
 nbu_pkgs_ordered_list:
@@ -64,45 +55,44 @@ nbu_pkgs_ordered_list:
   8.3.0.1: 'NetBackup_8.3.0.1_Win'
   8.3.0.0: 'NetBackup_8.3_Win'
 
+
 os_version_supported_minimum: 6.2
 
 # Software Repo
-nbu_repo_force: false
-nbu_repo_validate_certs: true
+nbu_repo_force: no
+nbu_repo_validate_certs: yes
 
 # EEB Patch
-nbu_patch_dir_path: "{{ os_path_nbu_install }}\\Patch"
 nbu_eeb_file_base: "{{ item | basename }}"                      # Extract filename from EEB path
 nbu_eeb_filename: "{{ item.value.package | basename }}"
-nbu_eeb_file_id: "{{ nbu_eeb_file_base.split('_')[1] }}" # Extract EEB ET-ID from EEB path
-nbu_eeb_file_ver: "{{ nbu_eeb_file_base.split('_')[2] }}" # Extract EEB Version from EEB path
-eeb_name: "{{ nbu_eeb_file_base.split(' ')[0] }}" # Extract EEB ET-ID from EEB path
-eeb_execution_flag: "{{ nbu_eeb_file_base.split(' ')[1] | default('') }}" # Extract EEB Version from EEB path
+nbu_eeb_file_id: "{{ nbu_eeb_file_base.split('_')[1] }}"        # Extract EEB ET-ID from EEB path
+nbu_eeb_file_ver: "{{ nbu_eeb_file_base.split('_')[2] }}"       # Extract EEB Version from EEB path
+eeb_name: "{{ nbu_eeb_file_base.split(' ')[0] }}"               # Extract EEB ET-ID from EEB path
+eeb_execution_flag: "{{ nbu_eeb_file_base.split(' ')[1] |default('') }}"     # Extract EEB Version from EEB path
 nbu_eeb_package_marker_name: "Veritas NetBackup Client EEB ({{ nbu_eeb_file_id }}_{{ nbu_eeb_file_ver }})"
 
 # Certificate management resources
-nbu_certificates_file_dir: certinfo # newly created directory for keeping cert management files
-nbu_ca_certificate_file: NBU_Fingerprint.txt # name of CACertificate file
-nbu_authorization_token_file: NBU_Token.txt # name of Authorization token file
+nbu_certificates_file_dir: certinfo                             # newly created directory for keeping cert management files
+nbu_CACertificate_File: NBU_Fingerprint.txt                     # name of CACertificate file
+nbu_authorization_token_file: NBU_Token.txt                     # name of Authorization token file
 nbu_primary_server_ans_found: false
-nbu_certificates_file_path: "{{ os_path_nbu_install }}\\NetBackup\\Temp" # NBU Installer path where certificate deployment dir will be created
+nbu_certificates_file_path: "{{ os_path_nbu_install }}\\NetBackup\\Temp"      # NBU Installer path where certificate deployment dir will be created
 nbu_detected_role: "NOT_FOUND"
 
 # NB web service vars
 nbu_api_port: '1556'
 
 # NB Configuration variables
-# If using a masked primary for initial install, set the value to true to ignore connectivity validation and continue execution.
-ignore_primary_connectivity_failures: false
-skip_primary_version_compatibility_check: false # Skip Primary server version compatibility check
+ignore_primary_connectivity_failures: false                     # If using a masked primary for initial install, set the value to true to ignore connectivity validation and continue execution. 
+skip_primary_version_compatibility_check: false                 # Skip Primary server version compatibility check
 # Set this to true if packages are cached locally independently or by using staging playbook to avoid downloading the pakcages at install-time.
 install_pkgs_from_local_cache: false
-include_service_user_configuration: false # Post-install nbserviceusercmd service user (Veritas KB 100053035 / NBU-260522)
+include_service_user_configuration: false                               # Post-install nbserviceusercmd service user (Veritas KB 100053035 / NBU-260522)
 # NetBackup service stop/start commands based on role
 nbu_stop_cmd: "{{ 'bpdown.exe -S' }}"
 nbu_stop_exe: "{{ 'bpdown.exe' }}"
 
-# List of directories to be removed
+#List of directories to be removed
 nbu_directory_list_to_be_removed:
   - "{{ os_path_nbu_install }}\\Help"
   - "{{ os_path_nbu_install }}\\msg"
@@ -111,4 +101,4 @@ nbu_directory_list_to_be_removed:
   - "{{ os_path_nbu_install }}\\pdde"
   - "{{ os_path_nbu_install }}\\Security"
 
-# EOF
+#EOF

@@ -1,4 +1,3 @@
----
 # $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
 
 # NetBackup Certificate Deployment - Windows
@@ -7,7 +6,7 @@
   hosts: all
   pre_tasks:
     - name: Retrieving host distribution
-      ansible.builtin.setup:
+      setup:
         gather_subset:
           - "!all"
           - "!min"
@@ -16,14 +15,14 @@
     - name: "NBU-CERTIFICATE-DEPLOYMENT -> Load configurable variables"
       ansible.builtin.include_vars: "vars/win32nt.yml"
       tags: ["always"]
-      no_log: true
+      no_log: True
 
   roles:
-    - role: 'netbackup' # Load netbackup common defaults
-    - role: 'netbackup/win32nt' # Load netbackup default vars
+    - role: 'netbackup'                                 # Load netbackup common defaults
+    - role: 'netbackup/win32nt'                         # Load netbackup default vars
     - role: 'generic/is_nbu_version_supported'
     - role: 'generic/nbu_compatibility'
-    - role: 'netbackup/common/nbu_get_certificate/v2.0'
+    - role: 'netbackup/common/nbu-get-certificate/v2.0'
   vars:
     nbu_playbook_type: "certificate"
 

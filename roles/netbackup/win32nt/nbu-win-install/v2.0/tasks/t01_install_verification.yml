@@ -1,0 +1,139 @@
+# $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
+
+#####################################################################
+#### nbu-win-install -> tasks -> t01_install_verification.yml ####
+#####################################################################
+
+# Define the install start time as variable
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }}  -> Start NetBackup {{ nbu_playbook_type }}"
+  ansible.builtin.set_fact:
+    status: "started"
+    install_time: "{{ lookup('pipe','date +%Y%m%d%H%M%S') }}"
+
+# Verify whether the NetBackup client/server has the NetBackup server software installed
+# The install will not be performed if the client/server is a NetBackup server
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Verify whether NetBackup {{ nbu_role | capitalize }} server software is currently installed"
+  ansible.builtin.include_role:
+    name: 'generic/nbu_compatibility'
+
+# Set default Artifactory Respository 
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Set Artifactory Repository based on type of environment as Fact"
+  ansible.builtin.set_fact:
+    artifactory_repo: ""
+
+# Discover Artifactory Respository based on the type of environment
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Define Artifactory Repository based on type of environment"
+  block:
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Define Artifactory Repository - DEV"
+      ansible.builtin.set_fact:
+        artifactory_repo: yum-enterprise-dev-local
+      when: "'DEV' in awx_inventory_name"
+
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Define Artifactory Repository - UAT"
+      ansible.builtin.set_fact:
+        artifactory_repo: yum-enterprise-test-local
+      when: "'UAT' in awx_inventory_name"
+
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Define Artifactory Repository - PROD"
+      ansible.builtin.set_fact:
+        artifactory_repo: yum-enterprise-prod-local
+      when:
+        - "'PROD' in awx_inventory_name"
+  when: awx_inventory_name is defined and awx_inventory_name != ""
+
+# Determine the NetBackup Client/Media installed software version 
+# NetBackup Client/Media Software - Base - Check whether the NetBackup Client/Media is already installed
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Verify NetBackup {{ nbu_role | capitalize }} software is currently installed and get its version"
+  block:
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Verify whether NetBackup {{ nbu_role | capitalize }} software is currently installed"
+      win_reg_stat:
+        path: "{{ nbu_registry_path }}\\CurrentVersion"
+        name: Install Type
+      register: nbu_install_type_register
+      ignore_errors: true
+
+    - name: Ansible::Log.info
+      fail:
+        msg: "The specified Registry Key {{ nbu_registry_path }}\\CurrentVersion does not exist"
+      when: ( not nbu_install_type_register.exists )
+
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Verify what version of the NetBackup {{ nbu_role | capitalize }} software is currently installed"
+      win_reg_stat:
+        path: "{{ nbu_registry_path }}\\CurrentVersion"
+        name: VERSION
+      register: nbu_client_version_register
+      when: nbu_install_type_register.value == vars['nbu_' ~ nbu_role ~ '_product_name']
+  when:
+    - ( nbu_playbook_type == "upgrade" )
+
+# Include install/upgrade status task
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Include tasks for NetBackup {{ nbu_playbook_type }} status verification"
+  include_tasks: t01_{{ nbu_playbook_type }}_status.yml
+
+# Set facts about the NetBackup Client/Server
+# Does not run if NetBackup Client/Server software is not installed
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Set facts about the NetBackup {{ nbu_role | capitalize }} {{ nbu_playbook_type }}"
+  ansible.builtin.set_fact:
+    nbu_client_name: "{{ inventory_hostname_short }}"
+    nbu_client_current_version: "{{ nbu_client_version_register.value | default(nbu_version) }}"
+    nbu_client_version_proposed: "{{ nbu_version }}"
+  when:
+    - ( nbu_client_status == "upgrade" )
+    - ( nbu_install_type_register.value == vars['nbu_' ~ nbu_role ~ '_product_name'] )
+
+# Does not run if NetBackup Client software is not installed
+- name: Formatting NetBackup Version into x.x.x.x format
+  block:
+    - name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Formatting NetBackup Version into x.x.x.x format"
+      ansible.builtin.set_fact:
+        nbu_client_current_version: "{{ nbu_client_current_version + '.' + '0' * (1 - (nbu_client_current_version | regex_replace('.', '') | length) ) }}"
+      when: nbu_client_current_version | regex_findall('\.') | length < 3
+      loop: "{{ range(3) | list }}"
+  when:
+    - ( nbu_playbook_type == "upgrade" )
+    - ( nbu_install_type_register.value == vars['nbu_' ~ nbu_role ~ '_product_name'] )
+
+# Does not run if NetBackup Client software is not installed
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }}  -> Set facts about the NetBackup {{ nbu_role | capitalize }} {{ nbu_playbook_type }} "
+  ansible.builtin.set_fact:
+    nbu_client_name: "{{ inventory_hostname_short }}"
+    nbu_client_version_proposed: "{{ nbu_version }}"
+  when:
+    - ( nbu_client_status == "install" )
+
+# Display facts about the NetBackup Client/Server
+# Does not run if NetBackup Client/Server software is not installed
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Display facts about the NetBackup {{ nbu_role | capitalize }} upgrade"
+  ansible.builtin.debug:
+    msg:
+      - "NetBackup {{ nbu_role | capitalize }} - Hostname:                         {{ nbu_client_name }}"
+      - "NetBackup {{ nbu_role | capitalize }} - Action:                           {{ nbu_client_status }}"
+      - "NetBackup {{ nbu_role | capitalize }} - Version ('Current'):              {{ nbu_client_current_version }}"
+      - "NetBackup {{ nbu_role | capitalize }} - Version ('New'):                  {{ nbu_version }}"
+  when:
+    - ( nbu_client_status == "upgrade" )
+
+# Display facts about the NetBackup Client/Server
+# Runs only when NetBackup Client/Server software is not installed
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Display facts about the NetBackup {{ nbu_role | capitalize }} {{ nbu_playbook_type }}"
+  ansible.builtin.debug:
+    msg:
+      - "NetBackup {{ nbu_role | capitalize }} - Hostname:                         {{ inventory_hostname }}"
+      - "NetBackup {{ nbu_role | capitalize }} - Action:                           {{ nbu_playbook_type }}"
+      - "NetBackup {{ nbu_role | capitalize }} - Version ('New'):                  {{ nbu_version }}"
+  when:
+    - ( nbu_client_status == "install" )
+
+- name: Ansible::Log.info
+  ansible.builtin.debug:
+    msg: "Installed NetBackup {{ nbu_role | capitalize }} version ({{ nbu_client_current_version }}) is up-to-date"
+  when: ( nbu_client_status == "none" )
+
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Include tasks for space check "
+  ansible.builtin.include_role:
+     name: 'generic/nbu_space_check'
+  when: ( nbu_client_status == "install" ) or ( nbu_client_status == "upgrade" )
+
+
+# EOF
+

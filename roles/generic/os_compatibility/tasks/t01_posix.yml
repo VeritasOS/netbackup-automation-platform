@@ -1,4 +1,3 @@
----
 # $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
 
 ##############################################################################
@@ -25,28 +24,26 @@
       no_log: false
 
     - name: "NBU-OS-COMPATIBILITY -> Initialize native dependent missing_packages variable"
-      ansible.builtin.set_fact:
+      set_fact:
         missing_packages: []
 
     - name: "NBU-OS-COMPATIBILITY -> Set-fact common native dependent missing packages"
-      ansible.builtin.set_fact:
-        missing_packages: "{{ missing_packages + (os_system_packages[ansible_os_family | lower]['common'] | difference(ansible_facts.packages.keys())) }}"
+      set_fact:
+        missing_packages: "{{ missing_packages + (os_system_packages[ansible_os_family|lower]['common'] | difference(ansible_facts.packages.keys())) }}"
       when:
         - os_system_packages[ansible_os_family|lower]['common'] is defined
         - (os_system_packages[ansible_os_family|lower]['common'] | difference(ansible_facts.packages.keys())) | length > 0
 
     - name: "NBU-OS-COMPATIBILITY -> Set-fact {{ nbu_role | capitalize }} native dependent missing packages"
-      ansible.builtin.set_fact:
-        missing_packages: "{{ missing_packages + (os_system_packages[ansible_os_family | lower][nbu_role] | difference(ansible_facts.packages.keys())) }}"
+      set_fact:
+        missing_packages: "{{ missing_packages + (os_system_packages[ansible_os_family|lower][nbu_role] | difference(ansible_facts.packages.keys())) }}"
       when:
         - os_system_packages[ansible_os_family|lower][nbu_role] is defined
         - (os_system_packages[ansible_os_family|lower][nbu_role] | difference(ansible_facts.packages.keys())) | length > 0
 
     - name: "NBU-OS-COMPATIBILITY -> Set-fact {{ ansible_os_family }}:{{ ansible_distribution_major_version }} native dependent missing packages"
-      ansible.builtin.set_fact:
-        missing_packages: >-
-          "{{ missing_packages + (os_system_packages[ansible_os_family | lower][ansible_distribution_major_version] | difference(ansible_facts.packages.keys()))
-          }}"
+      set_fact:
+        missing_packages: "{{ missing_packages + (os_system_packages[ansible_os_family|lower][ansible_distribution_major_version] | difference(ansible_facts.packages.keys())) }}"
       when:
         - os_system_packages[ansible_os_family|lower][ansible_distribution_major_version] is defined
         - (os_system_packages[ansible_os_family|lower][ansible_distribution_major_version] | difference(ansible_facts.packages.keys())) | length > 0
@@ -55,7 +52,7 @@
       ansible.builtin.package:
         name: "{{ item }}"
         state: present
-        disable_gpg_check: false
+        disable_gpg_check: no
       with_items: "{{ missing_packages }}"
       when:
         - missing_packages | length > 0
@@ -70,12 +67,11 @@
     - name: "NBU-OS-COMPATIBILITY -> Fail if native package facts could not be reloaded"
       ansible.builtin.fail:
         msg: "{{ nbu_pkg_facts_reload_result_register.msg | default(nbu_pkg_facts_reload_result_register | to_json) }}"
-      when: "'ansible_facts' not in nbu_pkg_facts_reload_result_register or 'packages' not in (nbu_pkg_facts_reload_result_register.ansible_facts | \
-              default({}))"
+      when: "'ansible_facts' not in nbu_pkg_facts_reload_result_register or 'packages' not in (nbu_pkg_facts_reload_result_register.ansible_facts | default({}))"
       no_log: false
 
     - name: "NBU-OS-COMPATIBILITY -> Verify the existence of native dependent packages"
-      ansible.builtin.fail:
+      fail:
         msg: "One or more required system packages are not installed: {{ absent_packages }}"
       when: absent_packages | length > 0
       vars:

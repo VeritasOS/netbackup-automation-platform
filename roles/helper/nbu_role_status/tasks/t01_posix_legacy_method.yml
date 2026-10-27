@@ -1,4 +1,3 @@
----
 # $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
 
 # The install will not be performed if the playbook type is different from installed software on target host machine
@@ -11,8 +10,6 @@
   changed_when: false
 
 - name: "NBU-ROLE-STATUS -> Check if target host machine is Primary/Media/Client"
-  when:
-    - os_file_nbu_bpconf_register.stat.exists
   block:
     - name: "NBU-ROLE-STATUS -> Read first entry in bp.conf"
       ansible.builtin.shell: ( cat {{ os_file_nbu_bpconf }} | egrep -v "^#" | grep SERVER | awk 'NR==1 {print $3}' )
@@ -30,65 +27,70 @@
       failed_when: false
 
     - name: "NBU-ROLE-STATUS -> Fetch target host machine details as defined in ansible inventory file"
-      ansible.builtin.set_fact:
+      set_fact:
         nbu_inventory_hostname: "{{ inventory_hostname }}"
         nbu_short_hostname: "{{ ansible_hostname }}"
 
     - name: "NBU-ROLE-STATUS -> Set NBU_Role to Primary if target host machine has primary server installed"
-      when:
-        - ( nbu_primary_server_register.stdout | string == nbu_inventory_hostname ) or ( nbu_primary_server_register.stdout | string == nbu_short_hostname )
-        - ( nbu_primary_files_register.results[0].stat.exists )
-        - ( nbu_primary_files_register.results[1].stat.exists )
-
       block:
-        - name: "NBU-ROLE-STATUS -> Set NBU_Role to Primary if target host machine has primary server installed"
-          ansible.builtin.set_fact:
-            nbu_detected_role: "primary"
+          - name: "NBU-ROLE-STATUS -> Set NBU_Role to Primary if target host machine has primary server installed" 
+            ansible.builtin.set_fact:
+              nbu_detected_role: "primary"
 
-        - name: "NBU-ROLE-STATUS -> Check if NBU_Role is set to primary and skip all further tasks"
-          ansible.builtin.set_fact:
-            skip_next_tasks: true
-          when: nbu_detected_role == "primary"
+          - name: "NBU-ROLE-STATUS -> Check if NBU_Role is set to primary and skip all further tasks"
+            set_fact:
+              skip_next_tasks: true
+            when: nbu_detected_role == "primary"
+
+      when:
+        - ( nbu_primary_server_register.stdout | string == nbu_inventory_hostname ) or ( nbu_primary_server_register.stdout | string == nbu_short_hostname ) 
+        - ( nbu_primary_files_register.results[0].stat.exists ) 
+        - ( nbu_primary_files_register.results[1].stat.exists )      
 
     - name: "NBU-ROLE-STATUS -> Check if target host machine is Media/Client"
-      when:
-        - not skip_next_tasks | default(false)
-
       block:
-        # Verify whether target host machine has the NetBackup client software installed
+      # Verify whether target host machine has the NetBackup client software installed
         - name: "NBU-ROLE-STATUS -> Verify whether NetBackup client software is currently installed"
-          ansible.builtin.shell: "{{ version_check_cmd | replace('ITEM_PACKAGE_NAME', nbu_rpm_vrtsnbcfg) }}"
+          ansible.builtin.shell:  "{{ version_check_cmd | replace('ITEM_PACKAGE_NAME', nbu_rpm_vrtsnbcfg) }}"
           changed_when: false
           register: nbu_client_rpm_check
           failed_when: false
-
+ 
         - name: "NBU-ROLE-STATUS -> Check if target host machine is Media/Client"
-          when:
-            - nbu_client_rpm_check.rc == 0
           block:
             - name: "NBU-ROLE-STATUS -> Check for existence of Primary/Media Server rpms."
               ansible.builtin.shell: ( rpm -qa | egrep "VRTSpddes|VRTSpddei|VRTSnetbp|VRTSnbslibs" )
-              register: netbackup_server_rpm_list_register
+              register: netbackup_server_rpm_list_register 
               changed_when: false
               failed_when: false
               no_log: true
 
-            - name: "NBU-ROLE-STATUS -> Set NBU_Role to client if target host machine has NetBackup Client installed"
+            - name: "NBU-ROLE-STATUS -> Set NBU_Role to client if target host machine has NetBackup Client installed" 
               ansible.builtin.set_fact:
                 nbu_detected_role: "client"
-              when:
-                - netbackup_server_rpm_list_register.rc != 0
+              when:  
+                - netbackup_server_rpm_list_register.rc != 0 
 
-            - name: "NBU-ROLE-STATUS -> Set NBU_Role to media if target host machine has NetBackup media installed"
+            - name: "NBU-ROLE-STATUS -> Set NBU_Role to media if target host machine has NetBackup media installed" 
               ansible.builtin.set_fact:
                 nbu_detected_role: "media"
-              when:
+              when:  
                 - netbackup_server_rpm_list_register.rc == 0
+          when: 
+            - nbu_client_rpm_check.rc == 0 
+      when:
+        - not skip_next_tasks | default(false) 
 
-    - name: "NBU-ROLE-STATUS -> Set nbu_role to nbu_detected_role:{{ nbu_detected_role }} if nbu_role is undefined"
+    - name: "NBU-ROLE-STATUS -> Set nbu_role to nbu_detected_role:{{ nbu_detected_role }} if nbu_role is undefined" 
       ansible.builtin.set_fact:
         nbu_role: "{{ nbu_detected_role }}"
       when:
         - ( nbu_role is not defined )
+    
+  when:
+    - os_file_nbu_bpconf_register.stat.exists
 
-# EOF
+ 
+
+
+

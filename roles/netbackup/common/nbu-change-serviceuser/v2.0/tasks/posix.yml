@@ -1,0 +1,40 @@
+# $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved 
+
+# Install: include_service_user_configuration true requires non-empty nbu_services_user; then stop / changeUser / start.
+# Upgrade: empty nbu_services_user → no stop/change/start. Missing SERVICE_USER on host → skip (valid). Host value differs from inventory → fail with clear diff.
+
+- name: "NBU-SERVICE-USER -> Check nbserviceusercmd presence"
+  ansible.builtin.stat:
+    path: "{{ os_file_nbu_nbserviceusercmd }}"
+  register: nbu_nbserviceusercmd_stat_register
+  changed_when: false
+  failed_when: not nbu_nbserviceusercmd_stat_register.stat.exists
+
+- name: "NBU-SERVICE-USER -> Apply nbserviceusercmd --changeUser sequence (Unix)"
+  block:
+    - name: "NBU-SERVICE-USER -> Stop NetBackup services before service-user change (nbu-stop-services)"
+      ansible.builtin.include_role:
+        name: "netbackup/{{ nbap_ansible_system }}/nbu-stop-services"
+      vars:
+        nbu_run_vxpbx_exchanged_stop_script: true
+
+    # Feed answers on stdin: username, then y (nbserviceusercmd prompts).
+    - name: "NBU-SERVICE-USER -> Run nbserviceusercmd --changeUser"
+      ansible.builtin.command: "{{ os_file_nbu_nbserviceusercmd }} --changeUser"
+      args:
+        stdin: "{{ (nbu_services_user | trim) ~ '\n' ~ 'y' ~ '\n' }}"
+      register: nbu_nbserviceusercmd_result_register
+      changed_when: nbu_nbserviceusercmd_result_register.rc == 0
+      failed_when: nbu_nbserviceusercmd_result_register.rc != 0
+
+  always:
+    - name: "NBU-SERVICE-USER -> Start NetBackup services (always; mirrors Windows bpup recovery)"
+      ansible.builtin.include_role:
+        name: "netbackup/{{ nbap_ansible_system }}/nbu-start-services"
+      vars:
+        nbu_run_vxpbx_exchanged_start_script: true
+  when:
+    - (nbu_services_user | trim | length) > 0
+
+
+#EOF

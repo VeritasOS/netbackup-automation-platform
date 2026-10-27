@@ -1,0 +1,18 @@
+# $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
+
+#############################################
+#### NetBackup win-install ("Windows") ####
+#############################################
+
+# Determine whether the NetBackup software requires install/upgrade
+# If no install is required, the workflow will finish after running this task. 
+- ansible.builtin.import_tasks: t01_install_verification.yml
+
+# Import required tasks - Base Install
+- name: "NBU-{{ nbu_role|upper }}-{{ nbu_playbook_type|upper }} -> Load required tasks for NetBackup {{ nbu_role }} {{ nbu_playbook_type }} "
+  ansible.builtin.include_tasks: t02_base_install.yml
+  when: 
+    - ( nbu_client_status == "upgrade" or nbu_client_status == "install" )
+    
+# EOF
+

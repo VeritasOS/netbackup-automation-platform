@@ -1,29 +1,21 @@
----
 # $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
-
+ 
 # These vars are mostly customer-centric and would get updated.
 # Desired NetBackup Client Version to use in the format [x.x.x.x]
 # Supported versions: ['11.2.0.1', '11.2.0.0', '11.1.0.2', '11.1.0.0', '11.0.0.1', '11.0.0.0', '10.5.0.1', '10.5.0.0' ]
 nbu_version: x.x.x.x
 
-comment: >
+Comment: >
   # NetBackup Package Artifactory Repository
-  # {{ nbu_artifactory_repo_base_url }} should contain the base url before the repo folder segment.
+  # {{nbu_artifactory_repo_base_url}} should contain the base url (pre yum-enterprise-<awx_inventory_name>-local) so that it can be appended based on the {{awx_inventory_name}}.
   nbu_artifactory_repo_base_url: ""
-
-  # {{ nbu_artifactory_yum_repo_name }} Repository folder name (with or without trailing /; e.g. yum-enterprise-dev-local).
-  nbu_artifactory_yum_repo_name: "{{ yum_awx_inventory_name | default('') }}"
-  # {{ nbu_path_repo_base_pkg }} should contain relative path of base release version NetBackup packages
+  # {{nbu_path_repo_client_base_pkg}} should contain relative path of base release version NetBackup packages
   nbu_path_repo_base_pkg: ""
-
-  # {{ nbu_artifactory_eeb_repo_name }} Repository folder name (with or without trailing /; e.g. generic-enterprise-dev-local).
-  nbu_artifactory_eeb_repo_name: "{{ eeb_awx_inventory_name | default('') }}"
-  # {{ nbu_path_repo_eeb_pkg }} should contain relative path of EEB installer and its related RPM Marker file
+  # {{nbu_path_repo_client_eeb_pkg}} should contain relative path of EEB installer and its related RPM Marker file
   nbu_path_repo_eeb_pkg: ""
-  # {{ nbu_path_support_utilities }} should contain relative path of support utilities
+  # {{nbu_path_support_utilities}} should contain relative path of support utilities
   nbu_path_support_utilities: ""
 
-comment_eeb_ordered: >
   # List of EEBs to be installed per nbu_role and version
   nbu_eeb_ordered:
     client:
@@ -34,34 +26,34 @@ comment_eeb_ordered: >
          - "<eebinstall_name>"
     primary:
         10.1.1.0:
-         - "<eebinstall_name>"
+         - "<eebinstall_name>"    
 
 # Software Repo - TLS certificate validation for package downloads
-nbu_repo_validate_certs: true
+nbu_repo_validate_certs: yes
 
 # NetBackup REST API - TLS certificate validation
-nbu_api_validate_certs: true
+nbu_api_validate_certs: yes
+
 
 # NetBackup REST API - suppress sensitive output in task logs (credentials, tokens, passphrases)
 nbu_api_no_log: true
 
 # NB Configuration variables
 
-# Applicable only to new installs.
+# Applicable only to new installs. 
 # Default: Output of `uname -n`. In case, FQDN is to be set, uncomment the var.
 # nbu_client_name_ans: "{{ ansible_fqdn }}"
 
 # This is requried only in case of Media and Client
 nbu_primary_server_ans: PRIMARY01
-# If using a masked primary for initial install, set the value to true to ignore connectivity validation and continue execution.
-ignore_primary_connectivity_failures: false
-skip_primary_version_compatibility_check: false # Skip Primary server version compatibility check
+ignore_primary_connectivity_failures: false               # If using a masked primary for initial install, set the value to true to ignore connectivity validation and continue execution. 
+skip_primary_version_compatibility_check: false           # Skip Primary server version compatibility check
 # NetBackup - Web Services Account
 nbu_webservices_group: nbwebgrp
 nbu_webservices_user: nbwebsvc
 # NetBackup - Services Account
-nbu_services_group: '' # This is the group name for NetBackup services user
-nbu_services_user: '' # This is the NetBackup services user name. It should not be domain\username format.
+nbu_services_group: ''                        # This is the group name for NetBackup services user
+nbu_services_user: ''                         # This is the NetBackup services user name. It should not be domain\username format.
 nbu_database_user: "{{ nbu_services_user }}"
 postgresql_pooler_odbc_port: ''
 
@@ -71,32 +63,33 @@ os_path_nbu_install: /usr/openv
 os_path_nbu_yum_cache_base: /var
 nbu_db_data_path: "{{ os_path_nbu_install }}/db/data"
 
-nbu_directory_list_to_be_removed: # Custom list of directories which should be removed while running [playbook_remove_client_redhat.yml]
-  - "{{ os_path_nbu_install }}"
-  - "{{ os_path_nbu_install_default }}"
+nbu_directory_list_to_be_removed:                         # Custom list of directories which should be removed while running [playbook_remove_client_redhat.yml]
+- "{{ os_path_nbu_install }}"
+- "{{ os_path_nbu_install_default }}"
+
 
 # FTO (Feature Toggle Options)                            # Valid options given can be true|false|yes|no|y|n|1|0
-include_eeb_rpm_marker: false # If set to true, playbook will create/delete extra RPM marker. This option is not applicable for Debian
-include_java_jre_install: 'MATCH' # Java/Jre package installation behavior:
-#   INCLUDE - Include the Java/Jre packages
-#   EXCLUDE - Exclude the Java/Jre packages
-#   MATCH   - Match the existing configuration on the host
-include_directio_install: 'MATCH' # DirectIO package installation behavior:
-#   INCLUDE - Include the NetBackup DirectIO
-#   EXCLUDE - Exclude the NetBackup DirectIO
-#   MATCH   - Match the existing configuration on the host
-include_vrtspddeu_client_install: 'MATCH' # VRTSpddeu package installation behavior for client role:
-#   INCLUDE - Include the VRTSpddeu package
-#   EXCLUDE - Exclude the VRTSpddeu package
-#   MATCH   - Match the existing configuration on the host
-nbu_cert_management: true # For include cert mangement playbook
-do_perform_nbcheck_preinstall: true # If set to true nbcheck gets called before NBU install/upgrade, else skip
-should_force_process_termination: false # After 3 attempts of graceful shutdown, forcefully terminate the running processes
-include_service_user_configuration: false # FTO: post-install nbserviceusercmd service user (Veritas KB 100053035 / NBU-260522)
+include_eeb_rpm_marker: false                             # If set to true, playbook will create/delete extra RPM marker. This option is not applicable for Debian
+include_java_jre_install: 'MATCH'                         # Java/Jre package installation behavior: 
+                                                           #   INCLUDE - Include the Java/Jre packages
+                                                           #   EXCLUDE - Exclude the Java/Jre packages
+                                                           #   MATCH   - Match the existing configuration on the host
+include_directio_install: 'MATCH'                         # DirectIO package installation behavior:
+                                                           #   INCLUDE - Include the NetBackup DirectIO
+                                                           #   EXCLUDE - Exclude the NetBackup DirectIO
+                                                           #   MATCH   - Match the existing configuration on the host
+include_vrtspddeu_client_install: 'MATCH'                  # VRTSpddeu package installation behavior for client role:
+                                                           #   INCLUDE - Include the VRTSpddeu package
+                                                           #   EXCLUDE - Exclude the VRTSpddeu package  
+                                                           #   MATCH   - Match the existing configuration on the host
+nbu_cert_management: true                                # For include cert mangement playbook
+do_perform_nbcheck_preinstall: true                       # If set to true nbcheck gets called before NBU install/upgrade, else skip
+should_force_process_termination: false                   # After 3 attempts of graceful shutdown, forcefully terminate the running processes
+include_service_user_configuration: false                               # FTO: post-install nbserviceusercmd service user (Veritas KB 100053035 / NBU-260522)
 
 # primary specific options
-do_install_ita_dc: false # If set to true, will attempt to install ITA Data Collector along with Primary Server
-# This option specifies if an upgrade from a 10.1.1 or earlier primary server is allowed to proceed.
+do_install_ita_dc: false                                  # If set to true, will attempt to install ITA Data Collector along with Primary Server
+# This option specifies if an upgrade from a 10.1.1 or earlier primary server is allowed to proceed. 
 # NetBackup 10.2 and later versions check if a catalog backup was performed in the last 24 hours.
 skip_missing_catalog_backup_check: false
 
@@ -104,13 +97,14 @@ skip_missing_catalog_backup_check: false
 # NOTE: When using cache-only mode on IBM Z Series (s390x), ensure your cache contains s390x architecture packages
 install_pkgs_from_local_cache: false
 
-# Primary Security Settings
+
+#Primary Security Settings
 security_properties_params:
   certificateAutoDeployLevel: 1
   dteGlobalMode: "PREFERRED_ON"
   allowInsecureBackLevelHost: 0
   aliasAutoAdd: 1
-set_passphrase_constraints_request:
+setPassphraseConstraintsRequest:
   minPassphraseLength: 18
   minUpperCaseRequired: 1
   minLowerCaseRequired: 1
@@ -123,38 +117,38 @@ nbu_cust_reg_file_name: "veritas_customer_registration_key.json"
 # Additional "LICENSE = key" lines may be added if more licenses are to be applied. This option is valid for nbu_version <= "10.2.0.1".
 # nbu_license_key: ''
 nbu_license_key:
-  - '<nbu_license_key1>'
+- '<nbu_license_key1>'
 
 # This option specifies the SLIC file names list valid for nbu_version > "10.2.0.1"
-nbu_license_file_name_list:
-  - "<slic_license1>"
+nbu_license_file_name_list: 
+- "<slice_license1>"
 
 # NBCA configuration details
 nbu_primary_certdetails:
-  - hostname: 'PRIMARY01' # Primary Server hostname
-    nbu_server_fingerPrint: '' # Certificate fingerprint
-    nbu_server_authorization_token: '' # Authorization Token
+- hostname: 'PRIMARY01'                                   # Primary Server hostname
+  nbu_server_fingerPrint: ''                              # Certificate fingerprint
+  nbu_server_authorization_token: ''                      # Authorization Token 
 
 # ECA configuration details
 nbu_eca_certdetails:
-  nbu_eca_cert_path: '' # Certificate Path
-  nbu_eca_private_key_path: '' # Private key Path
-  nbu_eca_trust_store_path: '' # Truststore Path
-  nbu_eca_key_passphrasefile: '' # Key Passphrase file path if key is encrypted
-  eca_crl:
-    nbu_eca_crl_check_level: '' # Should a CRL be honoured for external certificate configuration. Options are ['USE_CDP', 'USE_PATH', 'DISABLED']
-    nbu_eca_crl_path: '' # The file system directory path where CRLs are available
+  nbu_eca_cert_path: ''                                   # Certificate Path
+  nbu_eca_private_key_path: ''                            # Private key Path
+  nbu_eca_trust_store_path: ''                            # Truststore Path
+  nbu_eca_key_passphrasefile: ''                          # Key Passphrase file path if key is encrypted
+  eca_crl:  
+    nbu_eca_crl_check_level:                              # Should a CRL be honoured for external certificate configuration. Options are ['USE_CDP', 'USE_PATH', 'DISABLED']
+    nbu_eca_crl_path: ''                                  # The file system directory path where CRLs are available
 
 # OS - Packages
-os_system_packages: # Additional system packages can be added here
+os_system_packages:                                       # Additional system packages can be added here
   redhat:
-    "common": # common for all os-versions and all nbu-roles
+    "common":                                             #common for all os-versions and all nbu-roles
       - libnsl
       - ncurses-libs
-    "primary": # primary specific. Similarly client and media specific list can be added
+    "primary":                                            #primary specific. Similarly client and media specific list can be added
       - bc
       - gzip
-    "9": # RHEL 9 system packages
+    "9":                                                  # RHEL 9 system packages
       - libxcrypt-compat
   suse:
     "primary":
@@ -162,7 +156,7 @@ os_system_packages: # Additional system packages can be added here
       - libXrender1
       - libXtst6
   sunos:
-    "common":
+    common:
       - developer/developerstudio-126/library/c++-libs
       - developer/developerstudio-126/library/c-libs
       - developer/developerstudio-126/library/f90-libs
@@ -171,12 +165,12 @@ os_system_packages: # Additional system packages can be added here
       - developer/developerstudio-126/library/studio-gccrt
 
 # OS - Symbolic links
-os_system_packages_symlink: # Additional symbolic links can be added here
+os_system_packages_symlink:                          # Additional symbolic links can be added here
   redhat:
-    "9": # RHEL 9 symbolic links
+    "9":                                                    # RHEL 9 symbolic links
       - { src: /usr/lib64/libncurses.so.6.2, dest: /usr/lib64/libncurses.so.5 }
       - { src: /usr/lib64/libtinfo.so.6.2, dest: /usr/lib64/libtinfo.so.5 }
-    "8": # RHEL 8 symbolic links
+    "8":                                                    # RHEL 8 symbolic links
       - { src: /usr/lib64/libncurses.so.6.1, dest: /usr/lib64/libncurses.so.5 }
       - { src: /usr/lib64/libtinfo.so.6.1, dest: /usr/lib64/libtinfo.so.5 }
 
