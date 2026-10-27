@@ -1,9 +1,10 @@
+---
 # $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
 
 - name: "NBU-COMPATIBILITY -> Load target machine hostname for Primary Server"
-  set_fact: 
+  ansible.builtin.set_fact:
     nbu_primary_server_ans: "{{ inventory_hostname_short }}"
-  when:  
+  when:
     - ( nbu_role is defined )
     - ( nbu_role == "primary" )
 

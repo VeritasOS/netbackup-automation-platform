@@ -1,3 +1,4 @@
+---
 # $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
 
 # Check file existence of /tmp/nbap_partial_install_detected
@@ -16,7 +17,8 @@
 
 - name: "NBU-PARTIAL-INSTALL-DETECTION -> Decode the file content {{ os_path_openv_tmp }}/nbap_partial_install_detected"
   ansible.builtin.fail:
-    msg: "ERROR - The file '{{ os_path_openv_tmp }}/nbap_partial_install_detected' is unexpectedly empty, we request you to delete the file and re-run the playbook."
+    msg: "ERROR - The file '{{ os_path_openv_tmp }}/nbap_partial_install_detected' is unexpectedly empty, we request you to delete the file and re-run the
+      playbook."
   when:
     - ( nbap_partial_install_register.stat.exists )
     - nbap_file_content_register.stdout_lines | length == 0
@@ -29,4 +31,5 @@
   when:
     - ( nbap_partial_install_register.stat.exists )
     - nbap_file_content_register.stdout_lines | length > 0
-#EOF
+
+# EOF

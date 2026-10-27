@@ -1,0 +1,38 @@
+name: Generate Release Checksums
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  generate-checksum:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Required to upload assets to the release
+    steps:
+      - name: Checkout repository at release tag
+        uses: actions/checkout@v4
+
+      - name: Create Source Archive & Generate Checksum
+        run: |
+          # Define archive name based on the release tag
+          TAG_NAME="${{ github.event.release.tag_name }}"
+          ARCHIVE_NAME="netbackup-automation-platform-${TAG_NAME}.tar.gz"
+          
+          # Create a clean tarball of the repository source code
+          tar --exclude='.git' -czf "$ARCHIVE_NAME" .
+          
+          # Generate SHA256 checksum for the archive
+          sha256sum "$ARCHIVE_NAME" > checksums.txt
+          
+          # (Optional) If you also want to hash specific files or folders, you can add them:
+          # sha256sum playbook_*.yml >> checksums.txt
+
+      - name: Upload Checksums to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            checksums.txt
+            netbackup-automation-platform-${{ github.event.release.tag_name }}.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,15 +1,16 @@
+---
 # $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
 
 - name: "NBU-INITIALIZE -> Get installation path from existing registry variable"
-  win_reg_stat:
+  ansible.windows.win_reg_stat:
     path: "{{ nbu_registry_path }}\\CurrentVersion"
     name: "INSTALLDIR"
   register: nbu_install_path_result
   failed_when: false
 
 - name: "NBU-INITIALIZE -> Warning: Custom installation path not allowed during upgrade"
-  debug:
-    msg: "WARNING: As upgrade is being performed, custom path isn't allowed. Hence continuing with installed path ( {{nbu_install_path_result.value}} )."
+  ansible.builtin.debug:
+    msg: "WARNING: As upgrade is being performed, custom path isn't allowed. Hence continuing with installed path ( {{ nbu_install_path_result.value }} )."
   when:
     - nbu_playbook_type is defined
     - nbu_playbook_type == "upgrade"
@@ -32,10 +33,34 @@
       - "{{ nbu_install_path_result.value | regex_replace('\\\\$', '') }}\\Patch"
       - "{{ nbu_install_path_result.value | regex_replace('\\\\$', '') }}\\pdde"
       - "{{ nbu_install_path_result.value | regex_replace('\\\\$', '') }}\\Security"
-  when: 
+  when:
     - nbu_install_path_result.exists
     - nbu_install_path_result.value is defined
     - nbu_install_path_result.value != ""
 
+# Set default Artifactory Respository
+- name: "NBU-INITIALIZE -> Set Artifactory Repository based on type of environment as Fact"
+  ansible.builtin.set_fact:
+    artifactory_repo: ""
 
-#EOF
+# Discover Artifactory Respository based on the type of environment
+- name: "NBU-INITIALIZE -> Define Artifactory Repository based on type of environment"
+  when: awx_inventory_name is defined and awx_inventory_name != ""
+  block:
+    - name: "NBU-INITIALIZE -> Define Artifactory Repository - DEV"
+      ansible.builtin.set_fact:
+        artifactory_repo: yum-enterprise-dev-local
+      when: "'DEV' in awx_inventory_name"
+
+    - name: "NBU-INITIALIZE -> Define Artifactory Repository - UAT"
+      ansible.builtin.set_fact:
+        artifactory_repo: yum-enterprise-test-local
+      when: "'UAT' in awx_inventory_name"
+
+    - name: "NBU-INITIALIZE -> Define Artifactory Repository - PROD"
+      ansible.builtin.set_fact:
+        artifactory_repo: yum-enterprise-prod-local
+      when:
+        - "'PROD' in awx_inventory_name"
+
+# EOF
