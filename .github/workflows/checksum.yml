@@ -20,10 +20,11 @@ jobs:
           set -e
           # Define archive name based on the release tag
           TAG_NAME="${{ github.event.release.tag_name }}"
-          ARCHIVE_NAME="netbackup-automation-platform-${TAG_NAME}.tar.gz"
+          SAFE_TAG="${TAG_NAME//\//-}"
+          ARCHIVE_NAME="netbackup-automation-platform-${SAFE_TAG}.tar.gz"
 
           git archive --format=tar.gz \
-            --prefix="netbackup-automation-platform-${TAG_NAME}/" \
+            --prefix="netbackup-automation-platform-${SAFE_TAG}/" \
             HEAD > "$ARCHIVE_NAME"
 
           
