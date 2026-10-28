@@ -2,7 +2,7 @@ name: Generate Release Checksums
 
 on:
   release:
-    types: [created]
+    types: [published, prereleased]
 
 jobs:
   generate-checksum:
@@ -12,6 +12,8 @@ jobs:
     steps:
       - name: Checkout repository at release tag
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
 
       - name: Create Source Archive & Generate Checksum
         run: |
