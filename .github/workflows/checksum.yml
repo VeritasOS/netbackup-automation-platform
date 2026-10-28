@@ -31,20 +31,23 @@ jobs:
           ref: ${{ steps.release.outputs.tag_name }}
 
       - name: Create Source Archive & Generate Checksum
+        id: archive
         run: |
           set -euo pipefail
           TAG_NAME="${{ steps.release.outputs.tag_name }}"
           SAFE_TAG="${TAG_NAME//\//-}"
+          PREFIX="netbackup-automation-platform-${SAFE_TAG}/"
           ARCHIVE_NAME="netbackup-automation-platform-${SAFE_TAG}.tar.gz"
+          ZIP_NAME="netbackup-automation-platform-${SAFE_TAG}.zip"
 
           # git archive avoids tar writing the archive into the tree being archived
           # (which causes: tar: .: file changed as we read it)
-          git archive --format=tar.gz \
-            --prefix="netbackup-automation-platform-${SAFE_TAG}/" \
-            HEAD > "$ARCHIVE_NAME"
+          git archive --format=tar.gz --prefix="$PREFIX" HEAD > "$ARCHIVE_NAME"
+          git archive --format=zip --prefix="$PREFIX" HEAD > "$ZIP_NAME"
 
-          sha256sum "$ARCHIVE_NAME" > checksums.txt
-          echo "ARCHIVE_NAME=$ARCHIVE_NAME" >> "$GITHUB_ENV"
+          sha256sum "$ARCHIVE_NAME" "$ZIP_NAME" > checksums.txt
+          echo "archive_name=$ARCHIVE_NAME" >> "$GITHUB_OUTPUT"
+          echo "zip_name=$ZIP_NAME" >> "$GITHUB_OUTPUT"
 
       - name: Upload Checksums to Release
         uses: softprops/action-gh-release@v2
@@ -52,6 +55,7 @@ jobs:
           tag_name: ${{ steps.release.outputs.tag_name }}
           files: |
             checksums.txt
-            ${{ env.ARCHIVE_NAME }}
+            ${{ steps.archive.outputs.archive_name }}
+            ${{ steps.archive.outputs.zip_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
