@@ -3,6 +3,12 @@ name: Generate Release Checksums
 on:
   release:
     types: [published, prereleased]
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: Release tag to archive (e.g. v4.1a)
+        required: true
+        type: string
 
 jobs:
   generate-checksum:
@@ -10,35 +16,42 @@ jobs:
     permissions:
       contents: write # Required to upload assets to the release
     steps:
+      - name: Resolve release tag
+        id: release
+        run: |
+          if [ -n "${{ github.event.release.tag_name }}" ]; then
+            echo "tag_name=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag_name=${{ github.event.inputs.tag_name }}" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Checkout repository at release tag
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.release.tag_name }}
+          ref: ${{ steps.release.outputs.tag_name }}
 
       - name: Create Source Archive & Generate Checksum
         run: |
-          set -e
-          # Define archive name based on the release tag
-          TAG_NAME="${{ github.event.release.tag_name }}"
+          set -euo pipefail
+          TAG_NAME="${{ steps.release.outputs.tag_name }}"
           SAFE_TAG="${TAG_NAME//\//-}"
           ARCHIVE_NAME="netbackup-automation-platform-${SAFE_TAG}.tar.gz"
 
+          # git archive avoids tar writing the archive into the tree being archived
+          # (which causes: tar: .: file changed as we read it)
           git archive --format=tar.gz \
             --prefix="netbackup-automation-platform-${SAFE_TAG}/" \
             HEAD > "$ARCHIVE_NAME"
 
-          
-          # Generate SHA256 checksum for the archive
           sha256sum "$ARCHIVE_NAME" > checksums.txt
-          
-          # (Optional) If you also want to hash specific files or folders, you can add them:
-          # sha256sum playbook_*.yml >> checksums.txt
+          echo "ARCHIVE_NAME=$ARCHIVE_NAME" >> "$GITHUB_ENV"
 
       - name: Upload Checksums to Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.release.outputs.tag_name }}
           files: |
             checksums.txt
-            netbackup-automation-platform-${{ github.event.release.tag_name }}.tar.gz
+            ${{ env.ARCHIVE_NAME }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
