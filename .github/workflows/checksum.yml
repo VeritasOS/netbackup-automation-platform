@@ -2,7 +2,7 @@ name: Generate Release Checksums
 
 on:
   release:
-    types: [published]
+    types: [created]
 
 jobs:
   generate-checksum:
