@@ -1,12 +1,15 @@
+---
 # $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
 
 # RedHat specific handling for creating links needed.
 - name: "NBU-OS-COMPATIBILITY -> Check OS dependent task."
   block:
-  - name: "NBU-OS-COMPATIBILITY -> Create required symbolic link for RHEL. Required steps for RHEL 8/9 only"
-    ansible.builtin.file:
-      src: '{{ item.src }}'
-      dest: '{{ item.dest }}'
-      state: link
-    with_items: "{{ os_system_packages_symlink[ansible_os_family|lower][ansible_distribution_major_version] }}"
-    when: os_system_packages_symlink[ansible_os_family|lower][ansible_distribution_major_version] is defined
+    - name: "NBU-OS-COMPATIBILITY -> Create required symbolic link for RHEL. Required steps for RHEL 8/9 only"
+      ansible.builtin.file:
+        src: '{{ item.src }}'
+        dest: '{{ item.dest }}'
+        state: link
+      with_items: "{{ os_system_packages_symlink[ansible_os_family | lower][ansible_distribution_major_version] }}"
+      when: os_system_packages_symlink[ansible_os_family|lower][ansible_distribution_major_version] is defined
+
+# EOF

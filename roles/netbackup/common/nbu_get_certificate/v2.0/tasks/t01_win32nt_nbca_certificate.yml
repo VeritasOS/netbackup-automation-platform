@@ -1,0 +1,257 @@
+---
+# $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
+
+#################################################################################
+#### NBU-NBCA-CERTIFICATE-DEPLOYMENT -> tasks -> t01_win32nt_nbca_certificate.yml ####
+#################################################################################
+
+# Define the Certification start time as variable
+- name: "NBU-NBCA-CERTIFICATE-DEPLOYMENT -> Cerificate deployment started"
+  ansible.builtin.set_fact:
+    status: "started"
+    install_time: "{{ lookup('pipe', 'date +%Y%m%d%H%M%S') }}"
+
+- name: "NBU-NBCA-CERTIFICATE-DEPLOYMENT -> Fetch certificate management details from --extra-vars"
+  ansible.builtin.set_fact:
+    nbu_authorization_fingerprint: "{{ item.nbu_server_fingerPrint }}"
+    nbu_authorization_token: "{{ item.nbu_server_authorization_token }}"
+  with_items: "{{ nbu_primary_certdetails }}"
+  when: item.hostname == nbu_primary_server_ans
+  no_log: true
+
+- name: "NBU-NBCA-CERTIFICATE-DEPLOYMENT-> Validate nbu_primary_server_ans in input yaml list."
+  ansible.builtin.set_fact:
+    nbu_primary_server_ans_found: true
+  with_items: "{{ nbu_primary_certdetails }}"
+  when: item.hostname == nbu_primary_server_ans
+  no_log: true
+
+- name: "NBU-NBCA-CERTIFICATE-DEPLOYMENT -> Check whether nbu_primary_server_ans_found"
+  ansible.builtin.fail:
+    msg: "Input variable ( nbu_primary_server_ans: {{ nbu_primary_server_ans }} ) does not match with hostname given in nbu_primary_certdetails:hostname: {{ \
+           nbu_primary_certdetails[0].hostname }}"
+  when:
+    - not nbu_primary_server_ans_found
+
+- name: "Ansible::Log.info"
+  ansible.builtin.fail:
+    msg: |
+      The provided fingerprint and/or authorization token are not of valid length:
+      At least one valid fingerprint (SHA1: 59 or SHA256: 95 chars) is required.
+      At least one valid authorization token (16 uppercase chars) is required.
+      Note: Please check your input values.
+  when:
+    - ((nbu_authorization_fingerprint | length != 59) and (nbu_authorization_fingerprint | length != 95)) or (nbu_authorization_token | length != 16)
+    - (nbu_authorization_fingerprint is defined and nbu_authorization_token is defined)
+
+- name: "NBU-NBCA-CERTIFICATE-DEPLOYMENT -> Create temporary directory to store certificate details on destination host"
+  ansible.windows.win_file:
+    path: "{{ nbu_certificates_file_path }}\\{{ nbu_certificates_file_dir }}"
+    state: directory
+    no_log: true
+
+- name: "NBU-NBCA-CERTIFICATE-DEPLOYMENT -> Push ({{ nbu_primary_server_ans }}) fingerprint to destination host"
+  ansible.windows.win_copy:
+    content: "{{ nbu_authorization_fingerprint }}"
+    dest: "{{ nbu_certificates_file_path }}\\{{ nbu_certificates_file_dir }}\\{{ nbu_ca_certificate_file }}"
+  when: nbu_authorization_fingerprint is defined
+  no_log: true
+
+- name: "NBU-NBCA-CERTIFICATE-DEPLOYMENT -> Check if ({{ nbu_ca_certificate_file }}) file exists on target host"
+  ansible.windows.win_stat:
+    path: "{{ nbu_certificates_file_path }}\\{{ nbu_certificates_file_dir }}\\{{ nbu_ca_certificate_file }}"
+  register: nbu_ca_certificate_file_register
+  failed_when: false
+  changed_when: false
+  no_log: true
+
+- name: "NBU-NBCA-CERTIFICATE-DEPLOYMENT  -> Checking for local NetBackup CA certificate on target host"
+  when:
+    - nbu_ca_certificate_file_register.stat.exists
+
+  block:
+    - name: "NBU-NBCA-CERTIFICATE-DEPLOYMENT -> Deploy a CA Certificate on Client Host Machine"
+      ansible.windows.win_command: nbcertcmd -getCACertificate -server {{ nbu_primary_server_ans }}
+        -file "{{ nbu_certificates_file_path }}\\{{ nbu_certificates_file_dir }}\\{{ nbu_ca_certificate_file }}" -force
+      args:
+        chdir: "{{ os_path_nbu_install }}\\netbackup\\bin"
+      changed_when: false
+      register: nbu_get_ca_certificate_register
+      failed_when: false
+      no_log: true
+
+    - name: "NBU-NBCA-CERTIFICATE-DEPLOYMENT -> Display CA Certificate check Error messages"
+      when:
+        - (  nbu_get_ca_certificate_register.rc != 0 )
+
+      block:
+        - name: "NBU-NBCA-CERTIFICATE-DEPLOYMENT -> Set facts about the CA Certificate Error messages"
+          ansible.builtin.set_fact:
+            nbu_get_ca_certificate_errmsg: "{{ nbu_get_ca_certificate_register.stderr }}"
+          no_log: true
+
+        - name: "Ansible::Log.info"
+          ansible.builtin.fail:
+            msg: "{{ nbu_get_ca_certificate_errmsg }}"
+
+    - name: "NBU-NBCA-CERTIFICATE-DEPLOYMENT -> Display CA Certificate output when successful"
+      when:
+        - (  nbu_get_ca_certificate_register.rc == 0 )
+
+      block:
+        - name: "NBU-NBCA-CERTIFICATE-DEPLOYMENT -> Set facts about the Certificate Error messages"
+          ansible.builtin.set_fact:
+            nbu_get_ca_certificate_output: "{{ nbu_get_ca_certificate_register.stdout }}"
+          no_log: true
+
+        - name: "Ansible::Log.info"
+          ansible.builtin.debug:
+            msg: "{{ nbu_get_ca_certificate_output }}"
+
+- name: "NBU-NBCA-CERTIFICATE-DEPLOYMENT -> Push Token to destination host"
+  ansible.windows.win_copy:
+    content: "{{ nbu_authorization_token }}"
+    dest: '{{ nbu_certificates_file_path }}\{{ nbu_certificates_file_dir }}\{{ nbu_authorization_token_file }}'
+  when: nbu_authorization_token is defined
+  no_log: true
+
+- name: "NBU-NBCA-CERTIFICATE-DEPLOYMENT -> Check if User Token exists on target host"
+  ansible.windows.win_stat:
+    path: '{{ nbu_certificates_file_path }}\{{ nbu_certificates_file_dir }}\{{ nbu_authorization_token_file }}'
+  register: nbu_authorization_token_file_register
+  failed_when: false
+  changed_when: false
+  no_log: true
+
+# If the Authorization Token file exists, then proceed with getCertificate
+- name: "NBU-NBCA-CERTIFICATE-DEPLOYMENT -> Check if Certificate is deployed on target host"
+  when:
+    - nbu_authorization_token_file_register.stat.exists
+
+  block:
+    - name: "NBU-NBCA-CERTIFICATE-DEPLOYMENT -> In the case where a host ID certificate is not present, use the getCertificate option to retrieve a host ID
+        certificate"
+      ansible.windows.win_command: nbcertcmd -getCertificate -server {{ nbu_primary_server_ans }}
+        -file "{{ nbu_certificates_file_path }}\\{{ nbu_certificates_file_dir }}\\{{ nbu_authorization_token_file }}" -force
+      args:
+        chdir: "{{ os_path_nbu_install }}\\netbackup\\bin"
+      changed_when: false
+      register: nbu_host_certificate_check_register
+      failed_when: false
+      no_log: true
+
+    # After Netbackup Certificate validation is done, remove all cert management directories and files from target host
+    - name: "NBU-NBCA-CERTIFICATE-DEPLOYMENT -> Check the existence of Certificate files and its respective directory"
+      ansible.windows.win_stat:
+        path: '{{ nbu_certificates_file_path }}\{{ nbu_certificates_file_dir }}'
+      register: nbu_certificate_dir_register
+      no_log: true
+
+    - name: "NBU-NBCA-CERTIFICATE-DEPLOYMENT -> Remove Certificate files and its respective directory on Client if it exists"
+      ansible.windows.win_file:
+        path: '{{ nbu_certificates_file_path }}\{{ nbu_certificates_file_dir }}'
+        state: absent
+      when: nbu_certificate_dir_register.stat.exists and nbu_certificate_dir_register.stat.isdir
+      no_log: true
+
+    - name: "NBU-NBCA-CERTIFICATE-DEPLOYMENT -> Display Host ID certificate Check Error messages"
+      when:
+        - (  nbu_host_certificate_check_register.rc != 0 )
+
+      block:
+        - name: "NBU-NBCA-CERTIFICATE-DEPLOYMENThe Host ID Certificate Error messages"
+          ansible.builtin.set_fact:
+            nbu_get_certificate_errmsg: "{{ nbu_host_certificate_check_register.stderr }}"
+          no_log: true
+
+        - name: "NBU-NBCA-CERTIFICATE-DEPLOYMENT -> Set facts about the Reissue Token Error messages"
+          ansible.builtin.set_fact:
+            nbu_get_extracted_pattern: "{{ nbu_get_certificate_errmsg | regex_search('EXIT STATUS 5989') }}"
+
+        - name: "NBU-NBCA-CERTIFICATE-DEPLOYMENT -> Check if certificate revocation list already exists"
+          ansible.windows.win_command: nbcertcmd -getCertificate -server {{ nbu_primary_server_ans }}
+          args:
+            chdir: "{{ os_path_nbu_install }}\\netbackup\\bin"
+          changed_when: false
+          register: nbu_certificate_existence_register
+          when: ( nbu_get_extracted_pattern == "EXIT STATUS 5989" )
+          no_log: true
+
+        - name: "Ansible::Log.info"
+          ansible.builtin.fail:
+            msg: "{{ nbu_get_certificate_errmsg }}"
+          when:
+            - ( nbu_get_extracted_pattern == "EXIT STATUS 5989" )
+            - ( nbu_certificate_existence_register.rc != 0 )
+
+        - name: "Ansible::Log.info"
+          ansible.builtin.fail:
+            msg: "{{ nbu_get_certificate_errmsg }}"
+          when:
+            - ( nbu_get_extracted_pattern == "" )
+
+        - name: "Ansible::Log.info"
+          ansible.builtin.debug:
+            msg: "{{ nbu_certificate_existence_register.stdout }}"
+          when: ( nbu_certificate_existence_register.rc == 0 )
+
+    - name: "NBU-NBCA-CERTIFICATE-DEPLOYMENT -> Display Host ID certificate check output when successful"
+      when:
+        - (  nbu_host_certificate_check_register.rc == 0 )
+
+      block:
+        - name: "NBU-NBCA-CERTIFICATE-DEPLOYMENT -> Set facts about the Host ID Certificate Output"
+          ansible.builtin.set_fact:
+            nbu_get_certificate_output: "{{ nbu_host_certificate_check_register.stdout }}"
+          no_log: true
+
+        - name: "Ansible::Log.info"
+          ansible.builtin.debug:
+            msg: "{{ nbu_get_certificate_output }}"
+
+- name: "NBU-NBCA-CERTIFICATE-DEPLOYMENT -> Check if the NetBackup host has connectivity with the Primary server"
+  ansible.windows.win_command: nbcertcmd -ping -server {{ nbu_primary_server_ans }}
+  args:
+    chdir: "{{ os_path_nbu_install }}\\netbackup\\bin"
+  changed_when: false
+  register: nbu_is_master_valid_register
+  failed_when: false
+
+- name: "Ansible::Log.info"
+  ansible.builtin.fail:
+    msg: NetBackup host has no connectivity with the Primary server.
+  when:
+    - ( nbu_is_master_valid_register.rc != 0 )
+
+- name: "NBU-NBCA-CERTIFICATE-DEPLOYMENT -> Configure connectivity to the Primary server"
+  when:
+    - ( nbu_is_master_valid_register.rc == 0 )
+  block:
+    - name: "NBU-NBCA-CERTIFICATE-DEPLOYMENT -> Get current Server registry value"
+      ansible.windows.win_reg_stat:
+        path: "{{ nbu_registry_path }}\\CurrentVersion\\Config"
+        name: Server
+      register: nbu_server_registry_list
+
+    - name: "NBU-NBCA-CERTIFICATE-DEPLOYMENT -> Copy Primary Server to registry on target host (preserve other entries)"
+      ansible.windows.win_regedit:
+        path: "{{ nbu_registry_path }}\\CurrentVersion\\Config"
+        name: Server
+        data: "{{ [nbu_primary_server_ans] + nbu_server_registry_list.value[1:] }}"
+        type: multistring
+      when:
+        - nbu_server_registry_list.exists
+        - nbu_server_registry_list.value is defined
+
+    - name: "NBU-NBCA-CERTIFICATE-DEPLOYMENT -> Update EMMSERVER registry to Primary Server"
+      ansible.windows.win_regedit:
+        path: "{{ nbu_registry_path }}\\CurrentVersion\\Config"
+        name: EMMSERVER
+        data: '{{ nbu_primary_server_ans }}'
+        type: string
+
+    - name: "Ansible::Log.info"
+      ansible.builtin.debug:
+        msg: "Primary Server has established connectivity with target host and is ready for backup/restore operation."
+
+# EOF

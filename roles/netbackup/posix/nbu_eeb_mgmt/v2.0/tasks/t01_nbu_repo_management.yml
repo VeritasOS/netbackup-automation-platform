@@ -1,0 +1,45 @@
+---
+# $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
+
+# Configure NetBackup yum/zypper package repository (EEB-only playbook; install/upgrade already configure repo)
+- name: "NBU-EEB-MGMT -> Clearing yum cache"
+  when: ansible_system == 'Linux'
+
+  block:
+    - name: "NBU-EEB-MGMT -> Check if {{ os_path_nbu_yum_cache }} exists"
+      ansible.builtin.stat:
+        path: "{{ os_path_nbu_yum_cache }}"
+      register: yum_cache_register
+      failed_when: false
+      changed_when: false
+
+    - name: "NBU-EEB-MGMT -> Remove the NetBackup yum cache directory"
+      ansible.builtin.file:
+        path: "{{ os_path_nbu_yum_cache }}"
+        state: absent
+      failed_when: false
+      when: ( ansible_distribution_major_version == '7' and yum_cache_register.stat.exists )
+
+- name: "NBU-EEB-MGMT -> Add YUM repository for NetBackup Software"
+  ansible.builtin.yum_repository:
+    name: netbackup
+    description: "NetBackup {{ nbu_version }} Binaries"
+    baseurl: "{{ nbu_artifactory_repo_base_url }}{{ nbu_artifactory_yum_repo_name_normalize }}{{ nbu_path_repo_base_pkg }}"
+    enabled: false
+    gpgcheck: false
+    state: present
+    sslverify: "{{ nbu_repo_validate_certs }}"
+  when:
+    - ansible_os_family == 'RedHat'
+
+- name: "NBU-EEB-MGMT -> Add zypper repository for NetBackup Software"
+  community.general.zypper_repository:
+    name: netbackup
+    repo: "{{ nbu_artifactory_repo_base_url }}{{ nbu_artifactory_yum_repo_name_normalize }}{{ nbu_path_repo_base_pkg }}"
+    state: present
+    disable_gpg_check: true
+    enabled: true
+  when:
+    - ansible_os_family == 'Suse'
+
+# EOF

@@ -1,3 +1,4 @@
+---
 # $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
 
 # NetBackup – Configure service user (Windows)
@@ -22,13 +23,13 @@
       no_log: true
 
   roles:
-    - role: netbackup
-    - role: netbackup/win32nt
-    - role: generic/is_nbu_version_supported
-    - role: helper/nbu_role_status
-    - role: netbackup/common/evaluate-service-user/v2.0
-    - role: generic/is_nbu_installed
-    - role: netbackup/common/nbu-change-serviceuser/v2.0
+    - role: 'netbackup'
+    - role: 'netbackup/win32nt'
+    - role: 'generic/is_nbu_version_supported'
+    - role: 'helper/nbu_role_status'
+    - role: 'netbackup/common/evaluate_service_user/v2.0'
+    - role: 'generic/is_nbu_installed'
+    - role: 'netbackup/common/nbu_change_serviceuser/v2.0'
 
   vars:
     nbu_playbook_type: "service_user"

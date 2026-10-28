@@ -1,8 +1,0 @@
-# $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
-#
-# ############################################################
-# #### Add vcenter to recovery server - ("Linux/Windows") ####
-# ############################################################
-
-- name: "ADD-VCENTER-TO-CRS -> Add vcenter to recovery server."
-  ansible.builtin.include_tasks: "{{ ansible_system|lower }}.yml"

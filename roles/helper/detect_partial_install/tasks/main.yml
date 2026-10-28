@@ -1,4 +1,7 @@
+---
 # $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
 
 - name: "NBU-PARTIAL-INSTALL-DETECTION -> Include tasks"
-  ansible.builtin.include_tasks:  "{{ nbap_ansible_system }}.yml"
+  ansible.builtin.include_tasks: "{{ nbap_ansible_system }}.yml"
+
+# EOF

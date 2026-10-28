@@ -1,3 +1,4 @@
+---
 # $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
 
 # Execute the role which detect the partial install status
@@ -9,3 +10,5 @@
   ansible.builtin.include_tasks: "{{ nbap_ansible_system }}.yml"
   when:
     - ( not nbap_partial_install_detected )
+
+# EOF

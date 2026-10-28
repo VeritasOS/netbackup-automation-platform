@@ -1,3 +1,4 @@
+---
 # $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
 
 ##############################################################################
@@ -15,30 +16,30 @@
       no_log: true
 
     - name: "NBU-OS-COMPATIBILITY -> Set installed package list"
-      set_fact:
+      ansible.builtin.set_fact:
         installed_packages: "{{ installed_pkgs.stdout_lines }}"
       no_log: true
 
     - name: "NBU-OS-COMPATIBILITY -> Initialize native dependent missing_packages variable"
-      set_fact:
+      ansible.builtin.set_fact:
         missing_packages: []
 
     - name: "NBU-OS-COMPATIBILITY -> Set-fact common native dependent missing packages"
-      set_fact:
+      ansible.builtin.set_fact:
         missing_packages: "{{ missing_packages + (os_system_packages['sunos']['common'] | difference(installed_packages)) }}"
       when:
         - os_system_packages['sunos']['common'] is defined
         - (os_system_packages['sunos']['common'] | difference(installed_packages)) | length > 0
 
     - name: "NBU-OS-COMPATIBILITY -> Set-fact {{ nbu_role | capitalize }} native dependent missing packages"
-      set_fact:
+      ansible.builtin.set_fact:
         missing_packages: "{{ missing_packages + (os_system_packages['sunos'][nbu_role] | difference(installed_packages)) }}"
       when:
         - os_system_packages['sunos'][nbu_role] is defined
         - (os_system_packages['sunos'][nbu_role] | difference(installed_packages)) | length > 0
 
     - name: "NBU-OS-COMPATIBILITY -> Set-fact SunOS:{{ ansible_distribution_major_version }} native dependent missing packages"
-      set_fact:
+      ansible.builtin.set_fact:
         missing_packages: "{{ missing_packages + (os_system_packages['sunos'][ansible_distribution_major_version] | difference(installed_packages)) }}"
       when:
         - os_system_packages['sunos'][ansible_distribution_major_version] is defined
@@ -60,12 +61,12 @@
       no_log: true
 
     - name: "NBU-OS-COMPATIBILITY -> Set installed package list after install"
-      set_fact:
+      ansible.builtin.set_fact:
         installed_packages_after: "{{ installed_pkgs_after.stdout_lines }}"
       no_log: true
 
     - name: "NBU-OS-COMPATIBILITY -> Verify the existence of native dependent packages"
-      fail:
+      ansible.builtin.fail:
         msg: "One or more required system packages are not installed: {{ absent_packages }}"
       when: absent_packages | length > 0
       vars:

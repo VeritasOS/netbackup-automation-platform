@@ -1,0 +1,89 @@
+# $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
+
+#######################################################################
+#### nbu_win_install -> tasks -> t03_archive_patch_on_upgrade.yml ####
+#######################################################################
+# Archives Patch to Patch.<pre-upgrade-version> before installing EEBs for a
+# new NetBackup release during cross-version upgrades. Uses nbu_version_pre_upgrade
+# captured during install verification (before base upgrade).
+# Copies Patch directory contents into Patch.<version>\ (not Patch.<version>\Patch\) then removes Patch\.
+# Uses robocopy (contents-only) + win_file absent because win_copy nests the source folder name.
+
+- name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Check whether {{ nbu_patch_dir_path }} exists"
+  ansible.windows.win_stat:
+    path: "{{ nbu_patch_dir_path }}"
+  register: nbu_patch_dir_register
+
+- name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Archive Patch directory when no pre-upgrade version is detected"
+  when:
+    - nbu_patch_dir_register.stat.exists
+    - nbu_patch_dir_register.stat.isdir
+    - nbu_current_installed_version is not defined
+  block:
+    - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Set versioned Patch archive path"
+      ansible.builtin.set_fact:
+        nbu_patch_undef_path: "{{ os_path_nbu_install }}\\Patch.undefined"
+
+    - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Create versioned Patch archive directory {{ nbu_patch_undef_path }}"
+      ansible.windows.win_file:
+        path: "{{ nbu_patch_undef_path }}"
+        state: directory
+
+    # Cross-version EEB archive: copy every file and subfolder from the live Patch
+    # directory into Patch.undefined (e.g. Patch\EEB\ -> Patch.undefined\EEB\).
+    # robocopy copies source *contents* into the destination root; it does not create
+    # Patch.undefined\Patch\. win_copy with a directory src nests the folder name, so
+    # robocopy is used instead. Exit codes 0-7 are success (0 = nothing to copy);
+    # codes >= 8 fail the task. The original Patch\ directory is removed in the next task.
+    - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Copy contents of {{ nbu_patch_dir_path }} to {{ nbu_patch_undef_path }}"
+      ansible.windows.win_command: >-
+        robocopy "{{ nbu_patch_dir_path }}" "{{ nbu_patch_undef_path }}"
+        /E /R:1 /W:1 /NFL /NDL /NJH /NJS /NC /NS
+      register: nbu_patch_undef_copy_register
+      failed_when: nbu_patch_undef_copy_register.rc >= 8
+      changed_when: nbu_patch_undef_copy_register.rc | int in [1, 2, 3, 5, 6, 7]
+
+    - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Remove original Patch directory {{ nbu_patch_dir_path }}"
+      ansible.windows.win_file:
+        path: "{{ nbu_patch_dir_path }}"
+        state: absent
+      when: nbu_patch_undef_copy_register is succeeded
+
+- name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Rename Patch directory only when pre-upgrade version is lower than proposed"
+  when:
+    - nbu_patch_dir_register.stat.exists
+    - nbu_patch_dir_register.stat.isdir
+    - nbu_current_installed_version is defined
+    - nbu_current_installed_version | trim | length > 0
+    - nbu_current_installed_version is version_compare(nbu_version, '<')
+  block:
+    - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Set versioned Patch archive path"
+      ansible.builtin.set_fact:
+        nbu_patch_archive_path: "{{ os_path_nbu_install }}\\Patch.{{ nbu_current_installed_version }}"
+
+    - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Create versioned Patch archive directory {{ nbu_patch_archive_path }}"
+      ansible.windows.win_file:
+        path: "{{ nbu_patch_archive_path }}"
+        state: directory
+
+    # Cross-version EEB archive: copy every file and subfolder from the live Patch
+    # directory into Patch.<pre-upgrade-version> (e.g. Patch\EEB\ -> Patch.11.1\EEB\).
+    # robocopy copies source *contents* into the destination root; it does not create
+    # Patch.<version>\Patch\. win_copy with a directory src nests the folder name, so
+    # robocopy is used instead. Exit codes 0-7 are success (0 = nothing to copy);
+    # codes >= 8 fail the task. The original Patch\ directory is removed in the next task.
+    - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Copy contents of {{ nbu_patch_dir_path }} to {{ nbu_patch_archive_path }}"
+      ansible.windows.win_command: >-
+        robocopy "{{ nbu_patch_dir_path }}" "{{ nbu_patch_archive_path }}"
+        /E /R:1 /W:1 /NFL /NDL /NJH /NJS /NC /NS
+      register: nbu_patch_archive_copy_register
+      failed_when: nbu_patch_archive_copy_register.rc >= 8
+      changed_when: nbu_patch_archive_copy_register.rc | int in [1, 2, 3, 5, 6, 7]
+
+    - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Remove original Patch directory {{ nbu_patch_dir_path }}"
+      ansible.windows.win_file:
+        path: "{{ nbu_patch_dir_path }}"
+        state: absent
+      when: nbu_patch_archive_copy_register is succeeded
+
+# EOF
