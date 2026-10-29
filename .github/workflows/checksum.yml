@@ -25,43 +25,25 @@ jobs:
             echo "tag_name=${{ github.event.inputs.tag_name }}" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Resolve GitHub source archive URLs
-        id: urls
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          if [ "${{ github.event_name }}" = "release" ]; then
-            {
-              echo "tarball_url<<EOF"
-              echo "${{ github.event.release.tarball_url }}"
-              echo "EOF"
-              echo "zipball_url<<EOF"
-              echo "${{ github.event.release.zipball_url }}"
-              echo "EOF"
-            } >> "$GITHUB_OUTPUT"
-          else
-            TAG="${{ steps.release.outputs.tag_name }}"
-            RELEASE="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${TAG}")"
-            echo "tarball_url<<EOF" >> "$GITHUB_OUTPUT"
-            echo "$RELEASE" | jq -r '.tarball_url' >> "$GITHUB_OUTPUT"
-            echo "EOF" >> "$GITHUB_OUTPUT"
-            echo "zipball_url<<EOF" >> "$GITHUB_OUTPUT"
-            echo "$RELEASE" | jq -r '.zipball_url' >> "$GITHUB_OUTPUT"
-            echo "EOF" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Download GitHub source archives and generate checksums
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TARBALL_URL: ${{ steps.urls.outputs.tarball_url }}
-          ZIPBALL_URL: ${{ steps.urls.outputs.zipball_url }}
+          TAG_NAME: ${{ steps.release.outputs.tag_name }}
         run: |
           set -euo pipefail
           WORKDIR="${RUNNER_TEMP}/release-checksums"
           mkdir -p "$WORKDIR"
           cd "$WORKDIR"
           AUTH="Authorization: Bearer ${GH_TOKEN}"
+
+          REPO="${GITHUB_REPOSITORY#*/}"
+          TAG_SUFFIX="${TAG_NAME#v}"
+          BASE="${REPO}-${TAG_SUFFIX}"
+          TAR_NAME="${BASE}.tar.gz"
+          ZIP_NAME="${BASE}.zip"
+
+          TAR_URL="https://github.com/${GITHUB_REPOSITORY}/archive/refs/tags/${TAG_NAME}.tar.gz"
+          ZIP_URL="https://github.com/${GITHUB_REPOSITORY}/archive/refs/tags/${TAG_NAME}.zip"
 
           wait_for_url() {
             local url="$1"
@@ -79,20 +61,13 @@ jobs:
             return 1
           }
 
-          wait_for_url "$TARBALL_URL" "tarball"
-          wait_for_url "$ZIPBALL_URL" "zipball"
+          wait_for_url "$TAR_URL" "tarball"
+          wait_for_url "$ZIP_URL" "zipball"
 
-          curl -fsSL -H "$AUTH" -J -O "$TARBALL_URL"
-          curl -fsSL -H "$AUTH" -J -O "$ZIPBALL_URL"
+          curl -fsSL -H "$AUTH" -o "$TAR_NAME" "$TAR_URL"
+          curl -fsSL -H "$AUTH" -o "$ZIP_NAME" "$ZIP_URL"
 
-          shopt -s nullglob
-          archives=( *.tar.gz *.zip )
-          if [ "${#archives[@]}" -ne 2 ]; then
-            echo "Expected 2 archives, found ${#archives[@]}: ${archives[*]-none}" >&2
-            exit 1
-          fi
-
-          sha256sum "${archives[@]}" > checksums.txt
+          sha256sum "$TAR_NAME" "$ZIP_NAME" > checksums.txt
           cat checksums.txt
           cp checksums.txt "${GITHUB_WORKSPACE}/checksums.txt"
 
