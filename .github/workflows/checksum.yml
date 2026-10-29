@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: Release tag to archive (e.g. v4.1a)
+        description: Release tag (e.g. v4.1a)
         required: true
         type: string
 
@@ -14,7 +14,7 @@ jobs:
   generate-checksum:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # Required to upload assets to the release
+      contents: write
     steps:
       - name: Resolve release tag
         id: release
@@ -25,37 +25,81 @@ jobs:
             echo "tag_name=${{ github.event.inputs.tag_name }}" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Checkout repository at release tag
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ steps.release.outputs.tag_name }}
-
-      - name: Create Source Archive & Generate Checksum
-        id: archive
+      - name: Resolve GitHub source archive URLs
+        id: urls
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          TAG_NAME="${{ steps.release.outputs.tag_name }}"
-          SAFE_TAG="${TAG_NAME//\//-}"
-          PREFIX="netbackup-automation-platform-${SAFE_TAG}/"
-          ARCHIVE_NAME="netbackup-automation-platform-${SAFE_TAG}.tar.gz"
-          ZIP_NAME="netbackup-automation-platform-${SAFE_TAG}.zip"
+          if [ "${{ github.event_name }}" = "release" ]; then
+            {
+              echo "tarball_url<<EOF"
+              echo "${{ github.event.release.tarball_url }}"
+              echo "EOF"
+              echo "zipball_url<<EOF"
+              echo "${{ github.event.release.zipball_url }}"
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+          else
+            TAG="${{ steps.release.outputs.tag_name }}"
+            RELEASE="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${TAG}")"
+            echo "tarball_url<<EOF" >> "$GITHUB_OUTPUT"
+            echo "$RELEASE" | jq -r '.tarball_url' >> "$GITHUB_OUTPUT"
+            echo "EOF" >> "$GITHUB_OUTPUT"
+            echo "zipball_url<<EOF" >> "$GITHUB_OUTPUT"
+            echo "$RELEASE" | jq -r '.zipball_url' >> "$GITHUB_OUTPUT"
+            echo "EOF" >> "$GITHUB_OUTPUT"
+          fi
 
-          # git archive avoids tar writing the archive into the tree being archived
-          # (which causes: tar: .: file changed as we read it)
-          git archive --format=tar.gz --prefix="$PREFIX" HEAD > "$ARCHIVE_NAME"
-          git archive --format=zip --prefix="$PREFIX" HEAD > "$ZIP_NAME"
+      - name: Download GitHub source archives and generate checksums
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARBALL_URL: ${{ steps.urls.outputs.tarball_url }}
+          ZIPBALL_URL: ${{ steps.urls.outputs.zipball_url }}
+        run: |
+          set -euo pipefail
+          WORKDIR="${RUNNER_TEMP}/release-checksums"
+          mkdir -p "$WORKDIR"
+          cd "$WORKDIR"
+          AUTH="Authorization: Bearer ${GH_TOKEN}"
 
-          sha256sum "$ARCHIVE_NAME" "$ZIP_NAME" > checksums.txt
-          echo "archive_name=$ARCHIVE_NAME" >> "$GITHUB_OUTPUT"
-          echo "zip_name=$ZIP_NAME" >> "$GITHUB_OUTPUT"
+          wait_for_url() {
+            local url="$1"
+            local label="$2"
+            for attempt in $(seq 1 30); do
+              code="$(curl -s -o /dev/null -w "%{http_code}" -L -H "$AUTH" "$url" || true)"
+              if [ "$code" = "200" ]; then
+                echo "${label} available"
+                return 0
+              fi
+              echo "Waiting for ${label} (HTTP ${code}), attempt ${attempt}/30..."
+              sleep 10
+            done
+            echo "Timed out waiting for ${label}: ${url}" >&2
+            return 1
+          }
 
-      - name: Upload Checksums to Release
+          wait_for_url "$TARBALL_URL" "tarball"
+          wait_for_url "$ZIPBALL_URL" "zipball"
+
+          curl -fsSL -H "$AUTH" -J -O "$TARBALL_URL"
+          curl -fsSL -H "$AUTH" -J -O "$ZIPBALL_URL"
+
+          shopt -s nullglob
+          archives=( *.tar.gz *.zip )
+          if [ "${#archives[@]}" -ne 2 ]; then
+            echo "Expected 2 archives, found ${#archives[@]}: ${archives[*]-none}" >&2
+            exit 1
+          fi
+
+          sha256sum "${archives[@]}" > checksums.txt
+          cat checksums.txt
+          cp checksums.txt "${GITHUB_WORKSPACE}/checksums.txt"
+
+      - name: Upload checksums.txt to release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.release.outputs.tag_name }}
-          files: |
-            checksums.txt
-            ${{ steps.archive.outputs.archive_name }}
-            ${{ steps.archive.outputs.zip_name }}
+          files: checksums.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
