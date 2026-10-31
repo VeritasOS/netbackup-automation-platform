@@ -7,7 +7,7 @@
     state: directory
     mode: '0755'
 
-- name: "NBU-CLIENT-{{ nbu_playbook_type | upper }} -> Verify whether ({{ item.name }}) package is currently installed"
+- name: "NBU-CLIENT-{{ nbu_playbook_type | upper }} -> Verify whether ({{ item.name }}) package is currently installed"  # noqa: command-instead-of-shell
   ansible.builtin.shell: "{{ pkg_status_check_cmd | replace('ITEM_PACKAGE_NAME', item.name) }}"
   failed_when: false
   changed_when: false
@@ -15,7 +15,7 @@
 
 - name: "NBU-CLIENT-{{ nbu_playbook_type | upper }} -> Verify what version of the NetBackup {{ nbu_playbook_type }} software ({{ item.name }}) is \
           currently installed"
-  ansible.builtin.shell: "{{ version_check_cmd | replace('ITEM_PACKAGE_NAME', item.name) }}"
+  ansible.builtin.shell: "{{ version_check_cmd | replace('ITEM_PACKAGE_NAME', item.name) }}"  # noqa: command-instead-of-shell
   ignore_errors: true
   changed_when: false
   register: nbu_pkg_version_register
@@ -35,18 +35,18 @@
         force: true
         validate_certs: "{{ nbu_repo_validate_certs }}"
 
-    - name: "NBU-CLIENT-{{ nbu_playbook_type | upper }} -> Extract {{ item.name }}.image.gz package"
+    - name: "NBU-CLIENT-{{ nbu_playbook_type | upper }} -> Extract {{ item.name }}.image.gz package"  # noqa: command-instead-of-shell
       ansible.builtin.shell: ( gunzip -f "{{ item.name }}.image.gz" )
       args:
         chdir: "{{ os_path_openv_tmp }}/netbackup_aix_packages"
       register: extract_result
       failed_when: extract_result.rc != 0
 
-    - name: "NBU-CLIENT-{{ nbu_playbook_type | upper }} -> Cleanup any inconsistent state packages"
+    - name: "NBU-CLIENT-{{ nbu_playbook_type | upper }} -> Cleanup any inconsistent state packages"  # noqa: command-instead-of-shell
       ansible.builtin.shell: ( installp -C {{ item.name }} )
       when: nbu_playbook_type == 'install'
 
-    - name: "NBU-CLIENT-{{ nbu_playbook_type | upper }} -> Install NetBackup {{ item.name }}.image package"
+    - name: "NBU-CLIENT-{{ nbu_playbook_type | upper }} -> Install NetBackup {{ item.name }}.image package"  # noqa: command-instead-of-shell
       ansible.builtin.shell: ( installp -ad {{ os_path_openv_tmp }}/netbackup_aix_packages/{{ item.name }}.image all )
       register: install_status_register
       failed_when: install_status_register.rc not in [0, 1]

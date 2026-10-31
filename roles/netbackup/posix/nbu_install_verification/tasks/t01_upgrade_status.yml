@@ -11,7 +11,7 @@
 
 # The upgrade will not proceed if the NetBackup software is not already installed.
 - name: "NBU-{{ nbu_role | upper }}-UPGRADE -> Verify whether NetBackup {{ nbu_role }} software ({{ item.name }}) is currently installed"
-  ansible.builtin.shell: "{{ pkg_status_check_cmd | replace('ITEM_PACKAGE_NAME', item.name) }}"
+  ansible.builtin.shell: "{{ pkg_status_check_cmd | replace('ITEM_PACKAGE_NAME', item.name) }}"  # noqa: command-instead-of-shell
   changed_when: false
   register: nbu_rpm_check_register
   failed_when: false
@@ -19,7 +19,7 @@
 # Verify what version of the NetBackup software is currently installed.
 # Returned version is used to determine whether the NetBackup sofware requires upgrading.
 - name: "NBU-{{ nbu_role | upper }}-UPGRADE -> Verify what version of the NetBackup {{ nbu_role }} software ({{ item.name }}) is currently installed"
-  ansible.builtin.shell: "{{ version_check_cmd | replace('ITEM_PACKAGE_NAME', item.name) }}"
+  ansible.builtin.shell: "{{ version_check_cmd | replace('ITEM_PACKAGE_NAME', item.name) }}"  # noqa: command-instead-of-shell
   ignore_errors: true
   changed_when: false
   register: nbu_rpm_version_register

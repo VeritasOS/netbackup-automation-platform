@@ -10,7 +10,7 @@
   failed_when: false
 
 - name: "NBU-PARTIAL-INSTALL-DETECTION -> Read the file content if it exists"
-  ansible.builtin.shell: "cat {{ os_path_openv_tmp }}/nbap_partial_install_detected"
+  ansible.builtin.command: "cat {{ os_path_openv_tmp }}/nbap_partial_install_detected"
   register: nbap_file_content_register
   when: ( nbap_partial_install_register.stat.exists )
   changed_when: false

@@ -12,7 +12,7 @@
   block:
     - name: "NBU-GET-ACCESS-TOKEN -> BLOCK: Execute the task for login operation"
       when:
-        - action == "login"
+        - user_action == "login"
 
       block:
         - name: "NBU-GET-ACCESS-TOKEN -> Get access token for the given user: {{ nbu_rbac_user }}"
@@ -51,7 +51,7 @@
 
     - name: "NBU-REMOVE-TRANSIENT-SESSION -> BLOCK: Execute the task logout operations"
       when:
-        - action == "logout"
+        - user_action == "logout"
         - user_logged_in
 
       block:

@@ -1,3 +1,6 @@
+# $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
+
+# This workflow generates checksums for the release and uploads them to the release.
 name: Generate Release Checksums
 
 on:

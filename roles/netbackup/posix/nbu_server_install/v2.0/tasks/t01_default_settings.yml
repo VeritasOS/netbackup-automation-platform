@@ -13,7 +13,7 @@
 
 # Check - Upgrade is being performed by root user
 - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Verify the root user is performing the NetBackup server upgrade"
-  ansible.builtin.shell: ( whoami )
+  ansible.builtin.shell: ( whoami )  # noqa: command-instead-of-shell
   changed_when: false
   register: root_check
   failed_when: ( root_check.stdout != 'root' )
@@ -156,7 +156,7 @@
 
   block:
     - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Found instance of previous failed RPM"
-      ansible.builtin.shell:
+      ansible.builtin.command:
         cmd: "sed -n '1p' /tmp/previous_rpm_pkg_install_failed"
       changed_when: false
       failed_when: false
@@ -189,7 +189,7 @@
 
   block: # pre_rpm_failed_register.stat.exists
     - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Gather facts if any RPM failed to be installed"
-      ansible.builtin.shell:
+      ansible.builtin.command:
         cmd: "cat /tmp/previous_rpm_pkg_install_failed"
       register: previous_failed_rpm_register
       no_log: true

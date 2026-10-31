@@ -15,7 +15,7 @@
         path: "{{ os_file_nbu_nbgetconfig }}"
       register: nbgetconfig_stat_register
 
-    - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Read SERVICE_USER via nbgetconfig"
+    - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Read SERVICE_USER via nbgetconfig"  # noqa: command-instead-of-shell
       ansible.builtin.shell: "{{ nbgetconfig_value_cmd | replace('NBGETCONFIG_KEY', 'SERVICE_USER') }}"
       register: nbgetconfig_service_user_register
       changed_when: false
@@ -47,7 +47,7 @@
     state: present
 
 - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Check if NetBackup services user exists"
-  ansible.builtin.shell: getent passwd {{ nbu_services_user }}
+  ansible.builtin.command: getent passwd {{ nbu_services_user }}
   register: nb_svc_user_getent_register
   changed_when: false
   failed_when: false

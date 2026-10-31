@@ -24,7 +24,7 @@
     - ( nbu_webservices_group | length == 0 ) or ( nbu_webservices_user | length == 0 )
 
 - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Check if NetBackup Web Services group exists"
-  ansible.builtin.shell: getent group {{ nbu_webservices_group }}
+  ansible.builtin.command: getent group {{ nbu_webservices_group }}
   register: nbu_ws_group_getent
   failed_when: false
 
@@ -35,7 +35,7 @@
   when: nbu_ws_group_getent.rc != 0
 
 - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Check if service and database users exist"
-  ansible.builtin.shell: getent passwd {{ item }}
+  ansible.builtin.command: getent passwd {{ item }}
   with_items:
     - "{{ nbu_webservices_user }}"
     - "{{ nbu_services_user }}"
@@ -54,7 +54,7 @@
 
 - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Verify '{{ nbu_webservices_group }}' is NOT the primary group of '{{ nbu_services_user \
           }}'"
-  ansible.builtin.shell: id -gn {{ nbu_services_user }}
+  ansible.builtin.command: id -gn {{ nbu_services_user }}
   register: primary_group_check_register
   failed_when: false
 

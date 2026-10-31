@@ -22,7 +22,7 @@
   when:
     - nbcertcmd_existence_register.stat.exists
   block:
-    - name: "NBU-CERTIFICATE-DEPLOYMENT-> Retrieve certificate mode for primary server: {{ nbu_primary_server_ans }}"
+    - name: "NBU-CERTIFICATE-DEPLOYMENT-> Retrieve certificate mode for primary server: {{ nbu_primary_server_ans }}"  # noqa: command-instead-of-shell
       ansible.builtin.shell: ( {{ os_file_nbu_nbcertcmd }} -getSecConfig -caUsage -server "{{ nbu_primary_server_ans }}" )
       changed_when: false
       register: certificate_mode_register
@@ -64,7 +64,7 @@
             - nbgetconfig_existence_register.stat.exists
           block:
             - name: "NBU-CERTIFICATE-DEPLOYMENT -> Read ECA_TRUST_STORE_PATH via nbgetconfig"
-              ansible.builtin.shell: "{{ os_file_nbu_nbgetconfig }} ECA_TRUST_STORE_PATH | awk '{ print $3 }'"
+              ansible.builtin.shell: "{{ os_file_nbu_nbgetconfig }} ECA_TRUST_STORE_PATH | awk '{ print $3 }'"  # noqa: risky-shell-pipe
               register: nbgetconfig_eca_trust_store_register
               changed_when: false
               failed_when: false

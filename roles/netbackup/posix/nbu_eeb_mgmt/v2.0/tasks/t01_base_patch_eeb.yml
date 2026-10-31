@@ -9,7 +9,7 @@
     eeb_task_type: "{{ 'uninstall' if 'uninstall' in item else 'install' }}"
 
 # Check whether EEB is already installed
-- name: "NBU-EEB-MGMT -> Check whether NetBackup EEB is already {{ eeb_task_type }}ed - {{ eeb_name }}"
+- name: "NBU-EEB-MGMT -> Check whether NetBackup EEB is already {{ eeb_task_type }}ed - {{ eeb_name }}"  # noqa: command-instead-of-shell
   ansible.builtin.shell: ( grep {{ nbu_eeb_file_id }}_EEB{{ nbu_eeb_file_ver }} /usr/openv/pack/pack.summary )
   ignore_errors: true
   changed_when: false
@@ -61,7 +61,7 @@
 
     # Check NetBackup EEB installer version
     - name: "NBU-EEB-MGMT -> Check NetBackup EEB installer version - {{ eeb_name }}"
-      ansible.builtin.shell: ( {{ eeb_installer_path }} -inst_ver | awk -F ':' '{print $2}')
+      ansible.builtin.shell: ( {{ eeb_installer_path }} -inst_ver | awk -F ':' '{print $2}')  # noqa: risky-shell-pipe
       no_log: false
       register: eeb_install_version_register
 
@@ -74,7 +74,7 @@
       when: eeb_install_version_register.stdout | float >= 5.23
 
       block:
-        - name: "NBU-EEB-MGMT -> Get the eeb's netbackup version from -eeb_ver option"
+        - name: "NBU-EEB-MGMT -> Get the eeb's netbackup version from -eeb_ver option"  # noqa: command-instead-of-shell
           ansible.builtin.shell: "{{ eeb_netbackup_version_cmd | replace('EEB_PATH', eeb_base_path) | replace('EEB_NAME', eeb_name) }}"
           ignore_errors: false
           no_log: false
@@ -113,7 +113,7 @@
         # on Ansible's native display: a successful task prints only "ok",
         # while a failed task automatically prints stdout/stderr and aborts.
         - name: "NBU-EEB-MGMT -> {{ eeb_task_type | capitalize }} NetBackup EEB - {{ eeb_name }}"
-          ansible.builtin.shell: "{{ eeb_base_path }}/{{ item }} -no_questions"
+          ansible.builtin.command: "{{ eeb_base_path }}/{{ item }} -no_questions"
           changed_when: false
           failed_when: false
           no_log: true
@@ -155,7 +155,7 @@
   block:
     # Verify current EEB is Tomcat EEB and execute tomcat specific operations if its tomcat eeb
     - name: "NBU-EEB-MGMT -> Verify current EEB is for Tomcat"
-      ansible.builtin.shell: "{{ eeb_installer_path }} -r | grep 'TomcatDeployer'"
+      ansible.builtin.shell: "{{ eeb_installer_path }} -r | grep 'TomcatDeployer'"  # noqa: risky-shell-pipe
       failed_when: false
       register: tomcat_eeb_status_register
 
@@ -174,7 +174,7 @@
     # rollback must restore the pre-EEB Tomcat from the bkpcomp backup first;
     # eebinstaller -uninstall only removes the deliverable and does not revert Tomcat.
     - name: "NBU-EEB-MGMT -> Verify current EEB is for Tomcat"
-      ansible.builtin.shell: "{{ eeb_installer_path }} -r | grep 'TomcatDeployer'"
+      ansible.builtin.shell: "{{ eeb_installer_path }} -r | grep 'TomcatDeployer'"  # noqa: risky-shell-pipe
       failed_when: false
       register: tomcat_eeb_stat_register
 
@@ -183,7 +183,7 @@
       when: tomcat_eeb_stat_register.rc == 0
 
     - name: "NBU-EEB-MGMT -> {{ eeb_task_type | capitalize }} NetBackup EEB - {{ eeb_name }}"
-      ansible.builtin.shell: "{{ eeb_base_path }}/{{ item }} -no_questions"
+      ansible.builtin.command: "{{ eeb_base_path }}/{{ item }} -no_questions"
       failed_when: false
       changed_when: false
       no_log: true
@@ -218,7 +218,7 @@
   block:
     # Check whether EEB marker file exists
     - name: "NBU-EEB-MGMT -> Check whether NetBackup EEB RPM marker is already {{ eeb_task_type }}ed - {{ nbu_eeb_package_marker_name }}"
-      ansible.builtin.shell: "{{ pkg_status_check_cmd | replace('ITEM_PACKAGE_NAME', nbu_eeb_package_marker_name) }}"
+      ansible.builtin.shell: "{{ pkg_status_check_cmd | replace('ITEM_PACKAGE_NAME', nbu_eeb_package_marker_name) }}"  # noqa: command-instead-of-shell
       ignore_errors: true
       changed_when: false
       failed_when: false
@@ -266,7 +266,7 @@
               when:
                 - "'uninstall' not in (item | default('') | string)"
 
-            - name: "NBU-EEB-MGMT -> {{ eeb_task_type | capitalize }} NetBackup EEB PKG Marker File - {{ eeb_name }}"
+            - name: "NBU-EEB-MGMT -> {{ eeb_task_type | capitalize }} NetBackup EEB PKG Marker File - {{ eeb_name }}"  # noqa: command-instead-of-shell
               ansible.builtin.shell: "{{ eeb_pkg_installcmd | replace('ITEM_EEB_MARKER_PACKAGE', nbu_eeb_package_marker_name) }}"
               args:
                 chdir: "{{ os_path_openv_tmp }}/netbackup_sunos_packages"
@@ -274,7 +274,7 @@
                 - "'uninstall' not in (item | default('') | string)"
 
             - name: "NBU-EEB-MGMT -> {{ eeb_task_type | capitalize }} NetBackup EEB PKG Marker File - {{ eeb_name }}"
-              ansible.builtin.shell: "{{ uninstall_package_cmd }} {{ nbu_eeb_solaris_pkg_abbr }}"
+              ansible.builtin.command: "{{ uninstall_package_cmd }} {{ nbu_eeb_solaris_pkg_abbr }}"
               args:
                 chdir: "{{ os_path_openv_tmp }}/netbackup_sunos_packages"
               when:

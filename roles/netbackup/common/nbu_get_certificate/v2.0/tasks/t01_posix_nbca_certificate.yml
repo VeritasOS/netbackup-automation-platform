@@ -72,7 +72,7 @@
     - nbu_ca_certificate_file_register.stat.exists
 
   block:
-    - name: "NBU-CERTIFICATE-DEPLOYMENT -> Deploy a CA Certificate on target host"
+    - name: "NBU-CERTIFICATE-DEPLOYMENT -> Deploy a CA Certificate on target host"  # noqa: command-instead-of-shell
       ansible.builtin.shell: ( {{ os_file_nbu_nbcertcmd }} -getCACertificate -server "{{ nbu_primary_server_ans }}"
         -file "{{ nbu_certificates_file_path }}/{{ nbu_certificates_file_dir }}/{{ nbu_ca_certificate_file }}" -force )
       changed_when: false
@@ -133,7 +133,7 @@
     - name: "NBU-CERTIFICATE-DEPLOYMENT -> In the case where a host ID certificate is not present, use the getCertificate option to retrieve a host ID
         certificate"
       ansible.builtin.shell: ( {{ os_file_nbu_nbcertcmd }} -getCertificate -server "{{ nbu_primary_server_ans }}"
-        -file "{{ nbu_certificates_file_path }}/{{ nbu_certificates_file_dir }}/{{ nbu_authorization_token_file }}" -force )
+        -file "{{ nbu_certificates_file_path }}/{{ nbu_certificates_file_dir }}/{{ nbu_authorization_token_file }}" -force ) # noqa: command-instead-of-shell
       changed_when: false
       register: nbu_host_certificate_check_register
       failed_when: false
@@ -167,7 +167,7 @@
           ansible.builtin.set_fact:
             nbu_get_extracted_pattern: "{{ nbu_get_certificate_errmsg | regex_search('EXIT STATUS 5989') }}"
 
-        - name: "NBU-CERTIFICATE-DEPLOYMENT -> Check if certificate revocation list already exists"
+        - name: "NBU-CERTIFICATE-DEPLOYMENT -> Check if certificate revocation list already exists"  # noqa: command-instead-of-shell
           ansible.builtin.shell: ( {{ os_file_nbu_nbcertcmd }} -getCertificate -server "{{ nbu_primary_server_ans }}" )
           changed_when: false
           register: nbu_certificate_existence_register
@@ -206,7 +206,7 @@
           ansible.builtin.debug:
             msg: "{{ nbu_get_certificate_output }}"
 
-- name: "NBU-CERTIFICATE-DEPLOYMENT -> Check if the NetBackup host has connectivity with the Primary server"
+- name: "NBU-CERTIFICATE-DEPLOYMENT -> Check if the NetBackup host has connectivity with the Primary server"  # noqa: command-instead-of-shell
   ansible.builtin.shell: ( {{ os_file_nbu_nbcertcmd }} -ping -server {{ nbu_primary_server_ans }} )
   changed_when: false
   register: nbu_is_master_valid_register
@@ -230,7 +230,7 @@
         line: 'SERVER = {{ nbu_primary_server_ans }}'
 
     - name: "NBU-NBCA-CERTIFICATE-DEPLOYMENT -> Reset EMMServer entry to Primary Server name"
-      ansible.builtin.shell: ( echo EMMSERVER={{ nbu_primary_server_ans }} | /usr/openv/netbackup/bin/nbsetconfig )
+      ansible.builtin.shell: ( echo EMMSERVER={{ nbu_primary_server_ans }} | /usr/openv/netbackup/bin/nbsetconfig )  # noqa: risky-shell-pipe
       changed_when: false
       when:
         - ( nbu_role == "primary") or ( nbu_role == "media")

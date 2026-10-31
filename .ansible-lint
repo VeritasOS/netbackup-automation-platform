@@ -1,14 +1,13 @@
 # $Copyright: Copyright (c) 2026 Cohesity, Inc. All rights reserved $
 ---
+exclude_paths:
+  - scm/
+
 # ansible-lint configuration
 # Profile: safety — enforces safety-tier rules; style/production rules suppressed via skip_list.
 profile: safety
 skip_list:
-  - risky-shell-pipe
-  - no-changed_when
   - name[template]
   - role-name[path]
   - command-instead-of-module
-  - command-instead-of-shell
-  - var-naming[no-reserved]
   - var-naming[no-role-prefix]

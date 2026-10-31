@@ -14,7 +14,7 @@
   when:
     - netbackup_bpclntcmd_file_register.stat.exists
   block:
-    - name: "NBU-ROLE-STATUS -> Get hostname of target host machine"
+    - name: "NBU-ROLE-STATUS -> Get hostname of target host machine"  # noqa: command-instead-of-shell
       ansible.builtin.shell: ( {{ os_file_nbu_bpclntcmd }} -gethostname )
       changed_when: false
       register: nbu_get_hostname_register
@@ -24,7 +24,7 @@
       when:
         - ( nbu_get_hostname_register.rc == 0 )
       block:
-        - name: "NBU-ROLE-STATUS -> Check if target host machine is Primary Server "
+        - name: "NBU-ROLE-STATUS -> Check if target host machine is Primary Server "  # noqa: command-instead-of-shell
           ansible.builtin.shell: ( {{ os_file_nbu_bpclntcmd }} {{ item }} {{ nbu_get_hostname_register.stdout }})
           register: nbu_is_master_media_register
           changed_when: false

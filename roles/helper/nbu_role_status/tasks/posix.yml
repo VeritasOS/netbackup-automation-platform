@@ -18,7 +18,7 @@
       ansible.builtin.include_role:
         name: 'netbackup/{{ nbap_ansible_system }}/nbu_start_services'
 
-    - name: "NBU-ROLE-STATUS -> Check if the NetBackup host has connectivity with the Primary server"
+    - name: "NBU-ROLE-STATUS -> Check if the NetBackup host has connectivity with the Primary server"  # noqa: command-instead-of-shell
       ansible.builtin.shell: ( {{ os_file_nbu_nbcertcmd }} -ping -server {{ nbu_primary_server_ans }} )
       changed_when: false
       register: nbu_is_master_valid_register

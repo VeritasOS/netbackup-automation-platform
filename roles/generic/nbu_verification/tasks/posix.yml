@@ -18,7 +18,7 @@
 
   block:
     - name: "NBU-VERIFICATION -> Get Primary Server hostname"
-      ansible.builtin.shell: ( cat  {{ os_file_nbu_bpconf }} | egrep -v "^#" | grep SERVER | awk 'NR==1 {print $3}' )
+      ansible.builtin.shell: ( cat  {{ os_file_nbu_bpconf }} | egrep -v "^#" | grep SERVER | awk 'NR==1 {print $3}' )  # noqa: risky-shell-pipe
       changed_when: false
       register: nbu_primary_server_bpconf_register
 
@@ -29,7 +29,7 @@
 
 - name: "NBU-VERIFICATION -> Verify connectivity with the NetBackup primary server's ({{ nbu_primary_server_ans }}) web service."
   # Continue running respective CLIs only if the last one is sucessfull.
-  ansible.builtin.shell: "{{ os_file_nbu_nbcertcmd }} {{ item }}"
+  ansible.builtin.shell: "{{ os_file_nbu_nbcertcmd }} {{ item }}"  # noqa: command-instead-of-shell
   register: netbackup_commands_rc_register
   failed_when: false
   no_log: true
@@ -113,7 +113,7 @@
     install_retries: "{{ '2' if install_phase | default('PRE') == 'POST' else '0' }}"
 
 # Check 1 - Check NetBackup EMM Database is responding.
-- name: "NBU-VERIFICATION -> Check NetBackup EMM Database is responding"
+- name: "NBU-VERIFICATION -> Check NetBackup EMM Database is responding"  # noqa: command-instead-of-shell
   ansible.builtin.shell: ( "{{ os_file_nbu_nbemmcmd }}" -listhosts )
   register: nbemmcmd_result
   retries: "{{ install_retries }}"
@@ -130,7 +130,7 @@
   block:
     # Check 2 - Check NetBackup Jobs Database.
     - name: "NBU-VERIFICATION -> Check NetBackup Jobs Database"
-      ansible.builtin.shell: "{{ os_file_nbu_bpdbjobs }}"
+      ansible.builtin.command: "{{ os_file_nbu_bpdbjobs }}"
       register: bpdbjobs_result
       retries: "{{ install_retries }}"
       delay: 5
@@ -143,7 +143,7 @@
 
     # Check 3 - Check NetBackup Audit Report.
     - name: "NBU-VERIFICATION -> Check NetBackup Audit Report"
-      ansible.builtin.shell: "{{ os_file_nbu_nbauditreport }}"
+      ansible.builtin.command: "{{ os_file_nbu_nbauditreport }}"
       register: nbauditreport_result
       retries: "{{ install_retries }}"
       delay: 5
@@ -156,7 +156,7 @@
 
     # Check 4 - Verify if a NetBackup catalog backup has been succesful in last 24 hours
     # Fail if there's no recent NBU Catalog backup
-    - name: "NBU-VERIFICATION -> Verify whether NetBackup catalog backup has completed succesfully in last 24 hours"
+    - name: "NBU-VERIFICATION -> Verify whether NetBackup catalog backup has completed succesfully in last 24 hours"  # noqa: command-instead-of-shell
       ansible.builtin.shell: ( "{{ os_file_nbu_bpimagelist }}" -idonly -hoursago 24 -pt NBU-Catalog )
       changed_when: false
       register: nbu_check_catbkp
@@ -169,7 +169,7 @@
     # Check 5 - Verify the NetBackup CA key strength
     # Fail if the key strength is not 2048 bit strength.
     - name: "NBU-VERIFICATION -> Verify the NetBackup CA Key Strength is 2048 bit"
-      ansible.builtin.shell: ( "{{ os_file_nbu_nbcertcmd }}" -listcertdetails | grep "Key Strength" )
+      ansible.builtin.shell: ( "{{ os_file_nbu_nbcertcmd }}" -listcertdetails | grep "Key Strength" )  # noqa: risky-shell-pipe
       changed_when: false
       register: nbu_check_castrength_register
       failed_when: "'             Key Strength : 2048' not in nbu_check_castrength_register.stdout"

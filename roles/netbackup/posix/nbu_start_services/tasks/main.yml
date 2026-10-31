@@ -27,13 +27,13 @@
     - netbackup_files_check_register.results[0].stat.exists
     - netbackup_files_check_register.results[1].stat.exists
   block:
-    - name: "NBU-START-SERVICES -> Checking pbx_exchange already running"
+    - name: "NBU-START-SERVICES -> Checking pbx_exchange already running"  # noqa: command-instead-of-shell
       ansible.builtin.shell: "{{ vrts_pbx_usage_cmd }}"
       register: bpps_register
       failed_when: false
       changed_when: false
 
-    - name: "NBU-START-SERVICES -> Start vxpbx_exchanged (PBX) via control script"
+    - name: "NBU-START-SERVICES -> Start vxpbx_exchanged (PBX) via control script"  # noqa: command-instead-of-shell
       ansible.builtin.shell: ( {{ os_file_nbu_vxpbx_exchanged }} start )
       register: nbu_start_services_vxpbx_start_result
       retries: 2
@@ -53,7 +53,7 @@
     #   when: bpps_register.stdout|int == 0
 
     - name: "NBU-START-SERVICES -> Starting NetBackup, even if single NetBackup service is not in running state."
-      ansible.builtin.shell:
+      ansible.builtin.shell:  # noqa: risky-shell-pipe
         cmd: "echo y | {{ os_file_nbu_bpstart }}"
       register: service_start_register
       retries: 2

@@ -4,7 +4,7 @@
 - name: "NBCHECK ->  NBCheck error block"
   when: extract_file_status_register.rc == 0
   block:
-    - name: "NBCHECK -> Checking for {{ 'Critical' if item.critical else 'Non-Critical' }} system conditions..."
+    - name: "NBCHECK -> Checking for {{ 'Critical' if item.critical else 'Non-Critical' }} system conditions..."  # noqa: command-instead-of-shell
       ansible.builtin.shell: ( {{ nb_check_path }} --keepgoing --failures-only --test={{ item.testName }} --role_from_installer={{ nbcheck_role_list[nbu_role]
         }} {{ db_service_user_arg }} {{ install_it_analytics }} {{ nbweb_service_group }} {{ nbweb_service_user }} {{ postgres_user_param }} {{
         pg_bouncer_port_param }})

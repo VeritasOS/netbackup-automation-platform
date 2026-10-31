@@ -35,7 +35,7 @@
 
     # Get the NetBackup primary VXDBMS_NB_DATA from the bp.conf file
     - name: "NBU-STORAGE-COMPATIBILITY -> Retrieve VXDBMS_NB_DATA path from bp.conf file"
-      ansible.builtin.shell: ( cat  {{ os_file_nbu_bpconf }} | egrep -v "^#" | grep VXDBMS_NB_DATA | awk 'NR==1 {print $3}' )
+      ansible.builtin.shell: ( cat  {{ os_file_nbu_bpconf }} | egrep -v "^#" | grep VXDBMS_NB_DATA | awk 'NR==1 {print $3}' )  # noqa: risky-shell-pipe
       changed_when: false
       register: primary_vxdbms_data_register
       when: bpconf_status_register.stat.exists
@@ -45,7 +45,7 @@
         db_data_path: >-
           {{ nbu_db_data_path if not bpconf_status_register.stat.exists or primary_vxdbms_data_register.stdout == '' else primary_vxdbms_data_register.stdout }}
 
-    - name: "NBU-STORAGE-COMPATIBILITY -> Get disk space information for {{ db_data_path }}"
+    - name: "NBU-STORAGE-COMPATIBILITY -> Get disk space information for {{ db_data_path }}"  # noqa: command-instead-of-shell
       ansible.builtin.shell: ( du -sh --block-size=1M {{ db_data_path }} )
       register: db_data_path_used_register
       no_log: false
@@ -60,7 +60,7 @@
       ansible.builtin.set_fact:
         os_path_space_validation: "{{ os_path_space_validation | default([]) + [{'path': db_data_path, 'space_required_MB': 3 * (db_data_path_size | int)}] }}"
 
-- name: "NBU-STORAGE-COMPATIBILITY -> Get disk space information for each path"
+- name: "NBU-STORAGE-COMPATIBILITY -> Get disk space information for each path"  # noqa: risky-shell-pipe
   ansible.builtin.shell: >
     {% if 'Linux' in ansible_system %}
     df -m --output=source,avail,target {{ item.path }}

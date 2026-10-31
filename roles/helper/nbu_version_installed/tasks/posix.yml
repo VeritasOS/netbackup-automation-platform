@@ -9,7 +9,7 @@
   failed_when: false
   changed_when: false
 
-- name: "NBU-VERSION-CHECK -> Verify what version of the NetBackup software is currently installed"
+- name: "NBU-VERSION-CHECK -> Verify what version of the NetBackup software is currently installed"  # noqa: command-instead-of-shell
   ansible.builtin.shell:
     cmd: "{{ version_check_cmd | replace('ITEM_PACKAGE_NAME', nbu_rpm_vrtsnbcfg) }}"
   changed_when: false

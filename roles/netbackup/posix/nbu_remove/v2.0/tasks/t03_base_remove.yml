@@ -45,12 +45,12 @@
 
   block:
     - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Check NB registered with vxlogcfg"
-      ansible.builtin.shell: "{{ os_path_nbu_log_vxlogcfg }} -l | grep 'NB,nb'"
+      ansible.builtin.shell: "{{ os_path_nbu_log_vxlogcfg }} -l | grep 'NB,nb'"  # noqa: risky-shell-pipe
       failed_when: false
       register: vxlogcfg
 
     - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} ->  execute {{ os_path_nbu_log_vxlogcfg }} -r -p 51216"
-      ansible.builtin.shell: '{{ os_path_nbu_log_vxlogcfg }} -r -p 51216'
+      ansible.builtin.command: '{{ os_path_nbu_log_vxlogcfg }} -r -p 51216'
       failed_when: false
       when: vxlogcfg.rc == 0
 
@@ -78,12 +78,12 @@
     - ansible_os_family == 'Suse'
 
 - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }}-> Remove {{ nbu_rpm_vrtsnbcfg }} package (AIX/Solaris)"
-  ansible.builtin.shell: " {{ uninstall_package_cmd }} {{ nbu_rpm_vrtsnbcfg }}"
+  ansible.builtin.command: " {{ uninstall_package_cmd }} {{ nbu_rpm_vrtsnbcfg }}"
   when:
     - ansible_system == 'AIX' or ansible_system == 'SunOS'
 
 - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Execute /opt/pdde/pddeuninstall.sh -forceclean"
-  ansible.builtin.shell: '/opt/pdde/pddeuninstall.sh -forceclean'
+  ansible.builtin.command: '/opt/pdde/pddeuninstall.sh -forceclean'
   when: pddeuninstall_check_register.stat.exists
   failed_when: false
 
@@ -147,11 +147,11 @@
 
 # Remove EEB Marker packages here, so not picked up by the VRTSpbx check
 - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Remove EEB RPM Markers"
-  ansible.builtin.shell: ( rpm -qa | grep {{ nbu_eeb_prefix }} | while read line; do rpm -e $line; done)
+  ansible.builtin.shell: ( rpm -qa | grep {{ nbu_eeb_prefix }} | while read line; do rpm -e $line; done)  # noqa: risky-shell-pipe
   failed_when: false
 
 - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Check If VRTSpbx Might Be In Use By Other Cohesity Products"
-  ansible.builtin.shell: "{{ vrts_pbx_usage_cmd }}"
+  ansible.builtin.shell: "{{ vrts_pbx_usage_cmd }}"  # noqa: command-instead-of-shell
   register: pbx_other_products_check_register
   changed_when: false
   failed_when: false
@@ -199,7 +199,7 @@
   failed_when: false
 
 - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Execute /usr/openv/analyticscollector/UninstallerData/uninstall_dc.sh -r"
-  ansible.builtin.shell: "/usr/openv/analyticscollector/UninstallerData/uninstall_dc.sh -r"
+  ansible.builtin.command: "/usr/openv/analyticscollector/UninstallerData/uninstall_dc.sh -r"
   when: uninstall_ita_dc_check_register.stat.exists
   failed_when: false
 
@@ -216,7 +216,7 @@
 
 - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Remove NetBackup link, file and directory"
   block:
-    - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Delete NetBackup links"
+    - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Delete NetBackup links"  # noqa: command-instead-of-shell
       ansible.builtin.shell: "{{ delete_nbu_links_cmd | replace('ITEM_LINK_NAME', item) }}"
       with_items: "{{ nbu_directory_list_to_be_removed }}"
 
@@ -241,11 +241,11 @@
         - /etc/rc2.d/S95netbackup
         - /etc/init.d/netbackup
 
-    - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Delete NetBackup files"
+    - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Delete NetBackup files"  # noqa: command-instead-of-shell
       ansible.builtin.shell: "{{ delete_nbu_files_cmd | replace('ITEM_FILE_NAME', item) }}"
       with_items: "{{ nbu_directory_list_to_be_removed }}"
 
-    - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Delete NetBackup directories except mounted disks"
+    - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Delete NetBackup directories except mounted disks"  # noqa: command-instead-of-shell
       ansible.builtin.shell: "{{ delete_nbu_directories_cmd | replace('ITEM_DIR_NAME', item) }}"
       with_items: "{{ nbu_directory_list_to_be_removed }}"
       failed_when: false

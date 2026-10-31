@@ -30,9 +30,9 @@
     - role: 'netbackup/posix' # Load netbackup default vars
     - role: 'generic/is_nbu_version_supported'
     - role: 'generic/nbu_compatibility'
-    - { role: 'netbackup/common/rest_api_integration', action: "login" }
+    - { role: 'netbackup/common/rest_api_integration', user_action: "login" }
     - role: 'netbackup/common/rest_api_integration/global_settings'
-    - { role: 'netbackup/common/rest_api_integration', action: "logout" }
+    - { role: 'netbackup/common/rest_api_integration', user_action: "logout" }
   vars:
     nbu_playbook_type: "global-settings"
     nbu_role: "primary" # Supported values ['primary', 'media', 'client']
