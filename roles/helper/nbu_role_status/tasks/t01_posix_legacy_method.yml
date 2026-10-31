@@ -15,7 +15,7 @@
     - os_file_nbu_bpconf_register.stat.exists
   block:
     - name: "NBU-ROLE-STATUS -> Read first entry in bp.conf"
-      ansible.builtin.shell: ( cat {{ os_file_nbu_bpconf }} | egrep -v "^#" | grep SERVER | awk 'NR==1 {print $3}' )
+      ansible.builtin.shell: ( cat {{ os_file_nbu_bpconf }} | egrep -v "^#" | grep SERVER | awk 'NR==1 {print $3}' )  # noqa: risky-shell-pipe
       register: nbu_primary_server_register
 
     - name: "NBU-ROLE-STATUS -> Verify the nbwmc and nbmqbroker files exist on target host machine"
@@ -56,7 +56,7 @@
 
       block:
         # Verify whether target host machine has the NetBackup client software installed
-        - name: "NBU-ROLE-STATUS -> Verify whether NetBackup client software is currently installed"
+        - name: "NBU-ROLE-STATUS -> Verify whether NetBackup client software is currently installed"  # noqa: command-instead-of-shell
           ansible.builtin.shell: "{{ version_check_cmd | replace('ITEM_PACKAGE_NAME', nbu_rpm_vrtsnbcfg) }}"
           changed_when: false
           register: nbu_client_rpm_check
@@ -67,7 +67,7 @@
             - nbu_client_rpm_check.rc == 0
           block:
             - name: "NBU-ROLE-STATUS -> Check for existence of Primary/Media Server rpms."
-              ansible.builtin.shell: ( rpm -qa | egrep "VRTSpddes|VRTSpddei|VRTSnetbp|VRTSnbslibs" )
+              ansible.builtin.shell: ( rpm -qa | egrep "VRTSpddes|VRTSpddei|VRTSnetbp|VRTSnbslibs" )  # noqa: risky-shell-pipe
               register: netbackup_server_rpm_list_register
               changed_when: false
               failed_when: false

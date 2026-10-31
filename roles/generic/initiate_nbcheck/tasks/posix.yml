@@ -43,7 +43,7 @@
   no_log: true
   register: file_status_register
 
-- name: "NBCHECK -> Extract {{ nbcheck_package_name }}{{ package_extension }} package"
+- name: "NBCHECK -> Extract {{ nbcheck_package_name }}{{ package_extension }} package"  # noqa: command-instead-of-shell
   ansible.builtin.shell: ( gunzip -f "{{ nbcheck_package_name }}{{ package_extension }}" )
   args:
     chdir: "{{ os_path_openv_tmp }}"
@@ -51,7 +51,7 @@
     - ansible_system == 'AIX' or ansible_system == 'SunOS'
     - file_status_register.stat.exists
 
-- name: "NBCHECK -> Extracting nbcheck file from {{ nbcheck_package_name }}"
+- name: "NBCHECK -> Extracting nbcheck file from {{ nbcheck_package_name }}"  # noqa: command-instead-of-shell
   ansible.builtin.shell: "{{ nbcheck_package_extraction_cmd }}"
   args:
     chdir: "{{ os_path_openv_tmp }}"

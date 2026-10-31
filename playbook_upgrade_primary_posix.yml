@@ -36,9 +36,9 @@
     - role: 'helper/detect_partial_install'
     - role: 'generic/nbu_compatibility'
     - role: 'generic/nbu_verification' # Verifies certificate specific checks and report
-    - { role: 'netbackup/common/rest_api_integration', action: "login" }
+    - { role: 'netbackup/common/rest_api_integration', user_action: "login" }
     - role: 'netbackup/common/rest_api_integration/catalog_images'
-    - { role: 'netbackup/common/rest_api_integration', action: "logout" }
+    - { role: 'netbackup/common/rest_api_integration', user_action: "logout" }
     - role: 'netbackup/posix/nbu_server_install/v2.0'
     - role: 'netbackup/common/nbu_change_serviceuser/v2.0'
     - role: 'generic/nbu_verification' # Verifies certificate specific checks and report

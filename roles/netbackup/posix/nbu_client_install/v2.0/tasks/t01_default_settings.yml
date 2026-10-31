@@ -71,7 +71,7 @@
 
   block:
     - name: "NBU-CLIENT-{{ nbu_playbook_type | upper }} -> Found instance of previous failed RPM"
-      ansible.builtin.shell:
+      ansible.builtin.command:
         cmd: "sed -n '1p' /tmp/previous_rpm_pkg_install_failed"
       changed_when: false
       failed_when: false

@@ -32,7 +32,7 @@
 
 - name: "NBU-EEB-MGMT -> Resolve Tomcat EEB readme and backup facts"
   block:
-    - name: "NBU-EEB-MGMT -> Extract NetBackup version from EEB readme - {{ eeb_name }}"
+    - name: "NBU-EEB-MGMT -> Extract NetBackup version from EEB readme - {{ eeb_name }}"  # noqa: risky-shell-pipe
       ansible.builtin.shell: >
         {{ eeb_installer_path }} -r
         | awk '/Veritas Bug ID:/{flag=1; next} /NetBackup( Primary)? Server/{flag=0} flag'
@@ -67,7 +67,7 @@
         tomcat_backup_folder_path: "{{ os_path_nbu_bkpcomp }}/NetBackup-webserver-{{ nbu_version_short }}-backup"
         tomcat_last_backup_tarball: "{{ os_path_nbu_bkpcomp }}/NetBackup-webserver-last-backup.tar.gz"
 
-    - name: "NBU-EEB-MGMT -> Get the current apache-tomcat server version"
+    - name: "NBU-EEB-MGMT -> Get the current apache-tomcat server version"  # noqa: command-instead-of-shell
       ansible.builtin.shell: "{{ nbu_tomcat_serverinfo_cmd | replace('LIB_PATH', os_path_nbu_wmc_webserver ~ '/lib') }}"
       register: current_apache_tomcat_version_register
       changed_when: false
@@ -98,7 +98,7 @@
             dest: "{{ os_path_openv_tmp }}"
             remote_src: true
 
-        - name: "NBU-EEB-MGMT -> Running TomcatDeployer.sh"
+        - name: "NBU-EEB-MGMT -> Running TomcatDeployer.sh"  # noqa: command-instead-of-shell
           ansible.builtin.shell: ( ./TomcatDeployer.sh )
           args:
             chdir: "{{ os_path_openv_tmp }}/{{ eeb_tar_extracted_folder_name }}"
@@ -188,12 +188,12 @@
     # Resolve the web service user/group from bp.conf so restored files get the
     # correct ownership instead of hardcoding nbwebsvc/nbwebgrp.
     - name: "NBU-EEB-MGMT -> Get WEBSVC_USER from bp.conf"
-      ansible.builtin.shell: "grep '^WEBSVC_USER' {{ os_file_nbu_bpconf }} | awk '{print $3}'"
+      ansible.builtin.shell: "grep '^WEBSVC_USER' {{ os_file_nbu_bpconf }} | awk '{print $3}'"  # noqa: risky-shell-pipe
       register: websvc_user_register
       changed_when: false
 
     - name: "NBU-EEB-MGMT -> Get WEBSVC_GROUP from bp.conf"
-      ansible.builtin.shell: "grep '^WEBSVC_GROUP' {{ os_file_nbu_bpconf }} | awk '{print $3}'"
+      ansible.builtin.shell: "grep '^WEBSVC_GROUP' {{ os_file_nbu_bpconf }} | awk '{print $3}'"  # noqa: risky-shell-pipe
       register: websvc_group_register
       changed_when: false
 

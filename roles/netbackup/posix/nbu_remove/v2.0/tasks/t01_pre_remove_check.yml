@@ -38,7 +38,7 @@
 
 - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Verify whether NetBackup {{ nbu_role | capitalize }} software is currently installed"
   ansible.builtin.shell: "{{ installed_packages_list_query_cmd | replace('PACKAGE_LIST_PLACEHOLDER',
-    pkg_ordered_list | join(' | ') if ansible_system in ['AIX', 'SunOS'] else nbu_rpms_version_ordered) }}"
+    pkg_ordered_list | join(' | ') if ansible_system in ['AIX', 'SunOS'] else nbu_rpms_version_ordered) }}"  # noqa: command-instead-of-shell
   register: nbu_rpm_check_register
   failed_when: false
   no_log: false

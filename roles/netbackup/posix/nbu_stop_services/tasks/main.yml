@@ -28,7 +28,7 @@
     - netbackup_files_check_register.results[1].stat.exists
   block:
     - name: "NBU-STOP-SERVICES -> Attempt to stop NetBackup processes"
-      ansible.builtin.shell:
+      ansible.builtin.shell:  # noqa: risky-shell-pipe
         cmd: "echo y | {{ os_path_nbu_install_default }}/netbackup/bin/bp.kill_all"
       register: bp_kill_result
       retries: 2
@@ -37,7 +37,7 @@
       no_log: true
       failed_when: false
 
-    - name: "NBU-STOP-SERVICES -> Stop vxpbx_exchanged (PBX)"
+    - name: "NBU-STOP-SERVICES -> Stop vxpbx_exchanged (PBX)"  # noqa: command-instead-of-shell
       ansible.builtin.shell: ( {{ os_file_nbu_vxpbx_exchanged }} stop )
       register: nbu_stop_services_vxpbx_stop_result_register
       retries: 2
@@ -48,12 +48,12 @@
       when: netbackup_files_check_register.results[2].stat.exists and nbu_run_vxpbx_exchanged_stop_script
 
     - name: "NBU-STOP-SERVICES -> Get the list of NetBackup processes still running"
-      ansible.builtin.shell:
+      ansible.builtin.shell:  # noqa: risky-shell-pipe
         cmd: "sleep 5 && {{ os_path_nbu_install_default }}/netbackup/bin/bpps -n | awk '{print $2, $8}'"
       register: running_processes_register
 
     - name: "NBU-STOP-SERVICES -> Terminate running processes"
-      ansible.builtin.shell:
+      ansible.builtin.command:
         cmd: "kill -9 {{ running_process_item.split(' ')[0] }}"
       loop: "{{ running_processes_register.stdout_lines }}"
       loop_control:

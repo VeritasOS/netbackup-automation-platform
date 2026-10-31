@@ -9,12 +9,12 @@
 # and will determine whether the NetBackup software requires installation.
 
 - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Verify whether NetBackup {{ nbu_role }} software is currently installed"
-  ansible.builtin.shell: "{{ pkg_status_check_cmd }}"
+  ansible.builtin.shell: "{{ pkg_status_check_cmd }}"  # noqa: command-instead-of-shell
   changed_when: false
   register: nbu_rpm_check_register
   failed_when: false
 
-- name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Verify NetBackup version for Debian-based systems"
+- name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Verify NetBackup version for Debian-based systems"  # noqa: command-instead-of-shell
   ansible.builtin.shell: "{{ version_check_cmd }}"
   changed_when: false
   failed_when: false

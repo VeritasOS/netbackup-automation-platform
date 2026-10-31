@@ -17,7 +17,7 @@
       when: ( nbu_role == "media" ) or (nbu_role == "client")
 
       block:
-        - name: "NBU-CERTIFICATE-DEPLOYMENT-> Retrieve certificate mode for primary server: {{ nbu_primary_server_ans }}"
+        - name: "NBU-CERTIFICATE-DEPLOYMENT-> Retrieve certificate mode for primary server: {{ nbu_primary_server_ans }}"  # noqa: command-instead-of-shell
           ansible.builtin.shell: ( {{ os_file_nbu_nbcertcmd }} -getSecConfig -caUsage -server "{{ nbu_primary_server_ans }}" )
           changed_when: false
           register: nbu_primary_certificate_mode_register

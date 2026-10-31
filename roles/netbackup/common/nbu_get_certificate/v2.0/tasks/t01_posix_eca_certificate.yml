@@ -112,7 +112,7 @@
       (eca_crl_stat_register.stat.exists | default(false)) and nbu_eca_crl_path | length > 0 ) or nbu_eca_crl_path | length == 0
 
 - name: "NBU-ECA-CERTIFICATE-DEPLOYMENT -> Update bp.conf with required external certificate parameters on target host"
-  ansible.builtin.shell: ( echo {{ item }} | /usr/openv/netbackup/bin/nbsetconfig )
+  ansible.builtin.shell: ( echo {{ item }} | /usr/openv/netbackup/bin/nbsetconfig )  # noqa: risky-shell-pipe
   changed_when: false
   with_items:
     - "ECA_CERT_PATH = {{ nbu_eca_cert_path }}"
@@ -121,7 +121,7 @@
   failed_when: false
 
 - name: "NBU-ECA-CERTIFICATE-DEPLOYMENT -> Update bp.conf with required ECA_KEY_PASSPHRASEFILE value on target host"
-  ansible.builtin.shell: ( echo ECA_KEY_PASSPHRASEFILE={{ nbu_eca_key_passphrasefile }} | /usr/openv/netbackup/bin/nbsetconfig )
+  ansible.builtin.shell: ( echo ECA_KEY_PASSPHRASEFILE={{ nbu_eca_key_passphrasefile }} | /usr/openv/netbackup/bin/nbsetconfig )  # noqa: risky-shell-pipe
   changed_when: false
   failed_when: false
   when:
@@ -134,12 +134,12 @@
 
   block:
     - name: "NBU-ECA-CERTIFICATE-DEPLOYMENT -> Update bp.conf with required ECA_CRL_CHECK_LEVEL value on target host"
-      ansible.builtin.shell: ( echo ECA_CRL_CHECK_LEVEL={{ nbu_eca_crl_check_level }} | /usr/openv/netbackup/bin/nbsetconfig )
+      ansible.builtin.shell: ( echo ECA_CRL_CHECK_LEVEL={{ nbu_eca_crl_check_level }} | /usr/openv/netbackup/bin/nbsetconfig )  # noqa: risky-shell-pipe
       changed_when: false
       failed_when: false
 
     - name: "NBU-ECA-CERTIFICATE-DEPLOYMENT -> Update bp.conf with required ECA_CRL_PATH value on target host"
-      ansible.builtin.shell: ( echo ECA_CRL_PATH={{ nbu_eca_crl_path }} | /usr/openv/netbackup/bin/nbsetconfig )
+      ansible.builtin.shell: ( echo ECA_CRL_PATH={{ nbu_eca_crl_path }} | /usr/openv/netbackup/bin/nbsetconfig )  # noqa: risky-shell-pipe
       changed_when: false
       failed_when: false
       when:
@@ -167,12 +167,12 @@
       no_log: true
       when: ( nbu_add_external_cert_register.rc == 0 )
 
-    - name: "NBU-ECA-CERTIFICATE-DEPLOYMENT -> Starting the NetBackup daemons"
+    - name: "NBU-ECA-CERTIFICATE-DEPLOYMENT -> Starting the NetBackup daemons"  # noqa: command-instead-of-shell
       ansible.builtin.shell: (/usr/openv/netbackup/bin/bp.start_all)
       no_log: true
       when: ( nbu_add_external_cert_register.rc == 0 )
 
-- name: "NBU-ECA-CERTIFICATE-DEPLOYMENT -> Run -precheck to ensure no issues with Certificates configured"
+- name: "NBU-ECA-CERTIFICATE-DEPLOYMENT -> Run -precheck to ensure no issues with Certificates configured"  # noqa: command-instead-of-shell
   ansible.builtin.shell: ( /usr/openv/netbackup/bin/nbcertcmd -enrollCertificate -precheck )
   changed_when: false
   register: nbu_eca_precheck_register
@@ -184,7 +184,7 @@
     - ( nbu_eca_precheck_register.rc != 0 )
 
   block:
-    - name: "NBU-ECA-CERTIFICATE-DEPLOYMENT -> Remove the enrollment if precheck fails"
+    - name: "NBU-ECA-CERTIFICATE-DEPLOYMENT -> Remove the enrollment if precheck fails"  # noqa: command-instead-of-shell
       ansible.builtin.shell: ( /usr/openv/netbackup/bin/nbcertcmd -removeEnrollment )
       changed_when: false
       register: nbu_remove_enrollment_register
@@ -207,7 +207,7 @@
       ansible.builtin.fail:
         msg: "{{ nbu_eca_precheck_register.stderr_lines }}{{ nbu_eca_precheck_register.stdout }}"
 
-- name: "NBU-ECA-CERTIFICATE-DEPLOYMENT -> Enroll an external certificate with the primary server domain"
+- name: "NBU-ECA-CERTIFICATE-DEPLOYMENT -> Enroll an external certificate with the primary server domain"  # noqa: command-instead-of-shell
   ansible.builtin.shell: ( /usr/openv/netbackup/bin/nbcertcmd -enrollCertificate )
   changed_when: false
   register: nbu_enroll_certificate_register
@@ -224,7 +224,7 @@
   when:
     - ( nbu_enroll_certificate_register.rc != 0 )
   block:
-    - name: "NBU-ECA-CERTIFICATE-DEPLOYMENT -> Remove enrollment when ECA certificate enrollment fails"
+    - name: "NBU-ECA-CERTIFICATE-DEPLOYMENT -> Remove enrollment when ECA certificate enrollment fails"  # noqa: command-instead-of-shell
       ansible.builtin.shell: ( /usr/openv/netbackup/bin/nbcertcmd -removeEnrollment )
       changed_when: false
       register: nbu_remove_enrollment_register

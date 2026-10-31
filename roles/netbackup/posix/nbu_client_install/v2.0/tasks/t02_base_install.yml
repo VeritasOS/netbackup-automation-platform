@@ -34,7 +34,7 @@
         name: 'netbackup/{{ nbap_ansible_system }}/nbu_stop_services'
 
     # Start the NetBackup services
-    - name: "NBU-CLIENT-{{ nbu_playbook_type | upper }} -> Start the NetBackup Services"
+    - name: "NBU-CLIENT-{{ nbu_playbook_type | upper }} -> Start the NetBackup Services"  # noqa: command-instead-of-shell
       ansible.builtin.shell: ( {{ os_file_nbu_bpstart }} )
       when: netbackup_files_register.results[0].stat.exists
 
@@ -44,13 +44,13 @@
         - ( nbu_role == "primary" )
       block:
         # Cancel any running jobs - None should be running because policies and SLPs are disabled
-        - name: "NBU-CLIENT-{{ nbu_playbook_type | upper }} -> Cancel any running jobs"
+        - name: "NBU-CLIENT-{{ nbu_playbook_type | upper }} -> Cancel any running jobs"  # noqa: command-instead-of-shell
           ansible.builtin.shell: ( {{ os_file_nbu_bpdbjobs }} -cancel_all)
           changed_when: false
 
         # Check there're no running jobs - There shouldn't be because policies and SLP are disabled but double check
         - name: "NBU-CLIENT-{{ nbu_playbook_type | upper }} -> Check there're no jobs running"
-          ansible.builtin.shell: ( {{ os_file_nbu_bpdbjobs }} -summary | grep -v MASTER | awk '{print $2}')
+          ansible.builtin.shell: ( {{ os_file_nbu_bpdbjobs }} -summary | grep -v MASTER | awk '{print $2}')  # noqa: risky-shell-pipe
           changed_when: false
           register: nbu_running_jobs_check
           until: nbu_running_jobs_check.stdout | int == 0
@@ -65,14 +65,14 @@
     # Remove "_" from master_01 for machines that were installed where they were unable
     # to reach bravura and defaulted to SERVER = master_01 as Primary Server
     - name: "NBU-CLIENT-{{ nbu_playbook_type | upper }} -> Remove pseudo NetBackup Primary Server name from bp.conf file - make RFC compliant"
-      ansible.builtin.shell: ( {{ server_name_replace_cmd }} )
+      ansible.builtin.shell: ( {{ server_name_replace_cmd }} )  # noqa: command-instead-of-shell
       when: netbackup_files_register.results[2].stat.exists
       failed_when: false
       changed_when: false
 
     # Get the NetBackup primary server hostname from the bp.conf file
     - name: "NBU-CLIENT-{{ nbu_playbook_type | upper }} -> Get Primary Server hostname"
-      ansible.builtin.shell: ( cat  /usr/openv/netbackup/bp.conf | egrep -v "^#" | grep SERVER | awk 'NR==1 {print $3}' )
+      ansible.builtin.shell: ( cat  /usr/openv/netbackup/bp.conf | egrep -v "^#" | grep SERVER | awk 'NR==1 {print $3}' )  # noqa: risky-shell-pipe
       changed_when: false
       register: nbu_primary_server_register
 
@@ -83,7 +83,7 @@
 
     # Get the NetBackup CLIENT_NAME from the bp.conf file
     - name: "NBU-CLIENT-{{ nbu_playbook_type | upper }} -> Get machines NetBackup CLIENT_NAME"
-      ansible.builtin.shell: ( cat  /usr/openv/netbackup/bp.conf | egrep -v "^#" | grep CLIENT_NAME | awk 'NR==1 {print $3}' )
+      ansible.builtin.shell: ( cat  /usr/openv/netbackup/bp.conf | egrep -v "^#" | grep CLIENT_NAME | awk 'NR==1 {print $3}' )  # noqa: risky-shell-pipe
       changed_when: false
       register: nbu_client_name_register
 
@@ -150,7 +150,7 @@
 
   block: # pre_rpm_failed_file_stat_register.stat.exists
     - name: "NBU-CLIENT-{{ nbu_playbook_type | upper }} -> Gather facts if any RPM failed to installed"
-      ansible.builtin.shell:
+      ansible.builtin.command:
         cmd: "cat /tmp/previous_rpm_pkg_install_failed"
       register: pre_rpm_failed_rpm_register
       no_log: true
@@ -266,7 +266,7 @@
 
   block: # post_rpm_failed_file_stat_register.stat.exists
     - name: "NBU-CLIENT-{{ nbu_playbook_type | upper }} -> Gather facts if any RPM failed to installed"
-      ansible.builtin.shell:
+      ansible.builtin.command:
         cmd: "cat /tmp/previous_rpm_pkg_install_failed"
       register: post_rpm_failed_rpm_register
       no_log: true
@@ -337,7 +337,7 @@
 
 # Remove the previous NetBackup EEB RPM marker files
 - name: "NBU-CLIENT-{{ nbu_playbook_type | upper }} -> Remove NetBackup EEB RPM Markers"
-  ansible.builtin.shell: ( rpm -qa | grep '^VRTSnbeeb\|^VRTSnb-vts2' | while read line; do rpm -e $line; done)
+  ansible.builtin.shell: ( rpm -qa | grep '^VRTSnbeeb\|^VRTSnb-vts2' | while read line; do rpm -e $line; done)  # noqa: risky-shell-pipe
   changed_when: false
   failed_when: false
 

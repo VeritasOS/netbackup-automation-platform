@@ -95,7 +95,7 @@
   when: ansible_os_family == 'RedHat'
 
   block:
-    - name: "NBU-INITIALIZE-{{ nbu_playbook_type | upper }} -> Check DirectIO PKG status"
+    - name: "NBU-INITIALIZE-{{ nbu_playbook_type | upper }} -> Check DirectIO PKG status"  # noqa: command-instead-of-shell
       ansible.builtin.shell: "{{ pkg_status_check_cmd | replace('ITEM_PACKAGE_NAME', 'VRTSnbdirectio') }}"
       register: directio_pkg_check
       failed_when: false
@@ -118,7 +118,7 @@
     - ansible_architecture == 'x86_64'
 
   block:
-    - name: "NBU-INITIALIZE-{{ nbu_playbook_type | upper }} -> Check VRTSnbjava PKG status"
+    - name: "NBU-INITIALIZE-{{ nbu_playbook_type | upper }} -> Check VRTSnbjava PKG status"  # noqa: command-instead-of-shell
       ansible.builtin.shell: "{{ pkg_status_check_cmd | replace('ITEM_PACKAGE_NAME', 'VRTSnbjava') }}"
       register: java_pkg_check
       failed_when: false
@@ -142,7 +142,7 @@
     - ansible_architecture == 'x86_64'
 
   block:
-    - name: "NBU-INITIALIZE-{{ nbu_playbook_type | upper }} -> Check VRTSpddeu PKG status"
+    - name: "NBU-INITIALIZE-{{ nbu_playbook_type | upper }} -> Check VRTSpddeu PKG status"  # noqa: command-instead-of-shell
       ansible.builtin.shell: "{{ pkg_status_check_cmd | replace('ITEM_PACKAGE_NAME', 'VRTSpddeu') }}"
       register: vrtspddeu_pkg_check
       failed_when: false
