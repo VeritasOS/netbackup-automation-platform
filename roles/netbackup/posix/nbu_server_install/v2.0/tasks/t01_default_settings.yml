@@ -13,7 +13,7 @@
 
 # Check - Upgrade is being performed by root user
 - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Verify the root user is performing the NetBackup server upgrade"
-  ansible.builtin.shell: ( whoami )  # noqa: command-instead-of-shell
+  ansible.builtin.shell: ( whoami )
   changed_when: false
   register: root_check
   failed_when: ( root_check.stdout != 'root' )
