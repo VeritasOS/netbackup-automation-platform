@@ -45,7 +45,7 @@
 
   block:
     - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Check NB registered with vxlogcfg"
-      ansible.builtin.shell: "{{ os_path_nbu_log_vxlogcfg }} -l | grep 'NB,nb'"  # noqa: risky-shell-pipe
+      ansible.builtin.shell: "{{ os_path_nbu_log_vxlogcfg }} -l | grep 'NB,nb'"
       failed_when: false
       register: vxlogcfg
 
@@ -147,11 +147,11 @@
 
 # Remove EEB Marker packages here, so not picked up by the VRTSpbx check
 - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Remove EEB RPM Markers"
-  ansible.builtin.shell: ( rpm -qa | grep {{ nbu_eeb_prefix }} | while read line; do rpm -e $line; done)  # noqa: risky-shell-pipe
+  ansible.builtin.shell: ( rpm -qa | grep {{ nbu_eeb_prefix }} | while read line; do rpm -e $line; done)
   failed_when: false
 
 - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Check If VRTSpbx Might Be In Use By Other Cohesity Products"
-  ansible.builtin.shell: "{{ vrts_pbx_usage_cmd }}"  # noqa: command-instead-of-shell
+  ansible.builtin.shell: "{{ vrts_pbx_usage_cmd }}"
   register: pbx_other_products_check_register
   changed_when: false
   failed_when: false
@@ -216,7 +216,7 @@
 
 - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Remove NetBackup link, file and directory"
   block:
-    - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Delete NetBackup links"  # noqa: command-instead-of-shell
+    - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Delete NetBackup links"
       ansible.builtin.shell: "{{ delete_nbu_links_cmd | replace('ITEM_LINK_NAME', item) }}"
       with_items: "{{ nbu_directory_list_to_be_removed }}"
 
@@ -241,11 +241,11 @@
         - /etc/rc2.d/S95netbackup
         - /etc/init.d/netbackup
 
-    - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Delete NetBackup files"  # noqa: command-instead-of-shell
+    - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Delete NetBackup files"
       ansible.builtin.shell: "{{ delete_nbu_files_cmd | replace('ITEM_FILE_NAME', item) }}"
       with_items: "{{ nbu_directory_list_to_be_removed }}"
 
-    - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Delete NetBackup directories except mounted disks"  # noqa: command-instead-of-shell
+    - name: "NBU-{{ nbu_role | upper }}-{{ nbu_playbook_type | upper }} -> Delete NetBackup directories except mounted disks"
       ansible.builtin.shell: "{{ delete_nbu_directories_cmd | replace('ITEM_DIR_NAME', item) }}"
       with_items: "{{ nbu_directory_list_to_be_removed }}"
       failed_when: false
